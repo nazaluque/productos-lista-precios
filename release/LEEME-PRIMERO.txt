@@ -1,0 +1,58 @@
+FRN · PAQUETE COMPLETO v0.4
+===========================
+
+Este paquete contiene exactamente dos plugins instalables y un Excel maestro.
+No instales el archivo FRN-PACK-COMPLETO-v0.4.zip directamente en WordPress:
+primero ábrelo y utiliza los archivos numerados de su interior.
+
+PASO 1 · ACTUALIZAR STOCK Y PRECIOS
+-----------------------------------
+En WordPress ve a Plugins > Añadir plugin > Subir plugin.
+Instala 01-INSTALAR-FRN-STOCK-PRECIOS-v0.4.0.zip.
+Si WordPress pregunta si deseas reemplazar la versión actual, confirma.
+Activa el plugin.
+
+PASO 2 · INSTALAR LA NUEVA PORTADA
+----------------------------------
+En Plugins > Añadir plugin > Subir plugin instala
+02-INSTALAR-FRN-HOME-v1.0.0.zip y actívalo.
+
+Este segundo plugin cambia solamente el Home. Incluye la foto compuesta,
+el menú Inicio / Productos, stock y precios / Pescado-Marisco / Carne,
+el teléfono y los botones de WhatsApp.
+
+PASO 3 · IMPORTAR LOS PRODUCTOS
+-------------------------------
+En el menú izquierdo abre FRN Stock.
+
+1. Selecciona Carne.
+2. Sube 03-IMPORTAR-FRN-CATALOGO-v0.4.xlsx.
+3. Pulsa Previsualizar importación.
+4. Comprueba 34 filas y pulsa Importar catálogo completo.
+5. Repite seleccionando Pescado / Marisco.
+6. Comprueba 46 filas y pulsa Importar catálogo completo.
+
+Resultado esperado: 80 referencias visibles. Los productos sin precio se
+muestran como «Consultar precio» y los que no tienen stock como «Consultar stock».
+
+EDICIÓN FÁCIL
+-------------
+En FRN Stock puedes cambiar código, marca, producto, kilos y precio.
+La columna Visible tiene un selector Sí/No. Elige No solo si quieres ocultar
+esa referencia. Después pulsa el botón Guardar cambios de la categoría.
+
+PASO 4 · VER Y COMPROBAR
+------------------------
+Abre estas direcciones:
+- https://frnatlantico.es/
+- https://frnatlantico.es/stock/
+- https://frnatlantico.es/stock/pescado-marisco/
+- https://frnatlantico.es/stock/carne/
+
+Si sigues viendo la portada anterior, limpia la caché de WordPress/hosting y
+abre la web en una ventana privada. No necesitas tocar el tema ni crear páginas.
+
+ACTUALIZACIÓN SEMANAL
+---------------------
+Cada lunes usa el mismo Excel maestro actualizado y repite la importación de
+Carne y Pescado / Marisco. Siempre previsualiza antes de importar.

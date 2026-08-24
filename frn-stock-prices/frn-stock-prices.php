@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FRN Stock & Prices
  * Description: Landings de stock y precios con importación Excel para FRN Atlántico.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: FRN Atlántico
  * Requires at least: 6.4
  * Requires PHP: 8.1
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('FRN_SP_VERSION', '0.3.0');
+define('FRN_SP_VERSION', '0.4.0');
 define('FRN_SP_PATH', plugin_dir_path(__FILE__));
 define('FRN_SP_URL', plugin_dir_url(__FILE__));
 

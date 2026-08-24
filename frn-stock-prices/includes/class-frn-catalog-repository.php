@@ -25,6 +25,7 @@ final class FRN_Catalog_Repository
             stock_kg decimal(14,2) NOT NULL DEFAULT 0,
             price_kg decimal(12,2) NULL,
             featured tinyint(1) NOT NULL DEFAULT 0,
+            visible tinyint(1) NOT NULL DEFAULT 1,
             source_file varchar(255) NOT NULL DEFAULT '',
             published_at datetime NOT NULL,
             PRIMARY KEY  (id),
@@ -33,10 +34,11 @@ final class FRN_Catalog_Repository
         ) {$charset};");
     }
 
-    public function all(string $category): array
+    public function all(string $category, bool $include_hidden = false): array
     {
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE category = %s ORDER BY featured DESC, product_name ASC', $category), ARRAY_A) ?: [];
+        $visibility = $include_hidden ? '' : ' AND visible = 1';
+        return $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE category = %s' . $visibility . ' ORDER BY featured DESC, product_name ASC', $category), ARRAY_A) ?: [];
     }
 
     public function publish(string $category, string $filename, array $rows): int
@@ -55,9 +57,10 @@ final class FRN_Catalog_Repository
                     'stock_kg' => $row['stock'],
                     'price_kg' => $row['price'],
                     'featured' => $row['featured'] ? 1 : 0,
+                    'visible' => $row['publish'] ? 1 : 0,
                     'source_file' => sanitize_file_name($filename),
                     'published_at' => current_time('mysql'),
-                ], ['%s','%s','%s','%s','%f','%f','%d','%s','%s']);
+                ], ['%s','%s','%s','%s','%f','%f','%d','%d','%s','%s']);
                 if ($wpdb->last_error) { throw new RuntimeException($wpdb->last_error); }
             }
             $wpdb->query('COMMIT');
@@ -81,10 +84,11 @@ final class FRN_Catalog_Repository
                     'product_name' => $row['name'],
                     'stock_kg' => $row['stock'],
                     'price_kg' => $row['price'],
+                    'visible' => $row['visible'] ? 1 : 0,
                     'published_at' => current_time('mysql'),
                 ],
                 ['id' => $row['id'], 'category' => $category],
-                ['%s','%s','%s','%f','%f','%s'],
+                ['%s','%s','%s','%f','%f','%d','%s'],
                 ['%d','%s']
             );
             if ($result === false) { throw new RuntimeException($wpdb->last_error ?: 'No se pudo guardar el producto.'); }

@@ -34,7 +34,6 @@ final class FRN_Stock_Prices
         add_filter('query_vars', [$this, 'query_vars']);
         add_filter('template_include', [$this, 'template_include']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
-        add_action('wp_footer', [$this, 'site_quick_nav'], 20);
         add_shortcode('frn_home_buttons', [$this, 'home_buttons']);
         if (is_admin()) {
             (new FRN_Admin_Importer())->boot();
@@ -83,17 +82,4 @@ final class FRN_Stock_Prices
         return sprintf('<div class="frn-home-stock-links"><a href="%s">Pescado / Marisco</a><a href="%s">Carne</a></div>', esc_url($fish), esc_url($meat));
     }
 
-    public function site_quick_nav(): void
-    {
-        if (is_admin() || in_array(get_query_var('frn_catalog'), ['hub', 'pescado-marisco', 'carne'], true)) { return; }
-        $whatsapp = preg_replace('/\D+/', '', (string) get_option('frn_sp_whatsapp_number', '34624354950'));
-        ?>
-        <nav class="frn-site-quick-nav" aria-label="Navegación de productos FRN">
-            <a href="<?php echo esc_url(home_url('/')); ?>">Inicio</a>
-            <a href="<?php echo esc_url(home_url('/stock/')); ?>">Productos y stock</a>
-            <a href="<?php echo esc_url('tel:+' . $whatsapp); ?>">+34 624 354 950</a>
-            <a class="frn-nav-wa" href="https://wa.me/<?php echo esc_attr($whatsapp); ?>" target="_blank" rel="noopener">Contacto / WhatsApp</a>
-        </nav>
-        <?php
-    }
 }

@@ -11,4 +11,9 @@ Solución WordPress para publicar stock y precios B2B de FRN Atlántico sin reem
 - CTA comercial por WhatsApp.
 - Preparación para protección por usuario/contraseña, desactivada inicialmente.
 
-El proyecto se integra como plugin para mantener los cambios aislados del tema y de las landings existentes.
+El proyecto se integra con dos plugins separados:
+
+- `FRN Stock & Prices`: catálogo, Excel, editor y landings.
+- `FRN Home`: portada comercial, navegación y CTA.
+
+Así la portada y el catálogo se pueden actualizar de manera independiente sin tocar el tema ni las landings existentes.

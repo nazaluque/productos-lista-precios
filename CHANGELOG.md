@@ -9,7 +9,16 @@
 - Añade navegación visible desde el Home y las landings.
 - Añade teléfono y WhatsApp en navegación, catálogo y pie.
 
-## 0.4.0 — Ofertas (planificada)
+## 0.4.0 — Importación completa y frontend separado
+
+- Corrige definitivamente la lectura de miles y decimales del stock desde Excel.
+- Importa todas las referencias, tengan o no precio o stock positivo.
+- Añade selector Visible Sí/No en el editor de WordPress.
+- Muestra «Consultar precio» y «Consultar stock» sin ocultar el producto.
+- Separa la portada en el plugin FRN Home 1.0.0.
+- Añade portada fotográfica, menú completo, teléfono y WhatsApp.
+
+## 0.5.0 — Ofertas (planificada)
 
 - Gestión separada de ofertas desde WordPress.
 - Activación y caducidad de ofertas.

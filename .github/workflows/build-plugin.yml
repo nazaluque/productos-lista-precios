@@ -1,4 +1,4 @@
-name: Build WordPress plugin ZIP
+name: Build FRN WordPress pack
 
 on:
   workflow_dispatch:
@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - 'frn-stock-prices/**'
+      - 'frn-home/**'
+      - 'release/**'
       - '.github/workflows/build-plugin.yml'
 
 jobs:
@@ -18,14 +20,20 @@ jobs:
           php-version: '8.2'
           tools: composer:v2
       - name: Validate PHP syntax
-        run: find frn-stock-prices -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Install production dependencies
+        run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-      - name: Create installable plugin
-        run: zip -r frn-stock-prices.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
+      - name: Create clear installable pack
+        run: |
+          mkdir -p build
+          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v0.4.0.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
+          zip -r build/02-INSTALAR-FRN-HOME-v1.0.0.zip frn-home
+          cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
+          cd build
+          zip -r ../FRN-PLUGINS-v0.4.zip .
       - uses: actions/upload-artifact@v4
         with:
-          name: frn-stock-prices
-          path: frn-stock-prices.zip
+          name: FRN-PLUGINS-v0.4
+          path: FRN-PLUGINS-v0.4.zip
           if-no-files-found: error
