@@ -1,0 +1,1 @@
+document.addEventListener('DOMContentLoaded',()=>{const input=document.querySelector('#frn-search');if(!input)return;input.addEventListener('input',()=>{const term=input.value.trim().toLowerCase();document.querySelectorAll('#frn-products tbody tr[data-search]').forEach(row=>{row.hidden=!row.dataset.search.includes(term);});});});
