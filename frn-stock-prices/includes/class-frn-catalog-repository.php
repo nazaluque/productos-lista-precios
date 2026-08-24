@@ -67,4 +67,29 @@ final class FRN_Catalog_Repository
             throw $error;
         }
     }
+
+    public function update_many(string $category, array $rows): int
+    {
+        global $wpdb;
+        $updated = 0;
+        foreach ($rows as $row) {
+            $result = $wpdb->update(
+                self::table(),
+                [
+                    'product_code' => $row['code'],
+                    'brand' => $row['brand'],
+                    'product_name' => $row['name'],
+                    'stock_kg' => $row['stock'],
+                    'price_kg' => $row['price'],
+                    'published_at' => current_time('mysql'),
+                ],
+                ['id' => $row['id'], 'category' => $category],
+                ['%s','%s','%s','%f','%f','%s'],
+                ['%d','%s']
+            );
+            if ($result === false) { throw new RuntimeException($wpdb->last_error ?: 'No se pudo guardar el producto.'); }
+            $updated += (int) $result;
+        }
+        return $updated;
+    }
 }

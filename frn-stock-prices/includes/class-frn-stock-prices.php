@@ -15,8 +15,9 @@ final class FRN_Stock_Prices
 
     public static function activate(): void
     {
-        update_option('frn_sp_catalog_protection_enabled', false, false);
-        update_option('frn_sp_whatsapp_number', '34624354950', false);
+        add_option('frn_sp_catalog_protection_enabled', false, '', false);
+        add_option('frn_sp_whatsapp_number', '34624354950', '', false);
+        update_option('frn_sp_version', FRN_SP_VERSION, false);
         FRN_Catalog_Repository::create_table();
         self::instance()->register_routes();
         flush_rewrite_rules();
@@ -24,10 +25,16 @@ final class FRN_Stock_Prices
 
     public function boot(): void
     {
+        if (get_option('frn_sp_version') !== FRN_SP_VERSION) {
+            FRN_Catalog_Repository::create_table();
+            update_option('frn_sp_version', FRN_SP_VERSION, false);
+            add_action('init', function (): void { $this->register_routes(); flush_rewrite_rules(); }, 99);
+        }
         add_action('init', [$this, 'register_routes']);
         add_filter('query_vars', [$this, 'query_vars']);
         add_filter('template_include', [$this, 'template_include']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('wp_footer', [$this, 'site_quick_nav'], 20);
         add_shortcode('frn_home_buttons', [$this, 'home_buttons']);
         if (is_admin()) {
             (new FRN_Admin_Importer())->boot();
@@ -36,6 +43,7 @@ final class FRN_Stock_Prices
 
     public function register_routes(): void
     {
+        add_rewrite_rule('^stock/?$', 'index.php?frn_catalog=hub', 'top');
         add_rewrite_rule('^stock/pescado-marisco/?$', 'index.php?frn_catalog=pescado-marisco', 'top');
         add_rewrite_rule('^stock/carne/?$', 'index.php?frn_catalog=carne', 'top');
         add_rewrite_tag('%frn_catalog%', '([^&]+)');
@@ -50,14 +58,14 @@ final class FRN_Stock_Prices
     public function template_include(string $template): string
     {
         $catalog = get_query_var('frn_catalog');
-        if (!in_array($catalog, ['pescado-marisco', 'carne'], true)) {
+        if (!in_array($catalog, ['hub', 'pescado-marisco', 'carne'], true)) {
             return $template;
         }
         if ((bool) get_option('frn_sp_catalog_protection_enabled', false) && !is_user_logged_in()) {
             auth_redirect();
         }
         status_header(200);
-        return FRN_SP_PATH . 'templates/catalog.php';
+        return FRN_SP_PATH . ($catalog === 'hub' ? 'templates/hub.php' : 'templates/catalog.php');
     }
 
     public function enqueue_assets(): void
@@ -73,5 +81,19 @@ final class FRN_Stock_Prices
         $fish = home_url('/stock/pescado-marisco/');
         $meat = home_url('/stock/carne/');
         return sprintf('<div class="frn-home-stock-links"><a href="%s">Pescado / Marisco</a><a href="%s">Carne</a></div>', esc_url($fish), esc_url($meat));
+    }
+
+    public function site_quick_nav(): void
+    {
+        if (is_admin() || in_array(get_query_var('frn_catalog'), ['hub', 'pescado-marisco', 'carne'], true)) { return; }
+        $whatsapp = preg_replace('/\D+/', '', (string) get_option('frn_sp_whatsapp_number', '34624354950'));
+        ?>
+        <nav class="frn-site-quick-nav" aria-label="Navegación de productos FRN">
+            <a href="<?php echo esc_url(home_url('/')); ?>">Inicio</a>
+            <a href="<?php echo esc_url(home_url('/stock/')); ?>">Productos y stock</a>
+            <a href="<?php echo esc_url('tel:+' . $whatsapp); ?>">+34 624 354 950</a>
+            <a class="frn-nav-wa" href="https://wa.me/<?php echo esc_attr($whatsapp); ?>" target="_blank" rel="noopener">Contacto / WhatsApp</a>
+        </nav>
+        <?php
     }
 }

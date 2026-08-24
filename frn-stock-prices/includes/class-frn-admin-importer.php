@@ -11,6 +11,7 @@ final class FRN_Admin_Importer
         add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_frn_sp_preview', [$this, 'preview']);
         add_action('admin_post_frn_sp_publish', [$this, 'publish']);
+        add_action('admin_post_frn_sp_save_products', [$this, 'save_products']);
     }
 
     public function menu(): void
@@ -30,6 +31,9 @@ final class FRN_Admin_Importer
             <?php if (isset($_GET['published'])) : ?>
                 <div class="notice notice-success"><p><?php echo esc_html((int) $_GET['published']); ?> referencias publicadas.</p></div>
             <?php endif; ?>
+            <?php if (isset($_GET['saved'])) : ?>
+                <div class="notice notice-success"><p>Los cambios manuales se han guardado correctamente.</p></div>
+            <?php endif; ?>
             <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="frn_sp_preview">
                 <?php wp_nonce_field('frn_sp_preview'); ?>
@@ -40,6 +44,7 @@ final class FRN_Admin_Importer
                 <?php submit_button('Previsualizar importación'); ?>
             </form>
             <?php if (is_array($preview)) : $this->preview_table($token, $preview); endif; ?>
+            <?php $this->product_editor(); ?>
         </div>
         <?php
     }
@@ -53,7 +58,7 @@ final class FRN_Admin_Importer
         <hr><h2>Previsualización</h2>
         <p><strong><?php echo esc_html(count($preview['rows'])); ?></strong> filas detectadas · <strong><?php echo esc_html(count($publishable)); ?></strong> preparadas para publicar · <strong><?php echo esc_html($excluded); ?></strong> excluidas para revisión · <strong><?php echo esc_html($invalid); ?></strong> con errores · Archivo: <?php echo esc_html($preview['filename']); ?></p>
         <div style="max-height:480px;overflow:auto"><table class="widefat striped"><thead><tr><th>Publicar</th><th>Estado</th><th>Código</th><th>Marca</th><th>Producto</th><th>Stock kg</th><th>Precio €/kg</th><th>Oferta</th></tr></thead><tbody>
-        <?php foreach ($preview['rows'] as $row) : ?><tr><td><strong><?php echo $row['publish'] ? 'Sí' : 'No'; ?></strong></td><td><?php echo !$row['valid'] ? '⚠ ' . esc_html(implode(', ', $row['errors'])) : esc_html($row['status'] ?: 'OK'); ?></td><td><?php echo esc_html($row['code']); ?></td><td><?php echo esc_html($row['brand']); ?></td><td><?php echo esc_html($row['name']); ?></td><td><?php echo esc_html(number_format_i18n($row['stock'], 2)); ?></td><td><?php echo $row['price'] === null ? 'Pendiente' : esc_html(number_format_i18n($row['price'], 2)); ?></td><td><?php echo $row['featured'] ? 'Sí' : 'No'; ?></td></tr><?php endforeach; ?>
+        <?php foreach ($preview['rows'] as $row) : ?><tr><td><strong><?php echo $row['publish'] ? 'Sí' : 'No'; ?></strong></td><td><?php echo !$row['valid'] ? '⚠ ' . esc_html(implode(', ', $row['errors'])) : esc_html($row['status'] ?: 'OK'); ?></td><td><?php echo esc_html($row['code']); ?></td><td><?php echo esc_html($row['brand']); ?></td><td><?php echo esc_html($row['name']); ?></td><td><?php echo esc_html(number_format_i18n($row['stock'], 2)); ?></td><td><?php echo (float) $row['price'] <= 0 ? 'Sin precio' : esc_html(number_format_i18n($row['price'], 2)); ?></td><td><?php echo $row['featured'] ? 'Sí' : 'No'; ?></td></tr><?php endforeach; ?>
         </tbody></table></div>
         <?php if ($invalid === 0 && count($publishable) > 0) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:20px"><input type="hidden" name="action" value="frn_sp_publish"><input type="hidden" name="preview" value="<?php echo esc_attr($token); ?>"><?php wp_nonce_field('frn_sp_publish_' . $token); ?><?php submit_button('Publicar solo las filas marcadas SI', 'primary'); ?></form><?php endif; ?>
         <?php
@@ -117,14 +122,14 @@ final class FRN_Admin_Importer
             $errors = [];
             $code = trim((string)($item['code'] ?? '')) ?: (string)($index + 1);
             if ($publish && ($stock === null || $stock <= 0)) { $errors[] = 'stock debe ser mayor que cero'; }
-            if ($publish && ($price === null || $price < 0)) { $errors[] = 'precio obligatorio'; }
+            if ($publish && $price !== null && $price < 0) { $errors[] = 'precio inválido'; }
             if ($publish && $code === '') { $errors[] = 'código obligatorio'; }
             $rows[] = [
                 'code'=>sanitize_text_field($code),
                 'brand'=>sanitize_text_field((string)($item['brand'] ?? 'FRN')),
                 'name'=>sanitize_text_field($nameValue),
                 'stock'=>$stock ?? 0,
-                'price'=>$price,
+                'price'=>$price ?? 0,
                 'featured'=>$this->truthy($item['featured'] ?? ''),
                 'publish'=>$publish,
                 'status'=>sanitize_text_field((string)($item['status'] ?? '')),
@@ -138,7 +143,7 @@ final class FRN_Admin_Importer
     private function normalize_header(mixed $value): string
     {
         $value = remove_accents(strtolower(trim((string)$value)));
-        return match (true) { in_array($value,['codigo','id','referencia'],true) => 'code', $value === 'marca' => 'brand', in_array($value,['producto','nombre','descripcion'],true) => 'product', str_contains($value,'stock') || str_contains($value,'cantidad') => 'stock', str_contains($value,'precio') => 'price', in_array($value,['oferta','destacado'],true) => 'featured', in_array($value,['publicar','publicado','visible'],true) => 'publish', $value === 'estado' => 'status', default => sanitize_key($value) };
+        return match (true) { in_array($value,['codigo','id','referencia'],true) => 'code', $value === 'marca' => 'brand', in_array($value,['producto','nombre','descripcion'],true) => 'product', str_contains($value,'stock') || str_contains($value,'cantidad') => 'stock', str_contains($value,'fuente') => 'source', str_contains($value,'precio') => 'price', in_array($value,['oferta','destacado'],true) => 'featured', in_array($value,['publicar','publicado','visible'],true) => 'publish', $value === 'estado' => 'status', default => sanitize_key($value) };
     }
 
     private function truthy(mixed $value): bool
@@ -148,10 +153,63 @@ final class FRN_Admin_Importer
 
     private function number(mixed $value, bool $nullable = false): ?float
     {
+        if (is_int($value) || is_float($value)) { return (float) $value; }
         if ($nullable && ($value === null || trim((string)$value) === '')) { return null; }
         $clean = preg_replace('/[^0-9,.-]/', '', (string)$value);
         if (str_contains($clean, ',') && str_contains($clean, '.')) { $clean = str_replace('.', '', $clean); }
         $clean = str_replace(',', '.', $clean);
         return is_numeric($clean) ? (float)$clean : null;
+    }
+
+    private function product_editor(): void
+    {
+        $repository = new FRN_Catalog_Repository();
+        ?>
+        <hr style="margin:40px 0 24px"><h2>Editar productos publicados</h2>
+        <p>Corrige manualmente código, marca, nombre, kilos o precio. Un precio 0 se mostrará como <strong>Consultar precio</strong>.</p>
+        <?php foreach (['carne' => 'Carne', 'pescado-marisco' => 'Pescado / Marisco'] as $category => $label) : $products = $repository->all($category); ?>
+            <h3 style="margin-top:30px"><?php echo esc_html($label); ?></h3>
+            <?php if (!$products) : ?><p>Todavía no hay referencias publicadas en esta categoría.</p><?php else : ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="frn_sp_save_products">
+                <input type="hidden" name="category" value="<?php echo esc_attr($category); ?>">
+                <?php wp_nonce_field('frn_sp_save_products_' . $category); ?>
+                <div style="overflow:auto;max-height:560px;border:1px solid #dcdcde"><table class="widefat striped" style="min-width:1080px"><thead><tr><th>Código</th><th>Marca</th><th style="width:38%">Producto</th><th>Stock kg</th><th>Precio €/kg</th></tr></thead><tbody>
+                <?php foreach ($products as $product) : $id = (int) $product['id']; ?>
+                    <tr>
+                        <td><input type="text" name="products[<?php echo esc_attr($id); ?>][code]" value="<?php echo esc_attr($product['product_code']); ?>" style="width:110px"></td>
+                        <td><input type="text" name="products[<?php echo esc_attr($id); ?>][brand]" value="<?php echo esc_attr($product['brand']); ?>" style="width:150px"></td>
+                        <td><input type="text" name="products[<?php echo esc_attr($id); ?>][name]" value="<?php echo esc_attr($product['product_name']); ?>" style="width:100%"></td>
+                        <td><input type="number" step="0.01" name="products[<?php echo esc_attr($id); ?>][stock]" value="<?php echo esc_attr((float) $product['stock_kg']); ?>" style="width:120px"></td>
+                        <td><input type="number" min="0" step="0.01" name="products[<?php echo esc_attr($id); ?>][price]" value="<?php echo esc_attr((float) $product['price_kg']); ?>" style="width:120px"></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody></table></div>
+                <?php submit_button('Guardar cambios de ' . $label); ?>
+            </form>
+            <?php endif; ?>
+        <?php endforeach;
+    }
+
+    public function save_products(): void
+    {
+        $category = in_array($_POST['category'] ?? '', ['pescado-marisco','carne'], true) ? $_POST['category'] : '';
+        if (!$category) { wp_die('Categoría no válida.'); }
+        $this->guard('frn_sp_save_products_' . $category);
+        $rawRows = is_array($_POST['products'] ?? null) ? wp_unslash($_POST['products']) : [];
+        $rows = [];
+        foreach ($rawRows as $id => $raw) {
+            if (!is_array($raw)) { continue; }
+            $rows[] = [
+                'id' => (int) $id,
+                'code' => sanitize_text_field((string) ($raw['code'] ?? '')),
+                'brand' => sanitize_text_field((string) ($raw['brand'] ?? '')),
+                'name' => sanitize_text_field((string) ($raw['name'] ?? '')),
+                'stock' => $this->number($raw['stock'] ?? 0) ?? 0,
+                'price' => max(0, $this->number($raw['price'] ?? 0) ?? 0),
+            ];
+        }
+        (new FRN_Catalog_Repository())->update_many($category, $rows);
+        wp_safe_redirect(admin_url('admin.php?page=frn-stock-prices&saved=1')); exit;
     }
 }

@@ -17,6 +17,8 @@ jobs:
         with:
           php-version: '8.2'
           tools: composer:v2
+      - name: Validate PHP syntax
+        run: find frn-stock-prices -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Install production dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
