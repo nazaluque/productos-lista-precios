@@ -109,7 +109,8 @@ final class FRN_Admin_Importer
             $errors = [];
             if ($stock === null || $stock < 0) { $errors[] = 'stock inválido'; }
             if ($price !== null && $price < 0) { $errors[] = 'precio inválido'; }
-            $rows[] = ['code'=>sanitize_text_field((string)($item['code'] ?? $index+1)),'brand'=>sanitize_text_field((string)($item['brand'] ?? 'FRN')),'name'=>sanitize_text_field($nameValue),'stock'=>$stock ?? 0,'price'=>$price,'featured'=>in_array(strtolower(trim((string)($item['featured'] ?? ''))),['sí','si','1','true','x'],true),'valid'=>!$errors,'errors'=>$errors];
+            $code = trim((string)($item['code'] ?? '')) ?: (string)($index + 1);
+            $rows[] = ['code'=>sanitize_text_field($code),'brand'=>sanitize_text_field((string)($item['brand'] ?? 'FRN')),'name'=>sanitize_text_field($nameValue),'stock'=>$stock ?? 0,'price'=>$price,'featured'=>in_array(strtolower(trim((string)($item['featured'] ?? ''))),['sí','si','1','true','x'],true),'valid'=>!$errors,'errors'=>$errors];
         }
         return $rows;
     }
