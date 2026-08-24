@@ -18,7 +18,16 @@
 - Separa la portada en el plugin FRN Home 1.0.0.
 - Añade portada fotográfica, menú completo, teléfono y WhatsApp.
 
-## 0.5.0 — Ofertas (planificada)
+## 0.5.0 — Importación única y reparación de enlaces
+
+- Elimina el selector de categoría del importador.
+- Una sola carga del Excel actualiza Carne y Pescado / Marisco.
+- Previsualiza y publica las dos categorías conjuntamente.
+- Reconoce las rutas `/stock/` aunque WordPress no haya regenerado los enlaces permanentes.
+- Añade un botón manual para reparar enlaces y accesos de comprobación.
+- Identifica claramente la versión del plugin frente a la versión de WordPress.
+
+## 0.6.0 — Ofertas (planificada)
 
 - Gestión separada de ofertas desde WordPress.
 - Activación y caducidad de ofertas.

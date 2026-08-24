@@ -12,6 +12,7 @@ final class FRN_Admin_Importer
         add_action('admin_post_frn_sp_preview', [$this, 'preview']);
         add_action('admin_post_frn_sp_publish', [$this, 'publish']);
         add_action('admin_post_frn_sp_save_products', [$this, 'save_products']);
+        add_action('admin_post_frn_sp_repair_routes', [$this, 'repair_routes']);
     }
 
     public function menu(): void
@@ -26,23 +27,27 @@ final class FRN_Admin_Importer
         $preview = $token ? get_transient(self::PREVIEW_PREFIX . $token) : null;
         ?>
         <div class="wrap">
-            <h1>FRN Stock &amp; Prices</h1>
-            <p>Usa el Excel maestro de FRN. El plugin seleccionará automáticamente la pestaña CARNE_IMPORT o PESCADO_IMPORT según la landing elegida.</p>
+            <h1>FRN Stock &amp; Prices <small style="font-size:13px;color:#646970">Plugin v<?php echo esc_html(FRN_SP_VERSION); ?></small></h1>
+            <div class="notice notice-info inline"><p><strong>Una sola importación actualiza las dos categorías.</strong> El plugin leerá automáticamente las pestañas CARNE_IMPORT y PESCADO_IMPORT del mismo Excel.</p></div>
             <?php if (isset($_GET['published'])) : ?>
-                <div class="notice notice-success"><p><?php echo esc_html((int) $_GET['published']); ?> referencias publicadas.</p></div>
+                <div class="notice notice-success"><p><strong>Catálogo actualizado:</strong> <?php echo esc_html((int) ($_GET['carne'] ?? 0)); ?> de Carne + <?php echo esc_html((int) ($_GET['pescado'] ?? 0)); ?> de Pescado / Marisco = <?php echo esc_html((int) $_GET['published']); ?> referencias.</p></div>
             <?php endif; ?>
             <?php if (isset($_GET['saved'])) : ?>
                 <div class="notice notice-success"><p>Los cambios manuales se han guardado correctamente.</p></div>
             <?php endif; ?>
+            <?php if (isset($_GET['routes_repaired'])) : ?>
+                <div class="notice notice-success"><p>Los enlaces del catálogo se han reparado.</p></div>
+            <?php endif; ?>
+            <p><a class="button" href="<?php echo esc_url(home_url('/stock/')); ?>" target="_blank">Comprobar Productos y stock</a> <a class="button" href="<?php echo esc_url(home_url('/stock/pescado-marisco/')); ?>" target="_blank">Comprobar Pescado / Marisco</a> <a class="button" href="<?php echo esc_url(home_url('/stock/carne/')); ?>" target="_blank">Comprobar Carne</a></p>
             <form method="post" enctype="multipart/form-data" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="frn_sp_preview">
                 <?php wp_nonce_field('frn_sp_preview'); ?>
                 <table class="form-table"><tbody>
-                    <tr><th><label for="category">Landing</label></th><td><select id="category" name="category"><option value="pescado-marisco">Pescado / Marisco</option><option value="carne">Carne</option></select></td></tr>
-                    <tr><th><label for="catalog_file">Excel maestro</label></th><td><input id="catalog_file" type="file" name="catalog_file" accept=".xlsx,.xls,.csv" required><p class="description">Puedes subir el mismo archivo para las dos landings. Se importan todas las filas y Publicar = SI/NO controla si se ven en la web.</p></td></tr>
+                    <tr><th><label for="catalog_file">1. Selecciona el Excel maestro</label></th><td><input id="catalog_file" type="file" name="catalog_file" accept=".xlsx,.xls" required><p class="description">Debe contener las pestañas CARNE_IMPORT y PESCADO_IMPORT. Publicar = SI/NO controla si cada producto se ve en la web.</p></td></tr>
                 </tbody></table>
-                <?php submit_button('Previsualizar importación'); ?>
+                <?php submit_button('2. Previsualizar las dos categorías'); ?>
             </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:-54px;margin-left:330px"><input type="hidden" name="action" value="frn_sp_repair_routes"><?php wp_nonce_field('frn_sp_repair_routes'); ?><?php submit_button('Reparar enlaces del catálogo', 'secondary', 'submit', false); ?></form>
             <?php if (is_array($preview)) : $this->preview_table($token, $preview); endif; ?>
             <?php $this->product_editor(); ?>
         </div>
@@ -51,16 +56,17 @@ final class FRN_Admin_Importer
 
     private function preview_table(string $token, array $preview): void
     {
-        $visible = array_filter($preview['rows'], static fn(array $row): bool => $row['publish']);
-        $hidden = count($preview['rows']) - count($visible);
-        $invalid = count(array_filter($preview['rows'], static fn(array $row): bool => !$row['valid']));
+        $all_rows = array_merge($preview['catalogs']['carne'], $preview['catalogs']['pescado-marisco']);
+        $visible = array_filter($all_rows, static fn(array $row): bool => $row['publish']);
+        $hidden = count($all_rows) - count($visible);
+        $invalid = count(array_filter($all_rows, static fn(array $row): bool => !$row['valid']));
         ?>
         <hr><h2>Previsualización</h2>
-        <p><strong><?php echo esc_html(count($preview['rows'])); ?></strong> filas detectadas · <strong><?php echo esc_html(count($visible)); ?></strong> visibles · <strong><?php echo esc_html($hidden); ?></strong> ocultas · <strong><?php echo esc_html($invalid); ?></strong> con errores · Archivo: <?php echo esc_html($preview['filename']); ?></p>
+        <p><strong><?php echo esc_html(count($preview['catalogs']['carne'])); ?></strong> Carne + <strong><?php echo esc_html(count($preview['catalogs']['pescado-marisco'])); ?></strong> Pescado / Marisco = <strong><?php echo esc_html(count($all_rows)); ?></strong> referencias · <strong><?php echo esc_html(count($visible)); ?></strong> visibles · <strong><?php echo esc_html($hidden); ?></strong> ocultas · <strong><?php echo esc_html($invalid); ?></strong> con errores · Archivo: <?php echo esc_html($preview['filename']); ?></p>
         <div style="max-height:480px;overflow:auto"><table class="widefat striped"><thead><tr><th>Publicar</th><th>Estado</th><th>Código</th><th>Marca</th><th>Producto</th><th>Stock kg</th><th>Precio €/kg</th><th>Oferta</th></tr></thead><tbody>
-        <?php foreach ($preview['rows'] as $row) : ?><tr><td><strong><?php echo $row['publish'] ? 'Sí' : 'No'; ?></strong></td><td><?php echo !$row['valid'] ? '⚠ ' . esc_html(implode(', ', $row['errors'])) : esc_html($row['status'] ?: 'OK'); ?></td><td><?php echo esc_html($row['code']); ?></td><td><?php echo esc_html($row['brand']); ?></td><td><?php echo esc_html($row['name']); ?></td><td><?php echo esc_html(number_format_i18n($row['stock'], 2)); ?></td><td><?php echo (float) $row['price'] <= 0 ? 'Sin precio' : esc_html(number_format_i18n($row['price'], 2)); ?></td><td><?php echo $row['featured'] ? 'Sí' : 'No'; ?></td></tr><?php endforeach; ?>
+        <?php foreach ($preview['catalogs'] as $category => $rows) : ?><tr><td colspan="8"><strong><?php echo $category === 'carne' ? 'CARNE' : 'PESCADO / MARISCO'; ?></strong></td></tr><?php foreach ($rows as $row) : ?><tr><td><strong><?php echo $row['publish'] ? 'Sí' : 'No'; ?></strong></td><td><?php echo !$row['valid'] ? '⚠ ' . esc_html(implode(', ', $row['errors'])) : esc_html($row['status'] ?: 'OK'); ?></td><td><?php echo esc_html($row['code']); ?></td><td><?php echo esc_html($row['brand']); ?></td><td><?php echo esc_html($row['name']); ?></td><td><?php echo esc_html(number_format_i18n($row['stock'], 2)); ?></td><td><?php echo (float) $row['price'] <= 0 ? 'Sin precio' : esc_html(number_format_i18n($row['price'], 2)); ?></td><td><?php echo $row['featured'] ? 'Sí' : 'No'; ?></td></tr><?php endforeach; endforeach; ?>
         </tbody></table></div>
-        <?php if ($invalid === 0 && count($preview['rows']) > 0) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:20px"><input type="hidden" name="action" value="frn_sp_publish"><input type="hidden" name="preview" value="<?php echo esc_attr($token); ?>"><?php wp_nonce_field('frn_sp_publish_' . $token); ?><?php submit_button('Importar catálogo completo', 'primary'); ?></form><?php endif; ?>
+        <?php if ($invalid === 0 && count($all_rows) > 0) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:20px"><input type="hidden" name="action" value="frn_sp_publish"><input type="hidden" name="preview" value="<?php echo esc_attr($token); ?>"><?php wp_nonce_field('frn_sp_publish_' . $token); ?><?php submit_button('3. Publicar Carne y Pescado / Marisco', 'primary'); ?></form><?php endif; ?>
         <?php
     }
 
@@ -68,10 +74,9 @@ final class FRN_Admin_Importer
     {
         $this->guard('frn_sp_preview');
         if (empty($_FILES['catalog_file']['tmp_name'])) { wp_die('No se recibió ningún archivo.'); }
-        $category = in_array($_POST['category'] ?? '', ['pescado-marisco','carne'], true) ? $_POST['category'] : 'pescado-marisco';
-        $rows = $this->read_file($_FILES['catalog_file']['tmp_name'], $_FILES['catalog_file']['name'], $category);
+        $catalogs = $this->read_workbook($_FILES['catalog_file']['tmp_name'], $_FILES['catalog_file']['name']);
         $token = wp_generate_password(20, false, false);
-        set_transient(self::PREVIEW_PREFIX . $token, ['category'=>$category,'filename'=>sanitize_file_name($_FILES['catalog_file']['name']),'rows'=>$rows], HOUR_IN_SECONDS);
+        set_transient(self::PREVIEW_PREFIX . $token, ['filename'=>sanitize_file_name($_FILES['catalog_file']['name']),'catalogs'=>$catalogs], HOUR_IN_SECONDS);
         wp_safe_redirect(admin_url('admin.php?page=frn-stock-prices&preview=' . rawurlencode($token))); exit;
     }
 
@@ -81,11 +86,16 @@ final class FRN_Admin_Importer
         $this->guard('frn_sp_publish_' . $token);
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
         if (!$preview) { wp_die('La previsualización ha caducado.'); }
-        $rows = array_values($preview['rows']);
-        if (!$rows || array_filter($rows, static fn(array $row): bool => !$row['valid'])) { wp_die('No hay filas válidas para publicar.'); }
-        $count = (new FRN_Catalog_Repository())->publish($preview['category'], $preview['filename'], $rows);
+        $carne = array_values($preview['catalogs']['carne'] ?? []);
+        $pescado = array_values($preview['catalogs']['pescado-marisco'] ?? []);
+        $all_rows = array_merge($carne, $pescado);
+        if (!$carne || !$pescado || array_filter($all_rows, static fn(array $row): bool => !$row['valid'])) { wp_die('Falta una de las dos categorías o existen filas no válidas.'); }
+        $repository = new FRN_Catalog_Repository();
+        $carne_count = $repository->publish('carne', $preview['filename'], $carne);
+        $pescado_count = $repository->publish('pescado-marisco', $preview['filename'], $pescado);
+        $count = $carne_count + $pescado_count;
         delete_transient(self::PREVIEW_PREFIX . $token);
-        wp_safe_redirect(admin_url('admin.php?page=frn-stock-prices&published=' . $count)); exit;
+        wp_safe_redirect(admin_url('admin.php?page=frn-stock-prices&published=' . $count . '&carne=' . $carne_count . '&pescado=' . $pescado_count)); exit;
     }
 
     private function guard(string $nonce): void
@@ -94,24 +104,28 @@ final class FRN_Admin_Importer
         check_admin_referer($nonce);
     }
 
-    private function read_file(string $path, string $name, string $category): array
+    private function read_workbook(string $path, string $name): array
     {
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-        if ($extension === 'csv') {
-            $handle = fopen($path, 'rb'); $raw = [];
-            while (($line = fgetcsv($handle, 0, ';')) !== false) { $raw[] = $line; }
-            fclose($handle);
-        } else {
-            $autoload = FRN_SP_PATH . 'vendor/autoload.php';
-            if (!file_exists($autoload)) { wp_die('Falta instalar las dependencias del plugin con Composer.'); }
-            require_once $autoload;
-            $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
-            $sheetName = $category === 'carne' ? 'CARNE_IMPORT' : 'PESCADO_IMPORT';
-            $sheet = $workbook->getSheetByName($sheetName) ?: $workbook->getActiveSheet();
+        if (!in_array($extension, ['xlsx', 'xls'], true)) { wp_die('Sube el Excel maestro en formato XLSX o XLS.'); }
+        $autoload = FRN_SP_PATH . 'vendor/autoload.php';
+        if (!file_exists($autoload)) { wp_die('Falta instalar las dependencias del plugin con Composer.'); }
+        require_once $autoload;
+        $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+        $catalogs = [];
+        foreach (['carne' => 'CARNE_IMPORT', 'pescado-marisco' => 'PESCADO_IMPORT'] as $category => $sheet_name) {
+            $sheet = $workbook->getSheetByName($sheet_name);
+            if (!$sheet) { wp_die('El Excel no contiene la pestaña obligatoria ' . esc_html($sheet_name) . '.'); }
             // Read the underlying numeric values, not locale-formatted strings.
             // This prevents 3,252.56 kg becoming 3.25 kg during import.
             $raw = $sheet->toArray(null, true, false, false);
+            $catalogs[$category] = $this->rows_from_raw($raw);
         }
+        return $catalogs;
+    }
+
+    private function rows_from_raw(array $raw): array
+    {
         if (count($raw) < 2) { return []; }
         $headers = array_map([$this, 'normalize_header'], array_shift($raw));
         $rows = [];
@@ -140,6 +154,14 @@ final class FRN_Admin_Importer
             ];
         }
         return $rows;
+    }
+
+    public function repair_routes(): void
+    {
+        $this->guard('frn_sp_repair_routes');
+        FRN_Stock_Prices::instance()->register_routes();
+        flush_rewrite_rules();
+        wp_safe_redirect(admin_url('admin.php?page=frn-stock-prices&routes_repaired=1')); exit;
     }
 
     private function normalize_header(mixed $value): string

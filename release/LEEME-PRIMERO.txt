@@ -1,14 +1,14 @@
-FRN · PAQUETE COMPLETO v0.4
+FRN · PAQUETE COMPLETO v0.5
 ===========================
 
 Este paquete contiene exactamente dos plugins instalables y un Excel maestro.
-No instales el archivo FRN-PACK-COMPLETO-v0.4.zip directamente en WordPress:
+No instales el archivo FRN-PACK-COMPLETO-v0.5.zip directamente en WordPress:
 primero ábrelo y utiliza los archivos numerados de su interior.
 
 PASO 1 · ACTUALIZAR STOCK Y PRECIOS
 -----------------------------------
 En WordPress ve a Plugins > Añadir plugin > Subir plugin.
-Instala 01-INSTALAR-FRN-STOCK-PRECIOS-v0.4.0.zip.
+Instala 01-INSTALAR-FRN-STOCK-PRECIOS-v0.5.0.zip.
 Si WordPress pregunta si deseas reemplazar la versión actual, confirma.
 Activa el plugin.
 
@@ -25,12 +25,10 @@ PASO 3 · IMPORTAR LOS PRODUCTOS
 -------------------------------
 En el menú izquierdo abre FRN Stock.
 
-1. Selecciona Carne.
-2. Sube 03-IMPORTAR-FRN-CATALOGO-v0.4.xlsx.
-3. Pulsa Previsualizar importación.
-4. Comprueba 34 filas y pulsa Importar catálogo completo.
-5. Repite seleccionando Pescado / Marisco.
-6. Comprueba 46 filas y pulsa Importar catálogo completo.
+1. Sube 03-IMPORTAR-FRN-CATALOGO-v0.4.xlsx.
+2. Pulsa Previsualizar las dos categorías.
+3. Comprueba 34 filas de Carne y 46 de Pescado / Marisco.
+4. Pulsa Publicar Carne y Pescado / Marisco.
 
 Resultado esperado: 80 referencias visibles. Los productos sin precio se
 muestran como «Consultar precio» y los que no tienen stock como «Consultar stock».
@@ -54,5 +52,5 @@ abre la web en una ventana privada. No necesitas tocar el tema ni crear páginas
 
 ACTUALIZACIÓN SEMANAL
 ---------------------
-Cada lunes usa el mismo Excel maestro actualizado y repite la importación de
-Carne y Pescado / Marisco. Siempre previsualiza antes de importar.
+Cada lunes usa el mismo Excel maestro actualizado y realiza una sola importación.
+Siempre previsualiza las dos categorías antes de publicar.

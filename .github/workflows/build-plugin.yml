@@ -27,13 +27,13 @@ jobs:
       - name: Create clear installable pack
         run: |
           mkdir -p build
-          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v0.4.0.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
+          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v0.5.0.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
           zip -r build/02-INSTALAR-FRN-HOME-v1.0.0.zip frn-home
           cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
           cd build
-          zip -r ../FRN-PLUGINS-v0.4.zip .
+          zip -r ../FRN-PLUGINS-v0.5.zip .
       - uses: actions/upload-artifact@v4
         with:
-          name: FRN-PLUGINS-v0.4
-          path: FRN-PLUGINS-v0.4.zip
+          name: FRN-PLUGINS-v0.5
+          path: FRN-PLUGINS-v0.5.zip
           if-no-files-found: error
