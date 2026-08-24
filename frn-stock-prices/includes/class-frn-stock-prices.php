@@ -62,11 +62,10 @@ final class FRN_Stock_Prices
 
     public function enqueue_assets(): void
     {
-        if (!in_array(get_query_var('frn_catalog'), ['pescado-marisco', 'carne'], true)) {
-            return;
-        }
         wp_enqueue_style('frn-stock-prices', FRN_SP_URL . 'assets/catalog.css', [], FRN_SP_VERSION);
-        wp_enqueue_script('frn-stock-prices', FRN_SP_URL . 'assets/catalog.js', [], FRN_SP_VERSION, true);
+        if (in_array(get_query_var('frn_catalog'), ['pescado-marisco', 'carne'], true)) {
+            wp_enqueue_script('frn-stock-prices', FRN_SP_URL . 'assets/catalog.js', [], FRN_SP_VERSION, true);
+        }
     }
 
     public function home_buttons(): string
