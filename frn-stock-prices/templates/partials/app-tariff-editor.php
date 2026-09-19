@@ -78,6 +78,11 @@ $renderTariffLines = static function(array $rows, string $group) use ($canViewCo
         <div><small>Tarifa <?php echo esc_html($scopeLabel); ?></small><h2><?php echo esc_html($tariff['title']); ?></h2></div>
         <a class="frn-text-link" href="<?php echo esc_url(add_query_arg('tab','tarifas',home_url('/stock/'))); ?>">← Volver</a>
     </div>
+    <div class="frn-source-chip frn-source-chip-inline">
+        <span>Origen de esta tarifa</span>
+        <strong><?php echo esc_html((string)($tariff['source_file'] ?? '')); ?></strong>
+        <small>Esta tarifa es una copia de la semana guardada al momento de crearla. Volver atrás no cambia su origen.</small>
+    </div>
 
     <form method="post" action="<?php echo esc_url($postUrl); ?>" id="frn-tariff-form">
         <input type="hidden" name="tariff_id" value="<?php echo (int)$tariff['id']; ?>">
