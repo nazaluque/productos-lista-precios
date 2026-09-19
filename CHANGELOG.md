@@ -1,5 +1,19 @@
 # FRN Stock & Prices
 
+## 1.1.2 — Trazabilidad semanal, cockpit ancho y PDF refinado
+
+- Muestra el nombre del Excel seleccionado antes de previsualizar y confirma que está listo.
+- Muestra de forma persistente el último Excel semanal publicado, fecha/hora, usuario y referencias activas.
+- Al crear o editar una tarifa se muestra claramente el archivo semanal de origen.
+- Ensancha el cockpit para aprovechar mejor pantallas grandes y evita saltos de línea en precios, euros, stock y costes.
+- Mantiene los productos en orden alfabético independientemente de que estén marcados como OFERTA.
+- OFERTA deja de alterar el orden y se muestra con un badge limpio sin estrella.
+- Añade fondos fotográficos propios distintos para Carne y Pescado/Marisco en el header del PDF.
+- Añade marca de agua FRN en todas las páginas del PDF.
+- Aumenta la presencia de CARNE / PESCADO Y MARISCO y de la fecha en el encabezado.
+- Aumenta dos puntos el footer del PDF y lo mantiene centrado.
+- Conserva “Consultar precio” cuando una referencia visible no tiene precio comercial.
+
 ## 1.1.1 — Ajustes finales de PDF comercial
 
 - Mantiene intacta la tipografía general del documento.
