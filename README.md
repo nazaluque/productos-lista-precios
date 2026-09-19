@@ -1,66 +1,89 @@
 # FRN Stock & Prices
 
-Herramienta privada de **frnatlantico.es** para preparar stock, precios y tarifas comerciales semanales de FRN Atlántico.
+Herramienta privada de **frnatlantico.es** para preparar stock, precios y tarifas comerciales de FRN Atlántico.
 
 La web corporativa **frnatlantico.com no forma parte de este proyecto**.
 
-## Arquitectura 0.8
+## Arquitectura 1.0
 
-La operación diaria ocurre 100% en el frontend:
+La aplicación funciona 100% en frontend:
 
-- `/stock/acceso/` — login privado FRN.
-- `/stock/` — aplicación interna.
-- Tab **Importar Excel semanal**.
-- Tab **Crear PDF**.
+- `/stock/acceso/` — login privado.
+- `/stock/` — herramienta interna.
+- **Datos semanales** — Stocks + Tarifas de precios.
+- **Crear PDF** — combina stock vigente y lista comercial.
 
-Los usuarios con rol **FRN Comercial** no acceden al panel general de WordPress.
+## Dos fuentes independientes
 
-## Flujo semanal
+### STOCKS
 
-1. Subir uno o varios Excel de Odoo.
-2. Previsualizar.
-3. Publicar datos.
-4. Editar en una tabla:
-   - código;
-   - marca;
-   - producto;
-   - stock;
-   - precio;
-   - oferta;
-   - incluir/excluir.
-5. Crear una tarifa semanal.
-6. Ajustar qué se imprime.
-7. Descargar PDF o CSV.
+Se importa el archivo semanal de Odoo.
+
+- Actualiza cantidades.
+- Un producto normal con stock 0 queda destildado.
+- Un producto que no aparece en el stock de esa semana queda con stock 0 y destildado.
+- No modifica las tarifas comerciales.
+
+### TARIFAS DE PRECIOS
+
+Se importa otro Excel independiente.
+
+Cada importación se guarda con un nombre, por ejemplo:
+
+- General 21/09/2026
+- Valdepeice
+- Madrid
+- HORECA Norte
+
+Una tarifa de precios no modifica el stock.
+
+## Generación de PDF
+
+Al crear una tarifa se selecciona:
+
+1. Carne o Pescado / Marisco.
+2. Tarifa de precios.
+3. Formato General, Distribuidor, Disponibilidad o Personalizado.
+
+La aplicación crea un snapshot editable.
+
+Reglas:
+
+- línea destildada = no sale;
+- precio 0 = celda vacía;
+- stock oculto = columna eliminada;
+- precio oculto = columna eliminada;
+- PDF/CSV guardan los cambios antes de exportar;
+- filas con bandas alternas para lectura;
+- Próximos ingresos aparece siempre.
 
 ## Próximos ingresos
 
-Una referencia cuyo código esté formado exclusivamente por **3 o más X** se considera un producto todavía sin código definitivo:
+Código formado solo por tres o más X:
 
-- `XXX`
-- `XXXX`
-- `XXXXX`
-- etc.
+- XXX
+- XXXX
+- XXXXX
 
-Se guarda como **Próximo ingreso**, aparece debajo de los productos actuales y el PDF crea una sección **PRÓXIMOS INGRESOS**.
-
-Se permiten varias referencias distintas con el mismo código provisional `XXX`.
+Se clasifica como **Próximo ingreso** aunque todavía no tenga stock.
 
 ## Seguridad
 
-- Login WordPress.
-- Rol específico `FRN Comercial`.
+- Rol `FRN Comercial`.
 - Sin acceso al wp-admin para ese rol.
-- Aplicación privada con `noindex, nofollow, noarchive`.
-- Páginas marcadas para no ser cacheadas.
-- Administradores conservan su acceso normal a WordPress.
+- Aplicación `noindex, nofollow, noarchive`.
+- Administradores mantienen acceso normal a WordPress.
 
 ## Excel
 
-Mientras se termina de adaptar al export exacto de Odoo, el parser acepta:
+El parser acepta XLSX/XLS y detecta columnas habituales de:
 
-- `CARNE_IMPORT` / `PESCADO_IMPORT`;
-- uno o varios Excel;
-- detección por nombre de archivo o pestaña;
-- detección auxiliar por códigos C... y P....
+- código / referencia / SKU;
+- producto / descripción;
+- stock / cantidad / existencia;
+- precio / tarifa / €/kg;
+- marca;
+- oferta;
+- visible/publicar.
 
-No guardar stocks ni precios confidenciales en GitHub.
+Cuando se disponga del export definitivo de Odoo se pueden afinar aliases sin cambiar la arquitectura.
