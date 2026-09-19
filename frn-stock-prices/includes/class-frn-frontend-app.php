@@ -31,6 +31,7 @@ final class FRN_Frontend_App
         add_action('admin_post_frn_front_tariff_pdf', [$this, 'tariff_pdf']);
         add_action('admin_post_frn_front_tariff_csv', [$this, 'tariff_csv']);
         add_action('admin_post_frn_front_settings', [$this, 'save_settings']);
+        add_action('admin_post_frn_front_user_save', [$this, 'user_save']);
     }
 
     public function render(): void
@@ -38,7 +39,7 @@ final class FRN_Frontend_App
         $this->guard_capability();
 
         $tab = sanitize_key($_GET['tab'] ?? 'importar');
-        if (!in_array($tab, ['importar','tarifas','tarifa'], true)) {
+        if (!in_array($tab, ['importar','tarifas','tarifa','usuarios'], true)) {
             $tab = 'importar';
         }
 
@@ -56,6 +57,12 @@ final class FRN_Frontend_App
             'tariff' => $tariffId ? $this->tariffs->get_tariff($tariffId) : null,
             'tariffLines' => $tariffId ? $this->tariffs->get_lines($tariffId) : [],
             'messages' => $this->messages(),
+            'canEditStock' => current_user_can('frn_edit_stock'),
+            'canEditPrices' => current_user_can('frn_edit_prices'),
+            'canViewCost' => current_user_can('frn_view_cost'),
+            'canExport' => current_user_can('frn_export_tariffs'),
+            'canManageUsers' => current_user_can('frn_manage_users'),
+            'frnUsers' => current_user_can('frn_manage_users') ? get_users(['role__in'=>['frn_administrator','frn_stock','frn_director_comercial','frn_comercial','frn_consulta'],'orderby'=>'display_name']) : [],
         ];
 
         extract($data, EXTR_SKIP);
@@ -64,7 +71,7 @@ final class FRN_Frontend_App
 
     public function preview_stock(): void
     {
-        $this->guard_post('frn_front_preview_stock');
+        $this->guard_post('frn_front_preview_stock', 'frn_edit_stock');
 
         try {
             $parsed = $this->excel->parse_stock_files($_FILES['stock_files'] ?? []);
@@ -82,7 +89,7 @@ final class FRN_Frontend_App
     public function publish_stock(): void
     {
         $token = sanitize_key($_POST['preview'] ?? '');
-        $this->guard_post('frn_front_publish_stock_' . $token);
+        $this->guard_post('frn_front_publish_stock_' . $token, 'frn_edit_stock');
 
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
 
@@ -217,13 +224,14 @@ final class FRN_Frontend_App
                 'brand' => sanitize_text_field((string) ($row['brand'] ?? '')),
                 'name' => sanitize_text_field((string) ($row['name'] ?? '')),
                 'stock' => $this->number($row['stock'] ?? 0),
-                'featured' => false,
+                'featured' => !empty($row['featured']),
                 'visible' => !empty($row['visible']),
+                'price' => $this->number($row['price'] ?? 0),
             ];
         }
 
         try {
-            $this->catalog->update_many($rows);
+            $this->catalog->update_many($rows, current_user_can('frn_edit_stock'), current_user_can('frn_edit_prices'));
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
         }
@@ -231,9 +239,57 @@ final class FRN_Frontend_App
         $this->redirect(['tab' => 'importar', 'saved' => 1]);
     }
 
+    public function user_save(): void
+    {
+        $this->guard_post('frn_front_user_save', 'frn_manage_users');
+
+        $userId = absint($_POST['user_id'] ?? 0);
+        $login = sanitize_user((string) ($_POST['user_login'] ?? ''));
+        $email = sanitize_email((string) ($_POST['user_email'] ?? ''));
+        $displayName = sanitize_text_field((string) ($_POST['display_name'] ?? ''));
+        $password = (string) ($_POST['user_password'] ?? '');
+        $role = sanitize_key((string) ($_POST['frn_role'] ?? 'frn_consulta'));
+
+        $allowedRoles = ['frn_administrator','frn_stock','frn_director_comercial','frn_comercial','frn_consulta'];
+        if (!in_array($role, $allowedRoles, true)) {
+            $this->redirect(['tab'=>'usuarios','error'=>rawurlencode('Perfil FRN no válido.')]);
+        }
+
+        if ($userId > 0) {
+            $user = get_user_by('id', $userId);
+            if (!$user) {
+                $this->redirect(['tab'=>'usuarios','error'=>rawurlencode('Usuario no encontrado.')]);
+            }
+            $payload = ['ID'=>$userId, 'display_name'=>$displayName ?: $user->display_name];
+            if ($email !== '') { $payload['user_email'] = $email; }
+            if ($password !== '') { $payload['user_pass'] = $password; }
+            $result = wp_update_user($payload);
+            if (is_wp_error($result)) {
+                $this->redirect(['tab'=>'usuarios','error'=>rawurlencode($result->get_error_message())]);
+            }
+            $user->set_role($role);
+        } else {
+            if ($login === '' || $email === '' || $password === '') {
+                $this->redirect(['tab'=>'usuarios','error'=>rawurlencode('Usuario, email y contraseña son obligatorios.')]);
+            }
+            $result = wp_insert_user([
+                'user_login'=>$login,
+                'user_email'=>$email,
+                'display_name'=>$displayName ?: $login,
+                'user_pass'=>$password,
+                'role'=>$role,
+            ]);
+            if (is_wp_error($result)) {
+                $this->redirect(['tab'=>'usuarios','error'=>rawurlencode($result->get_error_message())]);
+            }
+        }
+
+        $this->redirect(['tab'=>'usuarios','user_saved'=>1]);
+    }
+
     public function tariff_create(): void
     {
-        $this->guard_post('frn_front_tariff_create');
+        $this->guard_post('frn_front_tariff_create', 'frn_export_tariffs');
 
         $scope = sanitize_key((string) ($_POST['scope'] ?? ''));
         if (!in_array($scope, ['carne','pescado-marisco'], true)) {
@@ -267,7 +323,7 @@ final class FRN_Frontend_App
     public function tariff_save(): void
     {
         $id = absint($_POST['tariff_id'] ?? 0);
-        $this->guard_post('frn_front_tariff_save_' . $id);
+        $this->guard_post('frn_front_tariff_save_' . $id, 'frn_export_tariffs');
 
         try {
             $this->save_tariff_request($id);
@@ -306,7 +362,7 @@ final class FRN_Frontend_App
         $id = absint($_POST['tariff_id'] ?? $_GET['tariff_id'] ?? 0);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->guard_post('frn_front_tariff_save_' . $id);
+            $this->guard_post('frn_front_tariff_save_' . $id, 'frn_export_tariffs');
             try {
                 $this->save_tariff_request($id);
             } catch (Throwable $e) {
@@ -354,7 +410,7 @@ final class FRN_Frontend_App
         $id = absint($_POST['tariff_id'] ?? $_GET['tariff_id'] ?? 0);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->guard_post('frn_front_tariff_save_' . $id);
+            $this->guard_post('frn_front_tariff_save_' . $id, 'frn_export_tariffs');
             try {
                 $this->save_tariff_request($id);
             } catch (Throwable $e) {
@@ -624,6 +680,9 @@ final class FRN_Frontend_App
         if (isset($_GET['settings_saved'])) {
             $messages[] = ['success', 'Datos comerciales del PDF guardados.'];
         }
+        if (isset($_GET['user_saved'])) {
+            $messages[] = ['success', 'Usuario FRN guardado.'];
+        }
         if (!empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
         }
@@ -633,20 +692,22 @@ final class FRN_Frontend_App
 
     private function guard_capability(): void
     {
-        if (!is_user_logged_in() || !current_user_can('frn_manage_stock')) {
+        if (!is_user_logged_in() || !current_user_can('frn_access_tool')) {
             wp_die('No autorizado.', 403);
         }
     }
 
-    private function guard_post(string $nonce): void
+    private function guard_post(string $nonce, string $capability = 'frn_access_tool'): void
     {
         $this->guard_capability();
+        if (!current_user_can($capability)) { wp_die('No autorizado.', 403); }
         check_admin_referer($nonce);
     }
 
-    private function guard_get(string $nonce): void
+    private function guard_get(string $nonce, string $capability = 'frn_export_tariffs'): void
     {
         $this->guard_capability();
+        if (!current_user_can($capability)) { wp_die('No autorizado.', 403); }
         check_admin_referer($nonce);
     }
 
