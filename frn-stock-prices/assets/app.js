@@ -46,7 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const syncPriceRows = () => {
     if (!globalPrice) return;
-    setChecked('.frn-line-price', globalPrice.checked);
+    document.querySelectorAll('.frn-line-price').forEach((checkbox) => {
+      const row = checkbox.closest('tr');
+      const price = Number.parseFloat(row?.dataset.price || '0');
+      checkbox.checked = globalPrice.checked && price > 0;
+    });
   };
 
   if (globalStock) {
