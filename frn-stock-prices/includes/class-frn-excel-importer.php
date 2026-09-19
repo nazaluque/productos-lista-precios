@@ -134,8 +134,12 @@ final class FRN_Excel_Importer
 
             if ($code === '' && $nameValue === '') { continue; }
 
-            if ($code === '' && $mode !== 'price') {
-                $code = strtoupper(substr($category, 0, 1)) . '-ROW-' . ($index + 1);
+            // Native Odoo stock export arrives as:
+            // [P00663] FRN: PULPO T3 LIMPIO...
+            // Extract the stable SKU from the product label automatically.
+            if ($code === '' && preg_match('/^\\[([A-Z0-9]+)\\]\\s*(.+)$/i', $nameValue, $match)) {
+                $code = strtoupper(trim($match[1]));
+                $nameValue = trim($match[2]);
             }
 
             $stock = $this->number($item['stock'] ?? null, true);
@@ -158,9 +162,21 @@ final class FRN_Excel_Importer
             }
 
             $errors = [];
+
+            if ($code === '') {
+                $errors[] = $mode === 'price'
+                    ? 'falta código de producto'
+                    : 'no se pudo leer el código Odoo';
+            }
+
+            if ($incoming && $nameValue === '') {
+                $errors[] = 'próximo ingreso sin nombre';
+            }
+
             if ($mode !== 'price' && !$incoming && $stock === null) {
                 $errors[] = 'stock no válido';
             }
+
             if ($price !== null && $price < 0) {
                 $errors[] = 'precio inválido';
             }
@@ -266,7 +282,7 @@ final class FRN_Excel_Importer
         return match (true) {
             in_array($value, ['codigo','código','id','referencia','ref','sku','cod','cod.'], true) => 'code',
             str_contains($value, 'marca') || str_contains($value, 'brand') => 'brand',
-            in_array($value, ['producto','nombre','descripcion','descripción','product','description','articulo','artículo'], true) => 'product',
+            in_array($value, ['producto','productos','nombre','descripcion','descripción','product','products','description','articulo','artículo'], true) => 'product',
             str_contains($value, 'stock') || str_contains($value, 'cantidad') || str_contains($value, 'disponible') || str_contains($value, 'existencia') => 'stock',
             str_contains($value, 'precio') || str_contains($value, 'price') || str_contains($value, 'tarifa') || str_contains($value, '€/kg') || str_contains($value, 'eur/kg') => 'price',
             in_array($value, ['oferta','destacado','featured','promocion','promoción'], true) => 'featured',
