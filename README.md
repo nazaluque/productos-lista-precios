@@ -1,55 +1,66 @@
 # FRN Stock & Prices
 
-Aplicación WordPress para gestionar el stock semanal, precios B2B y tarifas comerciales de FRN Atlántico en **frnatlantico.es**.
+Herramienta privada de **frnatlantico.es** para preparar stock, precios y tarifas comerciales semanales de FRN Atlántico.
 
-> Este repositorio es independiente de la web corporativa `.com`. La implementación de tarifas se desarrolla aquí para no mezclarla con `nazaluque/frn-atlantico-web`.
+La web corporativa **frnatlantico.com no forma parte de este proyecto**.
+
+## Arquitectura 0.8
+
+La operación diaria ocurre 100% en el frontend:
+
+- `/stock/acceso/` — login privado FRN.
+- `/stock/` — aplicación interna.
+- Tab **Importar Excel semanal**.
+- Tab **Crear PDF**.
+
+Los usuarios con rol **FRN Comercial** no acceden al panel general de WordPress.
 
 ## Flujo semanal
 
-1. Importar el Excel semanal desde **FRN Stock**.
-2. Previsualizar y publicar el catálogo base.
-3. Abrir **FRN Stock → Tarifas semanales**.
-4. Crear una tarifa a partir del catálogo actual.
-5. Elegir qué productos aparecen y qué columnas se muestran.
-6. Ajustar precio o stock solo para esa tarifa, sin modificar el dato original.
-7. Marcar ofertas si corresponde.
-8. Descargar el PDF comercial o el CSV.
-9. La tarifa queda guardada en el histórico.
+1. Subir uno o varios Excel de Odoo.
+2. Previsualizar.
+3. Publicar datos.
+4. Editar en una tabla:
+   - código;
+   - marca;
+   - producto;
+   - stock;
+   - precio;
+   - oferta;
+   - incluir/excluir.
+5. Crear una tarifa semanal.
+6. Ajustar qué se imprime.
+7. Descargar PDF o CSV.
 
-## Catálogos públicos
+## Próximos ingresos
 
-- `/stock/` — centro de productos y stock.
-- `/stock/pescado-marisco/` — Pescado y Marisco.
-- `/stock/carne/` — Carne.
+Una referencia cuyo código esté formado exclusivamente por **3 o más X** se considera un producto todavía sin código definitivo:
 
-## Tarifa semanal v0.6
+- `XXX`
+- `XXXX`
+- `XXXXX`
+- etc.
 
-La versión 0.6 añade:
+Se guarda como **Próximo ingreso**, aparece debajo de los productos actuales y el PDF crea una sección **PRÓXIMOS INGRESOS**.
 
-- histórico de tarifas;
-- snapshot semanal para no perder tarifas anteriores;
-- precio origen vs. precio de tarifa;
-- stock origen vs. stock de tarifa;
-- mostrar/ocultar precio;
-- mostrar/ocultar stock;
-- stock exacto, redondeado, “Disponible” u oculto;
-- incluir/excluir productos;
-- marcar ofertas;
-- orden manual;
-- exportación PDF real mediante Dompdf;
-- exportación CSV;
-- datos de empresa editables desde WordPress;
-- uso automático del logo configurado en WordPress cuando sea PNG/JPG.
+Se permiten varias referencias distintas con el mismo código provisional `XXX`.
 
-## Importación de Odoo
+## Seguridad
 
-El importador actual espera el Excel maestro con las pestañas `CARNE_IMPORT` y `PESCADO_IMPORT`.
+- Login WordPress.
+- Rol específico `FRN Comercial`.
+- Sin acceso al wp-admin para ese rol.
+- Aplicación privada con `noindex, nofollow, noarchive`.
+- Páginas marcadas para no ser cacheadas.
+- Administradores conservan su acceso normal a WordPress.
 
-La interfaz de tarifas ya no depende de ese formato. Cuando dispongamos del **Excel real exportado por Odoo**, se adapta únicamente el parser de importación; el editor, el histórico y los PDF no cambian.
+## Excel
 
-## Plugins
+Mientras se termina de adaptar al export exacto de Odoo, el parser acepta:
 
-- **FRN Stock & Prices**: importación, catálogo, editor de tarifas y exportación.
-- **FRN Home**: portada comercial del dominio .es.
+- `CARNE_IMPORT` / `PESCADO_IMPORT`;
+- uno o varios Excel;
+- detección por nombre de archivo o pestaña;
+- detección auxiliar por códigos C... y P....
 
-No guardar en este repositorio listas de precios o stocks confidenciales de producción. Los Excel reales se cargan desde WordPress y viven en la base de datos/hosting, no en GitHub.
+No guardar stocks ni precios confidenciales en GitHub.
