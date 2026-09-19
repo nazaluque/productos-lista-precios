@@ -175,7 +175,7 @@ final class FRN_Stock_Prices
             wp_die('Este usuario no tiene acceso a la herramienta interna FRN.', 'Acceso restringido', ['response' => 403]);
         }
 
-        return FRN_SP_PATH . 'templates/app.php';
+        return FRN_SP_PATH . 'templates/app-loader.php';
     }
 
     public function enqueue_assets(): void
