@@ -169,7 +169,7 @@ final class FRN_Stock_Prices
         if ((bool) get_option('frn_sp_catalog_protection_enabled', true)) {
             if (!is_user_logged_in()) {
                 $requested = home_url('/' . trim((string) parse_url(wp_unslash($_SERVER['REQUEST_URI'] ?? '/stock/'), PHP_URL_PATH), '/') . '/');
-                $login = add_query_arg('redirect_to', rawurlencode($requested), home_url('/stock/acceso/'));
+                $login = add_query_arg('redirect_to', $requested, home_url('/stock/acceso/'));
                 wp_safe_redirect($login);
                 exit;
             }
