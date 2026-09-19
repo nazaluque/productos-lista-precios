@@ -1,5 +1,21 @@
 # FRN Stock & Prices
 
+## 1.0.0 — Stock y tarifas comerciales separados
+
+- Separa importación de STOCKS e importación de TARIFAS DE PRECIOS.
+- Mantiene el stock vigente independientemente de las listas comerciales.
+- Permite guardar varias tarifas de precios por cliente, zona o campaña.
+- Crea PDFs combinando stock vigente + tarifa elegida.
+- Los productos ausentes del stock semanal o con stock 0 quedan destildados.
+- Los códigos XXX / XXXX / XXXXX... se mantienen como Próximos ingresos.
+- El PDF filtra estrictamente líneas destildadas.
+- Descargar PDF o CSV guarda primero las modificaciones actuales.
+- Los precios 0 se muestran vacíos, nunca como 0,00 €.
+- Añade bandas alternas claro/oscuro en la tabla PDF.
+- Próximos ingresos aparece siempre, incluso sin referencias.
+- Mantiene PDFs separados para Carne y Pescado / Marisco.
+- La operación sigue 100% en frontend para usuarios FRN Comercial.
+
 ## 0.9.0 — Tarifa semanal operativa
 
 - Stock 0 queda destildado por defecto para productos normales.
