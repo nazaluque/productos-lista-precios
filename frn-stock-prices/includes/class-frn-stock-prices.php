@@ -60,6 +60,12 @@ final class FRN_Stock_Prices
             FRN_Catalog_Repository::create_table();
             FRN_Tariff_Repository::create_tables();
             self::ensure_roles();
+
+            if ($installed === '' || version_compare($installed, '0.9.0', '<')) {
+                global $wpdb;
+                $wpdb->query('UPDATE ' . FRN_Catalog_Repository::table() . ' SET visible = 0 WHERE incoming = 0 AND stock_kg <= 0');
+            }
+
             update_option('frn_sp_catalog_protection_enabled', true, false);
             update_option('frn_sp_version', FRN_SP_VERSION, false);
 
