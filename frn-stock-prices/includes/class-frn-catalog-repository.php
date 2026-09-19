@@ -24,6 +24,7 @@ final class FRN_Catalog_Repository
             product_code varchar(80) NOT NULL DEFAULT '',
             brand varchar(160) NOT NULL DEFAULT '',
             product_name varchar(255) NOT NULL,
+            unit varchar(20) NOT NULL DEFAULT '',
             stock_kg decimal(14,2) NOT NULL DEFAULT 0,
             price_kg decimal(12,2) NULL,
             featured tinyint(1) NOT NULL DEFAULT 0,
@@ -118,6 +119,7 @@ final class FRN_Catalog_Repository
                     'product_code' => sanitize_text_field((string) ($row['code'] ?? '')),
                     'brand' => sanitize_text_field((string) ($row['brand'] ?? '')),
                     'product_name' => sanitize_text_field((string) ($row['name'] ?? '')),
+                    'unit' => sanitize_text_field((string) ($row['unit'] ?? '')),
                     'stock_kg' => $stock,
                     'visible' => $visible,
                     'incoming' => $incoming ? 1 : 0,
@@ -131,7 +133,7 @@ final class FRN_Catalog_Repository
                         $table,
                         $data,
                         ['id' => $existingId],
-                        ['%s','%s','%s','%s','%f','%d','%d','%s','%s'],
+                        ['%s','%s','%s','%s','%s','%f','%d','%d','%s','%s'],
                         ['%d']
                     );
                 } else {
@@ -221,6 +223,7 @@ final class FRN_Catalog_Repository
                     'product_code' => $code,
                     'brand' => $brand,
                     'product_name' => $productName,
+                    'unit' => sanitize_text_field((string) ($row['unit'] ?? '')),
                     'stock_kg' => 0,
                     'price_kg' => 0,
                     'featured' => 0,
@@ -228,7 +231,7 @@ final class FRN_Catalog_Repository
                     'incoming' => $incoming ? 1 : 0,
                     'source_file' => sanitize_file_name($filename),
                     'published_at' => $now,
-                ], ['%s','%s','%s','%s','%f','%f','%d','%d','%d','%s','%s']);
+                ], ['%s','%s','%s','%s','%s','%f','%f','%d','%d','%d','%s','%s']);
 
                 if ($result === false || $wpdb->last_error) {
                     throw new RuntimeException($wpdb->last_error ?: 'No se pudo añadir el producto al maestro.');
