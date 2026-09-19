@@ -432,3 +432,64 @@
 @media(max-width:620px){
   .frn-user-row{grid-template-columns:1fr}
 }
+
+
+/* FRN Stock & Prices 1.1.2 · cockpit width and weekly source clarity */
+.frn-app-shell{
+  width:min(1840px,calc(100% - 28px));
+}
+.frn-app-card{padding:26px 24px}
+.frn-app-table{min-width:1320px}
+.frn-master-table{min-width:1320px}
+.frn-tariff-edit-table{min-width:1850px}
+.frn-app-table th,
+.frn-app-table td{white-space:nowrap}
+.frn-app-table td:nth-child(6),
+.frn-app-table th:nth-child(6){white-space:normal}
+.frn-master-table input.frn-wide{width:360px}
+.frn-app-table input[type=text],
+.frn-app-table input[type=number]{width:132px}
+.frn-file-status{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:48px;
+  padding:10px 14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:#07090a;
+  color:#9c988f
+}
+.frn-file-status strong{color:#d8d3ca}
+.frn-file-status.is-ready{
+  border-color:rgba(97,184,120,.55);
+  background:rgba(50,120,70,.10)
+}
+.frn-file-status.is-ready strong{color:#bfe6c9}
+.frn-active-source,.frn-source-chip{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin:0 0 24px;
+  padding:14px 16px;
+  border:1px solid rgba(180,138,69,.28);
+  background:#080a0b
+}
+.frn-active-source>div{display:grid;gap:4px}
+.frn-active-source small,.frn-source-chip span{
+  color:var(--frn-gold-light);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.12em
+}
+.frn-active-source strong,.frn-source-chip strong{color:#f0ece3}
+.frn-active-source>span,.frn-source-chip small{
+  margin-left:auto;
+  color:#8f8b83
+}
+.frn-source-chip{display:grid;grid-template-columns:auto 1fr auto}
+.frn-source-chip-inline{margin-top:-8px}
+@media(max-width:1100px){
+  .frn-app-shell{width:calc(100% - 20px)}
+  .frn-active-source,.frn-source-chip{align-items:flex-start;flex-direction:column;display:flex}
+  .frn-active-source>span,.frn-source-chip small{margin-left:0}
+}
