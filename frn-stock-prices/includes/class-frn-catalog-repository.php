@@ -72,7 +72,7 @@ final class FRN_Catalog_Repository
         return $wpdb->get_results(
             $wpdb->prepare(
                 'SELECT * FROM ' . self::table() . ' WHERE category = %s' . $visibility .
-                ' ORDER BY incoming ASC, featured DESC, product_name ASC',
+                ' ORDER BY incoming ASC, product_name ASC, brand ASC, product_code ASC',
                 $category
             ),
             ARRAY_A
@@ -85,7 +85,7 @@ final class FRN_Catalog_Repository
         $visibility = $include_hidden ? '' : ' WHERE visible = 1';
         return $wpdb->get_results(
             'SELECT * FROM ' . self::table() . $visibility .
-            ' ORDER BY incoming ASC, category ASC, featured DESC, product_name ASC',
+            ' ORDER BY category ASC, incoming ASC, product_name ASC, brand ASC, product_code ASC',
             ARRAY_A
         ) ?: [];
     }
@@ -255,6 +255,44 @@ final class FRN_Catalog_Repository
         }
 
         return $updated;
+    }
+
+    public function latest_import_meta(): array
+    {
+        global $wpdb;
+
+        $row = $wpdb->get_row(
+            'SELECT source_file, imported_at, imported_by
+             FROM ' . self::history_table() . '
+             ORDER BY imported_at DESC, id DESC
+             LIMIT 1',
+            ARRAY_A
+        ) ?: [];
+
+        if (!$row) {
+            return [];
+        }
+
+        $userName = '';
+        $userId = (int) ($row['imported_by'] ?? 0);
+        if ($userId > 0) {
+            $user = get_user_by('id', $userId);
+            if ($user) {
+                $userName = (string) ($user->display_name ?: $user->user_login);
+            }
+        }
+
+        $activeCount = (int) $wpdb->get_var(
+            'SELECT COUNT(*) FROM ' . self::table() . ' WHERE visible = 1'
+        );
+
+        return [
+            'source_file' => (string) ($row['source_file'] ?? ''),
+            'imported_at' => (string) ($row['imported_at'] ?? ''),
+            'imported_by' => $userId,
+            'user_name' => $userName,
+            'active_count' => $activeCount,
+        ];
     }
 
     public function history_for_product(int $productId, int $limit = 30): array
