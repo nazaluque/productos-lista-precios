@@ -1,81 +1,64 @@
-FRN · PAQUETE v1.0 · STOCK + TARIFAS COMERCIALES
-=================================================
+FRN · PAQUETE v1.0.1 · FORMATO REAL ODOO
+=========================================
 
-SOLO PARA
----------
-frnatlantico.es
+SOLO PARA frnatlantico.es
+NO TOCAR frnatlantico.com
 
-NO TOCAR
---------
-frnatlantico.com
+STOCK ODOO
+----------
+La aplicación acepta directamente el formato real probado:
 
-CAMBIO PRINCIPAL
-----------------
-A partir de 1.0 los datos se cargan por separado:
+Pestañas:
+- Carne
+- pescado
 
-1. STOCKS
-   - export semanal de Odoo;
-   - lo que no venga o venga con stock 0 queda destildado;
-   - no modifica precios.
+Cabeceras:
+- Productos
+- Cantidad a la mano
+- Categoría del producto
+- Unidad de medida
+- Marca
+- Modelo
 
-2. TARIFA DE PRECIOS
-   - archivo comercial independiente;
-   - puede guardarse con nombres distintos:
-     General, Valdepeice, Madrid, HORECA, etc.;
-   - no modifica el stock.
+Ejemplo:
+[P00663] FRN: PULPO T3 LIMPIO FAO 27 2-3K
 
-Al crear el PDF se combinan:
-STOCK VIGENTE + TARIFA DE PRECIOS ELEGIDA.
+La aplicación extrae automáticamente:
+Código: P00663
+Producto: FRN: PULPO T3 LIMPIO FAO 27 2-3K
+
+No hay que modificar el Excel semanal de stock.
+
+TARIFAS DE PRECIOS
+------------------
+Pueden viajar en un único Excel con dos pestañas:
+- CARNE
+- PESCADO
+
+Para unir precio y stock de forma segura, cada referencia debe incluir CODIGO.
+El nombre comercial puede ser distinto del nombre Odoo.
+
+Columnas recomendadas:
+CODIGO | NOMBRE | MARCA | PRECIO | UNIDAD | OFERTA | PUBLICAR
+
+El precio se une al stock por CODIGO, nunca por parecido de texto.
+
+IMPORTANTE
+----------
+La lista histórica de precios JULIO 2026 no tiene columna CODIGO.
+La versión 1.0.1 la detecta pero NO permite publicarla silenciosamente:
+marca "falta código de producto" para evitar asignar un precio a una referencia equivocada.
+
+PRÓXIMOS INGRESOS
+-----------------
+Códigos XXX / XXXX / XXXXX...
+Para estos códigos es obligatorio completar NOMBRE.
+Se permiten varios XXX con nombres diferentes.
 
 PDF
 ---
-- Nunca imprime 0,00 € como precio.
-- Una línea destildada no sale.
-- Descargar PDF/CSV guarda antes los cambios de la pantalla.
-- Filas alternas claro/oscuro para facilitar lectura.
-- La sección PRÓXIMOS INGRESOS aparece siempre.
-- Si está vacía, muestra:
-  "Actualmente no hay próximos ingresos informados."
-- Los códigos XXX / XXXX / XXXXX... se consideran próximos ingresos.
-- Carne y Pescado/Marisco generan PDFs separados.
-
-INSTALACIÓN
------------
-En WordPress de frnatlantico.es:
-
-1. Plugins > Añadir plugin > Subir plugin
-2. Instalar:
-   01-INSTALAR-FRN-STOCK-PRECIOS-v1.0.0.zip
-3. Reemplazar la versión anterior.
-4. FRN Home 1.1.0 puede quedarse instalado sin cambios.
-
-FLUJO DE TRABAJO
-----------------
-LUNES / STOCK:
-Odoo → Exportar stocks → Importar STOCKS → Previsualizar → Actualizar stock.
-
-COMERCIAL / PRECIOS:
-Excel de precios → Importar TARIFA → poner nombre → Previsualizar → Guardar tarifa.
-
-SALIDA:
-Crear PDF → elegir Carne o Pescado/Marisco → elegir tarifa de precios →
-elegir General / Distribuidor / Disponibilidad → ajustar → Descargar PDF.
-
-PRESets
--------
-General:
-precio + "Disponible"
-
-Distribuidor:
-precio + stock exacto
-
-Disponibilidad:
-sin precio + "Disponible"
-
-Personalizado:
-configuración manual.
-
-SEGURIDAD
----------
-El usuario FRN Comercial continúa trabajando solo en frontend.
-No tiene acceso al panel general de WordPress.
+- Línea destildada: no sale.
+- Precio 0: queda vacío, nunca 0,00 €.
+- Bandas alternas claro/gris.
+- PRÓXIMOS INGRESOS aparece siempre.
+- PDF/CSV guardan primero los cambios actuales.
