@@ -395,7 +395,7 @@ final class FRN_Frontend_App
                 $line['brand'],
                 $line['product_name'],
                 ((int) $tariff['show_stock'] && (int) $line['show_stock'])
-                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'], (int) $line['incoming'] === 1)
+                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'], (int) $line['incoming'] === 1, (string) ($line['unit'] ?? ''))
                     : '',
                 ((int) $tariff['show_price'] && (int) $line['show_price'] && $price > 0)
                     ? number_format($price, 2, ',', '.') . ' €/kg'
@@ -539,7 +539,8 @@ final class FRN_Frontend_App
                     ? $this->stock_text(
                         (float) $line['display_stock'],
                         (string) $tariff['stock_mode'],
-                        (int) $line['incoming'] === 1
+                        (int) $line['incoming'] === 1,
+                        (string) ($line['unit'] ?? '')
                     )
                     : '';
 
@@ -575,17 +576,26 @@ final class FRN_Frontend_App
         return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($path));
     }
 
-    private function stock_text(float $stock, string $mode, bool $incoming = false): string
+    private function stock_text(float $stock, string $mode, bool $incoming = false, string $unit = ''): string
     {
         if ($incoming && $stock <= 0) {
             return 'Próximamente';
         }
 
+        $unit = trim($unit);
+        $unitLabel = '';
+        if ($unit !== '') {
+            $normalized = strtolower(remove_accents($unit));
+            $unitLabel = str_contains($normalized, 'unidad') || in_array($normalized, ['ud','uds'], true)
+                ? ' ud'
+                : (str_contains($normalized, 'kg') ? ' kg' : ' ' . $unit);
+        }
+
         return match ($mode) {
-            'rounded' => $stock > 0 ? number_format(round($stock), 0, ',', '.') . ' kg' : '',
+            'rounded' => $stock > 0 ? number_format(round($stock), 0, ',', '.') . $unitLabel : '',
             'available' => $stock > 0 ? 'Disponible' : '',
             'hidden' => '',
-            default => $stock > 0 ? number_format($stock, 2, ',', '.') . ' kg' : '',
+            default => $stock > 0 ? number_format($stock, 2, ',', '.') . $unitLabel : '',
         };
     }
 
