@@ -5,6 +5,27 @@ final class FRN_Excel_Importer
 {
     public function parse_files(array $files): array
     {
+        return $this->parse($files, 'combined');
+    }
+
+    public function parse_stock_files(array $files): array
+    {
+        return $this->parse($files, 'stock');
+    }
+
+    public function parse_price_files(array $files): array
+    {
+        return $this->parse($files, 'price');
+    }
+
+    public static function is_incoming_code(string $code): bool
+    {
+        $normalized = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($code)));
+        return (bool) preg_match('/^X{3,}$/', $normalized);
+    }
+
+    private function parse(array $files, string $mode): array
+    {
         $normalized = $this->normalize_files($files);
         if (!$normalized) {
             throw new RuntimeException('No se recibió ningún Excel.');
@@ -15,7 +36,7 @@ final class FRN_Excel_Importer
 
         foreach ($normalized as $file) {
             $filenames[] = sanitize_file_name($file['name']);
-            $parsed = $this->parse_file($file['tmp_name'], $file['name']);
+            $parsed = $this->parse_file($file['tmp_name'], $file['name'], $mode);
 
             foreach ($catalogs as $category => $_) {
                 if (!empty($parsed[$category])) {
@@ -28,19 +49,20 @@ final class FRN_Excel_Importer
             $catalogs[$category] = $this->dedupe_rows($rows);
         }
 
+        $total = count($catalogs['carne']) + count($catalogs['pescado-marisco']);
+        if ($total === 0) {
+            $label = $mode === 'stock' ? 'stocks' : ($mode === 'price' ? 'precios' : 'datos');
+            throw new RuntimeException('No se encontraron ' . $label . ' reconocibles en el Excel.');
+        }
+
         return [
             'filename' => implode(' + ', $filenames),
+            'mode' => $mode,
             'catalogs' => $catalogs,
         ];
     }
 
-    public static function is_incoming_code(string $code): bool
-    {
-        $normalized = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($code)));
-        return (bool) preg_match('/^X{3,}$/', $normalized);
-    }
-
-    private function parse_file(string $path, string $name): array
+    private function parse_file(string $path, string $name, string $mode): array
     {
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         if (!in_array($extension, ['xlsx', 'xls'], true)) {
@@ -53,6 +75,7 @@ final class FRN_Excel_Importer
         }
 
         require_once $autoload;
+
         $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
         $catalogs = ['carne' => [], 'pescado-marisco' => []];
 
@@ -63,13 +86,13 @@ final class FRN_Excel_Importer
 
         $usedKnown = false;
         foreach ($known as $category => $sheet) {
-            if ($sheet) {
-                $usedKnown = true;
-                $catalogs[$category] = array_merge(
-                    $catalogs[$category],
-                    $this->rows_from_raw($sheet->toArray(null, true, false, false), $category)
-                );
-            }
+            if (!$sheet) { continue; }
+
+            $usedKnown = true;
+            $catalogs[$category] = array_merge(
+                $catalogs[$category],
+                $this->rows_from_raw($sheet->toArray(null, true, false, false), $category, $mode)
+            );
         }
 
         if ($usedKnown) {
@@ -80,54 +103,72 @@ final class FRN_Excel_Importer
             $raw = $sheet->toArray(null, true, false, false);
             if (count($raw) < 2) { continue; }
 
-            $category = $this->detect_category($sheet->getTitle(), $name, $raw);
+            $category = $this->detect_category($sheet->getTitle(), $name, $raw, $mode);
             if (!$category) { continue; }
 
             $catalogs[$category] = array_merge(
                 $catalogs[$category],
-                $this->rows_from_raw($raw, $category)
+                $this->rows_from_raw($raw, $category, $mode)
             );
         }
 
         return $catalogs;
     }
 
-    private function rows_from_raw(array $raw, string $category): array
+    private function rows_from_raw(array $raw, string $category, string $mode): array
     {
         if (count($raw) < 2) { return []; }
 
-        $headerIndex = $this->find_header_row($raw);
+        $headerIndex = $this->find_header_row($raw, $mode);
         if ($headerIndex === null) { return []; }
 
         $headers = array_map([$this, 'normalize_header'], $raw[$headerIndex]);
         $rows = [];
 
         foreach (array_slice($raw, $headerIndex + 1) as $index => $values) {
-            $item = array_combine($headers, array_pad($values, count($headers), '')) ?: [];
-            $nameValue = trim((string) ($item['product'] ?? ''));
-            if ($nameValue === '') { continue; }
+            $values = array_pad($values, count($headers), '');
+            $item = array_combine($headers, array_slice($values, 0, count($headers))) ?: [];
 
             $code = trim((string) ($item['code'] ?? ''));
-            if ($code === '') {
+            $nameValue = trim((string) ($item['product'] ?? ''));
+
+            if ($code === '' && $nameValue === '') { continue; }
+
+            if ($code === '' && $mode !== 'price') {
                 $code = strtoupper(substr($category, 0, 1)) . '-ROW-' . ($index + 1);
             }
 
-            $stock = $this->number($item['stock'] ?? null);
+            $stock = $this->number($item['stock'] ?? null, true);
             $price = $this->number($item['price'] ?? null, true);
             $incoming = self::is_incoming_code($code);
             $sourcePublish = !array_key_exists('publish', $item) || $this->truthy($item['publish']);
-            // Weekly tariff rule: normal products with zero stock start unchecked.
-            // Upcoming products (XXX...) may be promoted before stock exists.
-            $publish = $incoming ? $sourcePublish : ($sourcePublish && (($stock ?? 0) > 0));
+
+            if ($mode === 'stock') {
+                $publish = $incoming
+                    ? $sourcePublish
+                    : ($sourcePublish && (($stock ?? 0) > 0));
+            } elseif ($mode === 'price') {
+                $publish = $incoming
+                    ? $sourcePublish
+                    : ($sourcePublish && (($price ?? 0) > 0));
+            } else {
+                $publish = $incoming
+                    ? $sourcePublish
+                    : ($sourcePublish && (($stock ?? 0) > 0));
+            }
 
             $errors = [];
-            if (!$incoming && $stock === null) { $errors[] = 'stock no válido'; }
-            if ($price !== null && $price < 0) { $errors[] = 'precio inválido'; }
+            if ($mode !== 'price' && !$incoming && $stock === null) {
+                $errors[] = 'stock no válido';
+            }
+            if ($price !== null && $price < 0) {
+                $errors[] = 'precio inválido';
+            }
 
             $rows[] = [
                 'category' => $category,
                 'code' => sanitize_text_field($code),
-                'brand' => sanitize_text_field((string) ($item['brand'] ?? 'FRN')),
+                'brand' => sanitize_text_field((string) ($item['brand'] ?? '')),
                 'name' => sanitize_text_field($nameValue),
                 'stock' => $stock ?? 0,
                 'price' => $price ?? 0,
@@ -143,26 +184,37 @@ final class FRN_Excel_Importer
         return $rows;
     }
 
-    private function detect_category(string $sheet, string $filename, array $raw): ?string
+    private function detect_category(string $sheet, string $filename, array $raw, string $mode): ?string
     {
         $haystack = remove_accents(strtolower($sheet . ' ' . $filename));
 
-        if (str_contains($haystack, 'carne') || str_contains($haystack, 'vacuno') || str_contains($haystack, 'beef')) {
+        if (
+            str_contains($haystack, 'carne') ||
+            str_contains($haystack, 'vacuno') ||
+            str_contains($haystack, 'beef')
+        ) {
             return 'carne';
         }
-        if (str_contains($haystack, 'pesc') || str_contains($haystack, 'marisc') || str_contains($haystack, 'seafood')) {
+
+        if (
+            str_contains($haystack, 'pesc') ||
+            str_contains($haystack, 'marisc') ||
+            str_contains($haystack, 'seafood')
+        ) {
             return 'pescado-marisco';
         }
 
-        $headerIndex = $this->find_header_row($raw);
+        $headerIndex = $this->find_header_row($raw, $mode);
         if ($headerIndex === null) { return null; }
 
         $headers = array_map([$this, 'normalize_header'], $raw[$headerIndex]);
         $codePos = array_search('code', $headers, true);
         if ($codePos === false) { return null; }
 
-        $c = 0; $p = 0;
-        foreach (array_slice($raw, $headerIndex + 1, 30) as $row) {
+        $c = 0;
+        $p = 0;
+
+        foreach (array_slice($raw, $headerIndex + 1, 50) as $row) {
             $code = strtoupper(trim((string) ($row[$codePos] ?? '')));
             if (preg_match('/^C\d+/i', $code)) { $c++; }
             if (preg_match('/^P\d+/i', $code)) { $p++; }
@@ -174,16 +226,31 @@ final class FRN_Excel_Importer
         return null;
     }
 
-    private function find_header_row(array $raw): ?int
+    private function find_header_row(array $raw, string $mode): ?int
     {
-        foreach (array_slice($raw, 0, 15, true) as $index => $row) {
+        foreach (array_slice($raw, 0, 20, true) as $index => $row) {
             $headers = array_map([$this, 'normalize_header'], $row);
+
             $hasProduct = in_array('product', $headers, true);
             $hasCode = in_array('code', $headers, true);
             $hasStock = in_array('stock', $headers, true);
             $hasPrice = in_array('price', $headers, true);
 
-            if ($hasProduct && ($hasCode || $hasStock || $hasPrice)) {
+            if ($mode === 'price') {
+                if ($hasPrice && ($hasCode || $hasProduct)) {
+                    return (int) $index;
+                }
+                continue;
+            }
+
+            if ($mode === 'stock') {
+                if ($hasStock && ($hasCode || $hasProduct)) {
+                    return (int) $index;
+                }
+                continue;
+            }
+
+            if (($hasStock || $hasPrice) && ($hasCode || $hasProduct)) {
                 return (int) $index;
             }
         }
@@ -194,15 +261,16 @@ final class FRN_Excel_Importer
     private function normalize_header(mixed $value): string
     {
         $value = remove_accents(strtolower(trim((string) $value)));
+        $value = preg_replace('/\s+/', ' ', $value);
 
         return match (true) {
-            in_array($value, ['codigo','código','id','referencia','ref','sku'], true) => 'code',
+            in_array($value, ['codigo','código','id','referencia','ref','sku','cod','cod.'], true) => 'code',
             str_contains($value, 'marca') || str_contains($value, 'brand') => 'brand',
-            in_array($value, ['producto','nombre','descripcion','descripción','product','description'], true) => 'product',
-            str_contains($value, 'stock') || str_contains($value, 'cantidad') || str_contains($value, 'disponible') => 'stock',
-            str_contains($value, 'precio') || str_contains($value, 'price') || str_contains($value, 'tarifa') => 'price',
-            in_array($value, ['oferta','destacado','featured'], true) => 'featured',
-            in_array($value, ['publicar','publicado','visible'], true) => 'publish',
+            in_array($value, ['producto','nombre','descripcion','descripción','product','description','articulo','artículo'], true) => 'product',
+            str_contains($value, 'stock') || str_contains($value, 'cantidad') || str_contains($value, 'disponible') || str_contains($value, 'existencia') => 'stock',
+            str_contains($value, 'precio') || str_contains($value, 'price') || str_contains($value, 'tarifa') || str_contains($value, '€/kg') || str_contains($value, 'eur/kg') => 'price',
+            in_array($value, ['oferta','destacado','featured','promocion','promoción'], true) => 'featured',
+            in_array($value, ['publicar','publicado','visible','usar','activo'], true) => 'publish',
             in_array($value, ['estado','status'], true) => 'status',
             default => sanitize_key($value),
         };
@@ -212,18 +280,25 @@ final class FRN_Excel_Importer
     {
         return in_array(
             strtolower(trim(remove_accents((string) $value))),
-            ['si','sí','1','true','x','yes'],
+            ['si','sí','1','true','x','yes','y','ok'],
             true
         );
     }
 
     private function number(mixed $value, bool $nullable = false): ?float
     {
-        if (is_int($value) || is_float($value)) { return (float) $value; }
-        if ($nullable && ($value === null || trim((string) $value) === '')) { return null; }
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        if ($nullable && ($value === null || trim((string) $value) === '')) {
+            return null;
+        }
 
         $clean = preg_replace('/[^0-9,.-]/', '', (string) $value);
-        if ($clean === '' || $clean === '-' || $clean === null) { return $nullable ? null : 0.0; }
+        if ($clean === '' || $clean === '-' || $clean === null) {
+            return $nullable ? null : 0.0;
+        }
 
         if (str_contains($clean, ',') && str_contains($clean, '.')) {
             if (strrpos($clean, ',') > strrpos($clean, '.')) {
@@ -248,10 +323,15 @@ final class FRN_Excel_Importer
         }
 
         $out = [];
+
         foreach ($files['name'] as $i => $name) {
-            if (empty($files['tmp_name'][$i]) || (int) ($files['error'][$i] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            if (
+                empty($files['tmp_name'][$i]) ||
+                (int) ($files['error'][$i] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK
+            ) {
                 continue;
             }
+
             $out[] = [
                 'name' => $name,
                 'tmp_name' => $files['tmp_name'][$i],
@@ -270,7 +350,15 @@ final class FRN_Excel_Importer
         $out = [];
 
         foreach ($rows as $row) {
-            $key = strtolower(trim((string) $row['code']) . '|' . trim((string) $row['name']));
+            $code = strtoupper(trim((string) ($row['code'] ?? '')));
+            $name = strtolower(remove_accents(trim((string) ($row['name'] ?? ''))));
+
+            $key = self::is_incoming_code($code)
+                ? $code . '|' . $name
+                : ($code !== '' ? $code : $name);
+
+            if ($key === '') { continue; }
+
             if (isset($seen[$key])) {
                 $out[$seen[$key]] = $row;
             } else {
