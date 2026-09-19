@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const globalStock = document.querySelector('#frn-global-stock');
   const globalPrice = document.querySelector('#frn-global-price');
   const stockMode = document.querySelector('#frn-stock-mode');
+  const globalCost = document.querySelector('#frn-global-cost');
   const preset = document.querySelector('#frn-preset-mode');
 
   const syncStockRows = () => {
@@ -60,6 +61,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (globalPrice) {
     globalPrice.addEventListener('change', syncPriceRows);
+  }
+
+  const syncCostRows = () => {
+    if (!globalCost) return;
+    document.querySelectorAll('.frn-line-cost').forEach((checkbox) => {
+      const row = checkbox.closest('tr');
+      const cost = Number.parseFloat(row?.dataset.cost || '0');
+      checkbox.checked = globalCost.checked && cost > 0;
+    });
+  };
+
+  if (globalCost) {
+    globalCost.addEventListener('change', syncCostRows);
   }
 
   if (preset) {
