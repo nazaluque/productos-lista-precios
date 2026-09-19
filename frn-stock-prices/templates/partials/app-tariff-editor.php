@@ -61,7 +61,7 @@ $renderTariffLines = static function(array $rows, string $group): void {
                 $sourcePrice = (float) ($line['source_price'] ?? 0);
                 $displayPrice = (float) ($line['display_price'] ?? 0);
             ?>
-                <tr data-stock="<?php echo esc_attr((float)$line['source_stock']); ?>">
+                <tr data-stock="<?php echo esc_attr((float)$line['source_stock']); ?>" data-price="<?php echo esc_attr($displayPrice); ?>">
                     <td><input class="frn-use-checkbox" data-group="<?php echo esc_attr($group); ?>" type="checkbox" name="lines[<?php echo $id; ?>][visible]" value="1" <?php checked((int)$line['visible'],1); ?>></td>
                     <td><input class="frn-offer-checkbox" data-group="<?php echo esc_attr($group); ?>" type="checkbox" name="lines[<?php echo $id; ?>][featured]" value="1" <?php checked((int)$line['featured'],1); ?>></td>
                     <td><input type="number" name="lines[<?php echo $id; ?>][sort_order]" value="<?php echo esc_attr((int)$line['sort_order']); ?>"></td>
