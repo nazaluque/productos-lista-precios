@@ -8,19 +8,23 @@ final class FRN_Frontend_App
 
     private FRN_Catalog_Repository $catalog;
     private FRN_Tariff_Repository $tariffs;
+    private FRN_Price_List_Repository $priceLists;
     private FRN_Excel_Importer $excel;
 
     public function __construct()
     {
         $this->catalog = new FRN_Catalog_Repository();
         $this->tariffs = new FRN_Tariff_Repository();
+        $this->priceLists = new FRN_Price_List_Repository();
         $this->excel = new FRN_Excel_Importer();
     }
 
     public function boot(): void
     {
-        add_action('admin_post_frn_front_preview', [$this, 'preview']);
-        add_action('admin_post_frn_front_publish', [$this, 'publish']);
+        add_action('admin_post_frn_front_preview_stock', [$this, 'preview_stock']);
+        add_action('admin_post_frn_front_publish_stock', [$this, 'publish_stock']);
+        add_action('admin_post_frn_front_preview_prices', [$this, 'preview_prices']);
+        add_action('admin_post_frn_front_publish_prices', [$this, 'publish_prices']);
         add_action('admin_post_frn_front_save_products', [$this, 'save_products']);
         add_action('admin_post_frn_front_tariff_create', [$this, 'tariff_create']);
         add_action('admin_post_frn_front_tariff_save', [$this, 'tariff_save']);
@@ -47,6 +51,7 @@ final class FRN_Frontend_App
             'previewToken' => $previewToken,
             'preview' => is_array($preview) ? $preview : null,
             'products' => $this->catalog->all_combined(true),
+            'priceLists' => $this->priceLists->all(),
             'tariffs' => $this->tariffs->all_tariffs(),
             'tariff' => $tariffId ? $this->tariffs->get_tariff($tariffId) : null,
             'tariffLines' => $tariffId ? $this->tariffs->get_lines($tariffId) : [],
@@ -57,30 +62,32 @@ final class FRN_Frontend_App
         require FRN_SP_PATH . 'templates/app.php';
     }
 
-    public function preview(): void
+    public function preview_stock(): void
     {
-        $this->guard_post('frn_front_preview');
+        $this->guard_post('frn_front_preview_stock');
 
         try {
-            $parsed = $this->excel->parse_files($_FILES['catalog_files'] ?? []);
+            $parsed = $this->excel->parse_stock_files($_FILES['stock_files'] ?? []);
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
         }
 
+        $parsed['preview_type'] = 'stock';
         $token = wp_generate_password(20, false, false);
         set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
 
         $this->redirect(['tab' => 'importar', 'preview' => $token]);
     }
 
-    public function publish(): void
+    public function publish_stock(): void
     {
         $token = sanitize_key($_POST['preview'] ?? '');
-        $this->guard_post('frn_front_publish_' . $token);
+        $this->guard_post('frn_front_publish_stock_' . $token);
 
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
-        if (!$preview || !is_array($preview)) {
-            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización ha caducado.')]);
+
+        if (!$preview || !is_array($preview) || ($preview['preview_type'] ?? '') !== 'stock') {
+            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización de stock ha caducado.')]);
         }
 
         $all = array_merge(
@@ -93,7 +100,7 @@ final class FRN_Frontend_App
             $this->redirect([
                 'tab' => 'importar',
                 'preview' => $token,
-                'error' => rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
+                'error' => rawurlencode('Hay filas de stock con errores. Corrige el Excel antes de publicar.'),
             ]);
         }
 
@@ -104,9 +111,9 @@ final class FRN_Frontend_App
                 $rows = array_values($preview['catalogs'][$category] ?? []);
                 if (!$rows) { continue; }
 
-                $counts[$category] = $this->catalog->publish(
+                $counts[$category] = $this->catalog->publish_stock(
                     $category,
-                    (string) ($preview['filename'] ?? 'Excel semanal'),
+                    (string) ($preview['filename'] ?? 'Stock semanal'),
                     $rows
                 );
             }
@@ -122,9 +129,75 @@ final class FRN_Frontend_App
 
         $this->redirect([
             'tab' => 'importar',
-            'published' => $counts['carne'] + $counts['pescado-marisco'],
-            'carne' => $counts['carne'],
-            'pescado' => $counts['pescado-marisco'],
+            'stock_published' => $counts['carne'] + $counts['pescado-marisco'],
+        ]);
+    }
+
+    public function preview_prices(): void
+    {
+        $this->guard_post('frn_front_preview_prices');
+
+        $name = sanitize_text_field((string) ($_POST['price_list_name'] ?? ''));
+        if (trim($name) === '') {
+            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('Pon un nombre a la tarifa de precios.')]);
+        }
+
+        try {
+            $parsed = $this->excel->parse_price_files($_FILES['price_files'] ?? []);
+        } catch (Throwable $e) {
+            $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
+        }
+
+        $parsed['preview_type'] = 'prices';
+        $parsed['price_list_name'] = $name;
+
+        $token = wp_generate_password(20, false, false);
+        set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
+
+        $this->redirect(['tab' => 'importar', 'preview' => $token]);
+    }
+
+    public function publish_prices(): void
+    {
+        $token = sanitize_key($_POST['preview'] ?? '');
+        $this->guard_post('frn_front_publish_prices_' . $token);
+
+        $preview = get_transient(self::PREVIEW_PREFIX . $token);
+
+        if (!$preview || !is_array($preview) || ($preview['preview_type'] ?? '') !== 'prices') {
+            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización de precios ha caducado.')]);
+        }
+
+        try {
+            foreach (['carne','pescado-marisco'] as $category) {
+                $rows = array_values($preview['catalogs'][$category] ?? []);
+                if (!$rows) { continue; }
+
+                $this->catalog->ensure_from_price_rows(
+                    $category,
+                    (string) ($preview['filename'] ?? 'Tarifa comercial'),
+                    $rows
+                );
+            }
+
+            $listId = $this->priceLists->create(
+                (string) ($preview['price_list_name'] ?? 'Tarifa comercial'),
+                (string) ($preview['filename'] ?? ''),
+                (array) ($preview['catalogs'] ?? [])
+            );
+        } catch (Throwable $e) {
+            $this->redirect([
+                'tab' => 'importar',
+                'preview' => $token,
+                'error' => rawurlencode($e->getMessage()),
+            ]);
+        }
+
+        delete_transient(self::PREVIEW_PREFIX . $token);
+
+        $this->redirect([
+            'tab' => 'importar',
+            'prices_published' => $listId,
         ]);
     }
 
@@ -144,8 +217,7 @@ final class FRN_Frontend_App
                 'brand' => sanitize_text_field((string) ($row['brand'] ?? '')),
                 'name' => sanitize_text_field((string) ($row['name'] ?? '')),
                 'stock' => $this->number($row['stock'] ?? 0),
-                'price' => max(0, $this->number($row['price'] ?? 0)),
-                'featured' => !empty($row['featured']),
+                'featured' => false,
                 'visible' => !empty($row['visible']),
             ];
         }
@@ -169,12 +241,22 @@ final class FRN_Frontend_App
         }
 
         $preset = sanitize_key((string) ($_POST['preset'] ?? 'general'));
+        $priceListId = absint($_POST['price_list_id'] ?? 0);
         $date = sanitize_text_field((string) ($_POST['tariff_date'] ?? current_time('Y-m-d')));
         $label = $scope === 'carne' ? 'Carne' : 'Pescado y marisco';
-        $title = 'Tarifa ' . $label . ' · ' . wp_date('d/m/Y', strtotime($date));
+
+        $priceList = $priceListId > 0 ? $this->priceLists->get($priceListId) : null;
+        $priceSuffix = $priceList ? ' · ' . $priceList['name'] : '';
+        $title = 'Tarifa ' . $label . $priceSuffix . ' · ' . wp_date('d/m/Y', strtotime($date));
 
         try {
-            $id = $this->tariffs->create_from_catalog($title, $date, $scope, $preset);
+            $id = $this->tariffs->create_from_catalog(
+                $title,
+                $date,
+                $scope,
+                $preset,
+                $priceListId
+            );
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'tarifas', 'error' => rawurlencode($e->getMessage())]);
         }
@@ -187,11 +269,8 @@ final class FRN_Frontend_App
         $id = absint($_POST['tariff_id'] ?? 0);
         $this->guard_post('frn_front_tariff_save_' . $id);
 
-        $settings = is_array($_POST['settings'] ?? null) ? wp_unslash($_POST['settings']) : [];
-        $lines = is_array($_POST['lines'] ?? null) ? wp_unslash($_POST['lines']) : [];
-
         try {
-            $this->tariffs->save_tariff($id, $settings, $lines);
+            $this->save_tariff_request($id);
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'tarifa', 'id' => $id, 'error' => rawurlencode($e->getMessage())]);
         }
@@ -224,11 +303,24 @@ final class FRN_Frontend_App
 
     public function tariff_pdf(): void
     {
-        $id = absint($_GET['tariff_id'] ?? 0);
-        $this->guard_get('frn_front_tariff_pdf_' . $id);
+        $id = absint($_POST['tariff_id'] ?? $_GET['tariff_id'] ?? 0);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->guard_post('frn_front_tariff_save_' . $id);
+            try {
+                $this->save_tariff_request($id);
+            } catch (Throwable $e) {
+                $this->redirect(['tab' => 'tarifa', 'id' => $id, 'error' => rawurlencode($e->getMessage())]);
+            }
+        } else {
+            $this->guard_get('frn_front_tariff_pdf_' . $id);
+        }
 
         $tariff = $this->tariffs->get_tariff($id);
-        $lines = $this->tariffs->get_lines($id, true);
+        $lines = array_values(array_filter(
+            $this->tariffs->get_lines($id, true),
+            static fn(array $line): bool => (int) ($line['visible'] ?? 0) === 1
+        ));
 
         if (!$tariff) { wp_die('Tarifa no encontrada.'); }
 
@@ -249,6 +341,7 @@ final class FRN_Frontend_App
         $dompdf->render();
 
         $scope = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado-Marisco';
+
         $dompdf->stream(
             sanitize_file_name('FRN-Tarifa-' . $scope . '-' . $tariff['tariff_date'] . '.pdf'),
             ['Attachment' => true]
@@ -258,11 +351,24 @@ final class FRN_Frontend_App
 
     public function tariff_csv(): void
     {
-        $id = absint($_GET['tariff_id'] ?? 0);
-        $this->guard_get('frn_front_tariff_csv_' . $id);
+        $id = absint($_POST['tariff_id'] ?? $_GET['tariff_id'] ?? 0);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->guard_post('frn_front_tariff_save_' . $id);
+            try {
+                $this->save_tariff_request($id);
+            } catch (Throwable $e) {
+                $this->redirect(['tab' => 'tarifa', 'id' => $id, 'error' => rawurlencode($e->getMessage())]);
+            }
+        } else {
+            $this->guard_get('frn_front_tariff_csv_' . $id);
+        }
 
         $tariff = $this->tariffs->get_tariff($id);
-        $lines = $this->tariffs->get_lines($id, true);
+        $lines = array_values(array_filter(
+            $this->tariffs->get_lines($id, true),
+            static fn(array $line): bool => (int) ($line['visible'] ?? 0) === 1
+        ));
 
         if (!$tariff) { wp_die('Tarifa no encontrada.'); }
 
@@ -281,22 +387,31 @@ final class FRN_Frontend_App
         fputcsv($out, ['Sección','Código','Marca','Producto','Stock','Precio'], ';');
 
         foreach ($lines as $line) {
+            $price = (float) ($line['display_price'] ?? 0);
+
             fputcsv($out, [
                 (int) $line['incoming'] === 1 ? 'Próximos ingresos' : 'Productos',
                 $line['product_code'],
                 $line['brand'],
                 $line['product_name'],
                 ((int) $tariff['show_stock'] && (int) $line['show_stock'])
-                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'])
+                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'], (int) $line['incoming'] === 1)
                     : '',
-                ((int) $tariff['show_price'] && (int) $line['show_price'])
-                    ? number_format((float) $line['display_price'], 2, ',', '.') . ' €/kg'
+                ((int) $tariff['show_price'] && (int) $line['show_price'] && $price > 0)
+                    ? number_format($price, 2, ',', '.') . ' €/kg'
                     : '',
             ], ';');
         }
 
         fclose($out);
         exit;
+    }
+
+    private function save_tariff_request(int $id): void
+    {
+        $settings = is_array($_POST['settings'] ?? null) ? wp_unslash($_POST['settings']) : [];
+        $lines = is_array($_POST['lines'] ?? null) ? wp_unslash($_POST['lines']) : [];
+        $this->tariffs->save_tariff($id, $settings, $lines);
     }
 
     private function pdf_html(array $tariff, array $lines): string
@@ -318,53 +433,75 @@ final class FRN_Frontend_App
 
         $regular = array_values(array_filter(
             $lines,
-            static fn(array $line): bool => (int) $line['incoming'] !== 1
+            static fn(array $line): bool =>
+                (int) $line['incoming'] !== 1 &&
+                (int) $line['visible'] === 1
         ));
         $incoming = array_values(array_filter(
             $lines,
-            static fn(array $line): bool => (int) $line['incoming'] === 1
+            static fn(array $line): bool =>
+                (int) $line['incoming'] === 1 &&
+                (int) $line['visible'] === 1
         ));
 
         $rowsHtml = $this->pdf_rows($regular, $tariff);
+
+        // Always show the section so the commercial template is stable week to week.
+        $rowsHtml .= '<tr class="incoming-title"><td colspan="' . $columnCount . '">PRÓXIMOS INGRESOS</td></tr>';
         if ($incoming) {
-            $rowsHtml .= '<tr class="incoming"><td colspan="' . $columnCount . '">PRÓXIMOS INGRESOS</td></tr>';
             $rowsHtml .= $this->pdf_rows($incoming, $tariff);
+        } else {
+            $rowsHtml .= '<tr class="incoming-empty"><td colspan="' . $columnCount . '">Actualmente no hay próximos ingresos informados.</td></tr>';
         }
 
-        $headers = '<th style="width:12%">Código</th><th>Producto</th><th style="width:16%">Marca</th>';
+        $headers = '<th class="code">Código</th><th class="product">Producto</th><th class="brand">Marca</th>';
         if ($showStock) {
-            $headers .= '<th style="width:16%;text-align:right">Stock</th>';
+            $headers .= '<th class="stock">Stock</th>';
         }
         if ($showPrice) {
-            $headers .= '<th style="width:15%;text-align:right">Precio</th>';
+            $headers .= '<th class="price-head">Precio</th>';
         }
 
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
         $date = mysql2date('d/m/Y', $tariff['tariff_date'] . ' 00:00:00');
         $scopeLabel = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado y marisco';
+        $priceListLabel = trim((string) ($tariff['price_list_name'] ?? ''));
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
-            @page{margin:26px 28px 40px}
-            body{font-family:DejaVu Sans,Arial,sans-serif;color:#1b1e22;font-size:10px}
-            .header{background:#080a0c;color:#fff;padding:22px 24px;border-bottom:4px solid #a9823f}
-            .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:30px;font-weight:bold;letter-spacing:2px}
-            .eyebrow{margin-top:12px;color:#d6b36a;font-size:9px;text-transform:uppercase;letter-spacing:1.2px}
-            .title{margin-top:8px;font-family:DejaVu Serif,serif;font-size:26px;line-height:1.05}
-            .meta{margin-top:8px;color:#d3d3d3;font-size:9px}
-            table{width:100%;border-collapse:collapse;margin-top:20px}
-            th{background:#202733;color:#fff;padding:8px 7px;text-align:left;font-size:8px;text-transform:uppercase}
-            td{padding:7px;border-bottom:1px solid #e1e1e1;vertical-align:top}
-            .incoming td{background:#0d1115;color:#d6b36a;font-weight:bold;letter-spacing:1.2px;padding:9px}
-            .num{text-align:right;white-space:nowrap}.price{font-weight:bold}
-            .offer{display:inline-block;background:#a9823f;color:#fff;padding:2px 5px;font-size:7px}
-            .footer{position:fixed;left:0;right:0;bottom:-22px;border-top:1px solid #d6d0c5;padding-top:7px;color:#777;font-size:8px}
-            .terms{margin-top:14px;color:#666;font-size:8px}
+            @page{margin:24px 24px 38px}
+            body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:9px}
+            .header{background:#080a0c;color:#fff;padding:20px 22px;border-bottom:4px solid #a9823f}
+            .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:29px;font-weight:bold;letter-spacing:2px}
+            .eyebrow{margin-top:11px;color:#d6b36a;font-size:8px;text-transform:uppercase;letter-spacing:1.2px}
+            .title{margin-top:7px;font-family:DejaVu Serif,serif;font-size:24px;line-height:1.05}
+            .meta{margin-top:7px;color:#d3d3d3;font-size:8px}
+            table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:16px}
+            th{background:#202733;color:#fff;padding:7px 7px;text-align:left;font-size:7.5px;text-transform:uppercase}
+            th.code{width:12%}
+            th.product{width:' . ($showStock && $showPrice ? '43%' : '55%') . '}
+            th.brand{width:15%}
+            th.stock{width:15%;text-align:right}
+            th.price-head{width:15%;text-align:right}
+            td{padding:6px 7px;border-bottom:1px solid #dfe2e4;vertical-align:top;line-height:1.25}
+            tr.product-row.row-light td{background:#ffffff}
+            tr.product-row.row-dark td{background:#eef0f2}
+            td.num{text-align:right;white-space:nowrap}
+            td.price{font-weight:bold;white-space:nowrap}
+            td.product-cell{font-weight:bold;word-wrap:break-word}
+            td.brand-cell{word-wrap:break-word}
+            .incoming-title td{background:#11161b!important;color:#d6b36a;font-weight:bold;letter-spacing:1px;padding:8px}
+            .incoming-empty td{background:#f3f0e9;color:#777;font-style:italic;padding:9px}
+            .offer{display:inline-block;background:#a9823f;color:#fff;padding:2px 4px;font-size:6px;white-space:nowrap}
+            .footer{position:fixed;left:0;right:0;bottom:-20px;border-top:1px solid #d6d0c5;padding-top:6px;color:#777;font-size:7px}
+            .terms{margin-top:12px;color:#666;font-size:7px}
         </style></head><body>
         <div class="header">' .
             $logoHtml .
             '<div class="eyebrow">' . esc_html($scopeLabel) . '</div>' .
             '<div class="title">' . esc_html($tariff['title']) . '</div>' .
-            '<div class="meta">Fecha: ' . esc_html($date) . ' · ' . esc_html($company) . '</div>' .
+            '<div class="meta">Fecha: ' . esc_html($date) . ' · ' . esc_html($company) .
+            ($priceListLabel !== '' ? ' · Precios: ' . esc_html($priceListLabel) : '') .
+            '</div>' .
         '</div>
         <table>
             <thead><tr>' . $headers . '</tr></thead>
@@ -380,28 +517,41 @@ final class FRN_Frontend_App
         $html = '';
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
+        $index = 0;
 
         foreach ($lines as $line) {
+            if ((int) ($line['visible'] ?? 0) !== 1) { continue; }
+
+            $class = $index % 2 === 0 ? 'row-light' : 'row-dark';
+            $index++;
+
             $offer = (int) $line['featured'] === 1
                 ? '<span class="offer">OFERTA</span> '
                 : '';
 
-            $html .= '<tr>'
+            $html .= '<tr class="product-row ' . $class . '">'
                 . '<td>' . esc_html($line['product_code']) . '</td>'
-                . '<td>' . $offer . '<strong>' . esc_html($line['product_name']) . '</strong></td>'
-                . '<td>' . esc_html($line['brand']) . '</td>';
+                . '<td class="product-cell">' . $offer . esc_html($line['product_name']) . '</td>'
+                . '<td class="brand-cell">' . esc_html($line['brand']) . '</td>';
 
             if ($showStock) {
                 $stock = (int) $line['show_stock']
-                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'])
-                    : '—';
+                    ? $this->stock_text(
+                        (float) $line['display_stock'],
+                        (string) $tariff['stock_mode'],
+                        (int) $line['incoming'] === 1
+                    )
+                    : '';
+
                 $html .= '<td class="num">' . esc_html($stock) . '</td>';
             }
 
             if ($showPrice) {
-                $price = (int) $line['show_price']
-                    ? number_format((float) $line['display_price'], 2, ',', '.') . ' €/kg'
-                    : '—';
+                $priceValue = (float) ($line['display_price'] ?? 0);
+                $price = ((int) $line['show_price'] === 1 && $priceValue > 0)
+                    ? number_format($priceValue, 2, ',', '.') . ' €/kg'
+                    : '';
+
                 $html .= '<td class="num price">' . esc_html($price) . '</td>';
             }
 
@@ -425,13 +575,17 @@ final class FRN_Frontend_App
         return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($path));
     }
 
-    private function stock_text(float $stock, string $mode): string
+    private function stock_text(float $stock, string $mode, bool $incoming = false): string
     {
+        if ($incoming && $stock <= 0) {
+            return 'Próximamente';
+        }
+
         return match ($mode) {
-            'rounded' => number_format(round($stock), 0, ',', '.') . ' kg',
-            'available' => $stock > 0 ? 'Disponible' : 'Próximamente',
+            'rounded' => $stock > 0 ? number_format(round($stock), 0, ',', '.') . ' kg' : '',
+            'available' => $stock > 0 ? 'Disponible' : '',
             'hidden' => '',
-            default => $stock > 0 ? number_format($stock, 2, ',', '.') . ' kg' : 'Próximamente',
+            default => $stock > 0 ? number_format($stock, 2, ',', '.') . ' kg' : '',
         };
     }
 
@@ -439,10 +593,16 @@ final class FRN_Frontend_App
     {
         $messages = [];
 
-        if (isset($_GET['published'])) {
+        if (isset($_GET['stock_published'])) {
             $messages[] = [
                 'success',
-                'Excel publicado: ' . (int) $_GET['published'] . ' referencias actualizadas.',
+                'Stock semanal actualizado: ' . (int) $_GET['stock_published'] . ' referencias leídas.',
+            ];
+        }
+        if (isset($_GET['prices_published'])) {
+            $messages[] = [
+                'success',
+                'Tarifa de precios guardada. Ya puedes seleccionarla al crear un PDF.',
             ];
         }
         if (isset($_GET['saved'])) {
@@ -491,6 +651,7 @@ final class FRN_Frontend_App
         if (is_int($value) || is_float($value)) { return (float) $value; }
 
         $clean = preg_replace('/[^0-9,.-]/', '', (string) $value);
+
         if (str_contains($clean, ',') && str_contains($clean, '.')) {
             if (strrpos($clean, ',') > strrpos($clean, '.')) {
                 $clean = str_replace('.', '', $clean);
