@@ -45,9 +45,9 @@ jobs:
           zip -r build/02-INSTALAR-FRN-HOME-v1.1.0.zip frn-home
           cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
           cd build
-          zip -r ../FRN-PLUGINS-v1.0.1.1.zip .
+          zip -r ../FRN-PLUGINS-v1.0.1.zip .
       - uses: actions/upload-artifact@v4
         with:
           name: FRN-PLUGINS-v1.0.1
-          path: FRN-PLUGINS-v1.0.1.1.zip
+          path: FRN-PLUGINS-v1.0.1.zip
           if-no-files-found: error
