@@ -16,7 +16,7 @@ $renderMasterRows = static function(array $rows, string $group): void {
                     <th>Código</th>
                     <th>Marca</th>
                     <th>Producto</th>
-                    <th>Stock kg</th>
+                    <th>Stock</th><th>Unidad</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,7 +38,7 @@ $renderMasterRows = static function(array $rows, string $group): void {
                     <td><input type="text" name="products[<?php echo $id; ?>][code]" value="<?php echo esc_attr($product['product_code']); ?>"></td>
                     <td><input type="text" name="products[<?php echo $id; ?>][brand]" value="<?php echo esc_attr($product['brand']); ?>"></td>
                     <td><input class="frn-wide" type="text" name="products[<?php echo $id; ?>][name]" value="<?php echo esc_attr($product['product_name']); ?>"></td>
-                    <td><input type="number" step="0.01" name="products[<?php echo $id; ?>][stock]" value="<?php echo esc_attr($stock); ?>"></td>
+                    <td><input type="number" step="0.01" name="products[<?php echo $id; ?>][stock]" value="<?php echo esc_attr($stock); ?>"></td><td><?php echo esc_html((string)($product['unit'] ?? '')); ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
