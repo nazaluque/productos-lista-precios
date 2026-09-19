@@ -51,7 +51,7 @@ final class FRN_Frontend_App
             'tab' => $tab,
             'previewToken' => $previewToken,
             'preview' => is_array($preview) ? $preview : null,
-            'products' => $this->catalog->all_combined(true),
+            'products' => $this->catalog->all_combined(false),
             'priceLists' => $this->priceLists->all(),
             'tariffs' => $this->tariffs->all_tariffs(),
             'tariff' => $tariffId ? $this->tariffs->get_tariff($tariffId) : null,
