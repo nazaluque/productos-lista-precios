@@ -27,9 +27,9 @@ jobs:
           tools: composer:v2
       - name: Validate PHP syntax
         run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Validate FRN 1.1 contract
+      - name: Validate FRN 1.1.1 contract
         run: |
-          grep -q "Version: 1.1.0" frn-stock-prices/frn-stock-prices.php
+          grep -q "Version: 1.1.1" frn-stock-prices/frn-stock-prices.php
           grep -q "frn_product_history" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "frn_front_preview_stock" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "frn_front_user_save" frn-stock-prices/includes/class-frn-frontend-app.php
@@ -41,13 +41,13 @@ jobs:
       - name: Create clear installable pack
         run: |
           mkdir -p build
-          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.0.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
-          zip -r build/02-INSTALAR-FRN-HOME-v1.1.0.zip frn-home
+          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.1.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
+          zip -r build/02-INSTALAR-FRN-HOME-v1.1.1.zip frn-home
           cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
           cd build
-          zip -r ../FRN-PLUGINS-v1.1.0.zip .
+          zip -r ../FRN-PLUGINS-v1.1.1.zip .
       - uses: actions/upload-artifact@v4
         with:
-          name: FRN-PLUGINS-v1.1.0
-          path: FRN-PLUGINS-v1.1.0.zip
+          name: FRN-PLUGINS-v1.1.1
+          path: FRN-PLUGINS-v1.1.1.zip
           if-no-files-found: error
