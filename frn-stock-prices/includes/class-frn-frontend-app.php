@@ -497,6 +497,7 @@ final class FRN_Frontend_App
         $email = get_option('frn_tariff_email', '');
         $web = get_option('frn_tariff_web', 'www.frnatlantico.com');
         $logo = $this->logo_data_uri();
+        $headerImage = $this->pdf_header_image_data_uri((string) ($tariff['catalog_scope'] ?? ''));
 
         $logoHtml = $logo
             ? '<img src="' . esc_attr($logo) . '" style="max-height:58px;max-width:220px">'
@@ -551,15 +552,18 @@ final class FRN_Frontend_App
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:24px 24px 44px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:9px}
-            .header{background:#080a0c;color:#fff;padding:20px 22px;border-bottom:4px solid #a9823f}
+            .header{position:relative;overflow:hidden;background:#080a0c;color:#fff;padding:20px 22px;border-bottom:4px solid #a9823f}
+            .header-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42}
+            .header-shade{position:absolute;inset:0;background:rgba(3,5,6,.58)}
+            .header-content{position:relative;z-index:2}
             .header-grid{width:100%;border-collapse:collapse;table-layout:auto;margin:0}
             .header-grid td{border:0!important;padding:0!important;background:transparent!important;vertical-align:top}
             .header-right{text-align:right}
-            .header-scope{color:#d6b36a;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:1.2px}
-            .header-date{margin-top:5px;color:#d3d3d3;font-size:8px}
+            .header-scope{color:#d6b36a;font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:1.2px}
+            .header-date{margin-top:5px;color:#f0f0ee;font-size:10px}
             .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:29px;font-weight:bold;letter-spacing:2px}
             .title{margin-top:9px;font-family:DejaVu Serif,serif;font-size:24px;line-height:1.05}
-            .meta{margin-top:7px;color:#d3d3d3;font-size:8px}
+            .meta{margin-top:7px;color:#f0f0ee;font-size:9px}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:16px}
             th{background:#202733;color:#fff;padding:7px 7px;text-align:left;font-size:7.5px;text-transform:uppercase}
             th.code{width:11%}
@@ -578,10 +582,16 @@ final class FRN_Frontend_App
             .incoming-title td{background:#11161b!important;color:#d6b36a;font-weight:bold;letter-spacing:1px;padding:8px}
             .incoming-empty td{background:#f3f0e9;color:#777;font-style:italic;padding:9px}
             .offer{display:inline-block;background:#b5482b;color:#fff4dc;border:1px solid #d6b36a;padding:2px 5px;border-radius:6px;font-size:6px;font-weight:bold;white-space:nowrap}
-            .footer{position:fixed;left:0;right:0;bottom:-18px;border-top:1px solid #d6d0c5;padding-top:7px;color:#5f5b54;font-size:9px;font-weight:600;text-align:center;line-height:1.35}
+            .watermark{position:fixed;left:17%;right:17%;top:40%;text-align:center;opacity:.055;z-index:-1}
+            .watermark img{max-width:320px;max-height:170px}
+            .watermark-text{font-family:DejaVu Serif,serif;font-size:54px;color:#9b8b6e;letter-spacing:4px}
+            .footer{position:fixed;left:0;right:0;bottom:-18px;border-top:1px solid #d6d0c5;padding-top:8px;color:#4e4b46;font-size:11px;font-weight:600;text-align:center;line-height:1.35}
             .terms{margin-top:12px;color:#666;font-size:7px}
         </style></head><body>
-        <div class="header">
+        ' . ($logo ? '<div class="watermark"><img src="' . esc_attr($logo) . '"></div>' : '<div class="watermark watermark-text">FRN ATLÁNTICO</div>') . '
+        <div class="header">' .
+            ($headerImage ? '<img class="header-photo" src="' . esc_attr($headerImage) . '"><div class="header-shade"></div>' : '') .
+            '<div class="header-content">
             <table class="header-grid"><tr>
                 <td>' . $logoHtml . '</td>
                 <td class="header-right">
@@ -593,6 +603,7 @@ final class FRN_Frontend_App
             <div class="meta">' . esc_html($company) .
                 ($priceListLabel !== '' ? ' · Precios: ' . esc_html($priceListLabel) : '') .
             '</div>
+            </div>
         </div>
         <table>
             <thead><tr>' . $headers . '</tr></thead>
@@ -618,7 +629,7 @@ final class FRN_Frontend_App
             $index++;
 
             $offer = (int) $line['featured'] === 1
-                ? '<span class="offer">★ OFERTA</span> '
+                ? '<span class="offer">OFERTA</span> '
                 : '';
 
             $html .= '<tr class="product-row ' . $class . '">'
@@ -661,6 +672,20 @@ final class FRN_Frontend_App
         }
 
         return $html;
+    }
+
+    private function pdf_header_image_data_uri(string $scope): string
+    {
+        $filename = $scope === 'carne'
+            ? 'pdf-header-carne.jpg'
+            : 'pdf-header-pescado.jpg';
+
+        $path = FRN_SP_PATH . 'assets/' . $filename;
+        if (!is_readable($path)) {
+            return '';
+        }
+
+        return 'data:image/jpeg;base64,' . base64_encode((string) file_get_contents($path));
     }
 
     private function logo_data_uri(): string
