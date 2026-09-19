@@ -59,7 +59,7 @@ final class FRN_Frontend_App
         ];
 
         extract($data, EXTR_SKIP);
-        require FRN_SP_PATH . 'templates/app.php';
+        require FRN_SP_PATH . 'templates/app-v1.php';
     }
 
     public function preview_stock(): void
