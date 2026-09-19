@@ -183,6 +183,10 @@ final class FRN_Stock_Prices
         if (!in_array(get_query_var('frn_tool'), ['login','app'], true)) { return; }
 
         wp_enqueue_style('frn-stock-prices', FRN_SP_URL . 'assets/catalog.css', [], FRN_SP_VERSION);
+
+        if (get_query_var('frn_tool') === 'app') {
+            wp_enqueue_script('frn-stock-prices-app', FRN_SP_URL . 'assets/app.js', [], FRN_SP_VERSION, true);
+        }
     }
 
     public function hide_admin_bar_for_commercial(bool $show): bool
