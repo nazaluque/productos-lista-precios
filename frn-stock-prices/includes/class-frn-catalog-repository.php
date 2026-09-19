@@ -142,7 +142,7 @@ final class FRN_Catalog_Repository
                     $result = $wpdb->insert(
                         $table,
                         $data,
-                        ['%s','%s','%s','%s','%f','%d','%d','%s','%s','%f','%d']
+                        ['%s','%s','%s','%s','%s','%f','%d','%d','%s','%s','%f','%d']
                     );
                 }
 
@@ -188,6 +188,7 @@ final class FRN_Catalog_Repository
 
                     if ($name !== '') { $update['product_name'] = $name; }
                     if ($brand !== '') { $update['brand'] = $brand; }
+                    if (!empty($row['unit'])) { $update['unit'] = sanitize_text_field((string) $row['unit']); }
 
                     if ($incoming) {
                         $update['visible'] = !empty($row['publish']) ? 1 : 0;
