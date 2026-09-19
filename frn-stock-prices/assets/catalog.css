@@ -245,3 +245,74 @@
  .frn-tariff-settings{grid-template-columns:1fr}
  .frn-history>a{flex-direction:column}
 }
+
+
+/* FRN Stock & Prices 0.9.0 · weekly tariff refinements */
+.frn-selection-tools{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin:10px 0 12px;
+  color:#9e9a92;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em
+}
+.frn-tool-divider{margin-left:12px}
+.frn-mini-button{
+  min-height:32px;
+  padding:0 10px;
+  border:1px solid rgba(180,138,69,.35);
+  background:#0a0c0e;
+  color:#d8d3ca;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  cursor:pointer
+}
+.frn-mini-button:hover{border-color:var(--frn-gold);color:var(--frn-gold-light)}
+.frn-create-tariff-form select{
+  width:100%;
+  min-height:42px;
+  padding:0 10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:#040505;
+  color:#f4f0e8
+}
+.frn-create-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.frn-create-buttons button{width:100%}
+.frn-checkbox-label{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-height:42px
+}
+.frn-checkbox-label input{width:auto!important;min-height:auto!important}
+.frn-preset-help{
+  margin:-8px 0 24px;
+  padding:12px 14px;
+  border-left:2px solid rgba(180,138,69,.55);
+  background:#080a0b;
+  color:#918d84;
+  font-size:10px;
+  line-height:1.5
+}
+.frn-save-note{
+  margin:18px 0 0;
+  color:#8d8981;
+  font-size:10px
+}
+.frn-tariff-actions{
+  justify-content:flex-end;
+  padding-top:4px;
+  border-top:1px solid rgba(255,255,255,.07)
+}
+.frn-tariff-actions>*{min-width:150px;justify-content:center}
+@media(max-width:760px){
+  .frn-create-buttons{grid-template-columns:1fr}
+  .frn-selection-tools{align-items:flex-start}
+  .frn-tool-divider{width:100%;margin:6px 0 0}
+  .frn-tariff-actions>*{width:100%}
+}
