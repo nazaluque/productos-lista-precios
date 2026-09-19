@@ -15,13 +15,15 @@ final class FRN_Stock_Prices
 
     public static function activate(): void
     {
-        add_option('frn_sp_catalog_protection_enabled', false, '', false);
         add_option('frn_sp_whatsapp_number', '34624354950', '', false);
         add_option('frn_tariff_company', 'FRN Atlántico', '', false);
         add_option('frn_tariff_address', '', '', false);
         add_option('frn_tariff_phone', '', '', false);
         add_option('frn_tariff_email', '', '', false);
         add_option('frn_tariff_web', 'www.frnatlantico.com', '', false);
+
+        self::ensure_roles();
+        update_option('frn_sp_catalog_protection_enabled', true, false);
         update_option('frn_sp_version', FRN_SP_VERSION, false);
 
         FRN_Catalog_Repository::create_table();
@@ -31,12 +33,39 @@ final class FRN_Stock_Prices
         flush_rewrite_rules();
     }
 
+    public static function ensure_roles(): void
+    {
+        $role = get_role('frn_comercial');
+        if (!$role) {
+            $role = add_role('frn_comercial', 'FRN Comercial', [
+                'read' => true,
+                'frn_manage_stock' => true,
+            ]);
+        } elseif (!$role->has_cap('frn_manage_stock')) {
+            $role->add_cap('frn_manage_stock');
+        }
+
+        $admin = get_role('administrator');
+        if ($admin && !$admin->has_cap('frn_manage_stock')) {
+            $admin->add_cap('frn_manage_stock');
+        }
+    }
+
     public function boot(): void
     {
-        if (get_option('frn_sp_version') !== FRN_SP_VERSION) {
+        $installed = (string) get_option('frn_sp_version', '');
+
+        if ($installed !== FRN_SP_VERSION) {
             FRN_Catalog_Repository::create_table();
             FRN_Tariff_Repository::create_tables();
+            self::ensure_roles();
+
+            if ($installed === '' || version_compare($installed, '0.7.0', '<')) {
+                update_option('frn_sp_catalog_protection_enabled', true, false);
+            }
+
             update_option('frn_sp_version', FRN_SP_VERSION, false);
+
             add_action('init', function (): void {
                 $this->register_routes();
                 flush_rewrite_rules();
@@ -49,6 +78,7 @@ final class FRN_Stock_Prices
         add_filter('redirect_canonical', [$this, 'prevent_catalog_redirect']);
         add_filter('template_include', [$this, 'template_include']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_filter('wp_robots', [$this, 'robots']);
         add_shortcode('frn_home_buttons', [$this, 'home_buttons']);
 
         if (is_admin()) {
@@ -59,6 +89,7 @@ final class FRN_Stock_Prices
 
     public function register_routes(): void
     {
+        add_rewrite_rule('^stock/acceso/?$', 'index.php?frn_catalog=login', 'top');
         add_rewrite_rule('^stock/?$', 'index.php?frn_catalog=hub', 'top');
         add_rewrite_rule('^stock/pescado-marisco/?$', 'index.php?frn_catalog=pescado-marisco', 'top');
         add_rewrite_rule('^stock/carne/?$', 'index.php?frn_catalog=carne', 'top');
@@ -81,6 +112,7 @@ final class FRN_Stock_Prices
         }
 
         $routes = [
+            'stock/acceso' => 'login',
             'stock' => 'hub',
             'stock/pescado-marisco' => 'pescado-marisco',
             'stock/carne' => 'carne',
@@ -97,29 +129,62 @@ final class FRN_Stock_Prices
         return get_query_var('frn_catalog') ? false : $redirect;
     }
 
+    public function robots(array $robots): array
+    {
+        if (get_query_var('frn_catalog')) {
+            $robots['noindex'] = true;
+            $robots['nofollow'] = true;
+            $robots['noarchive'] = true;
+        }
+
+        return $robots;
+    }
+
     public function template_include(string $template): string
     {
         $catalog = get_query_var('frn_catalog');
 
-        if (!in_array($catalog, ['hub', 'pescado-marisco', 'carne'], true)) {
+        if (!in_array($catalog, ['login', 'hub', 'pescado-marisco', 'carne'], true)) {
             return $template;
         }
 
-        if ((bool) get_option('frn_sp_catalog_protection_enabled', false) && !is_user_logged_in()) {
-            auth_redirect();
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
         }
+        nocache_headers();
 
         global $wp_query;
         $wp_query->is_404 = false;
         $wp_query->is_home = false;
         status_header(200);
 
+        if ($catalog === 'login') {
+            if (is_user_logged_in() && current_user_can('frn_manage_stock')) {
+                wp_safe_redirect(home_url('/stock/'));
+                exit;
+            }
+            return FRN_SP_PATH . 'templates/login.php';
+        }
+
+        if ((bool) get_option('frn_sp_catalog_protection_enabled', true)) {
+            if (!is_user_logged_in()) {
+                $requested = home_url('/' . trim((string) parse_url(wp_unslash($_SERVER['REQUEST_URI'] ?? '/stock/'), PHP_URL_PATH), '/') . '/');
+                $login = add_query_arg('redirect_to', rawurlencode($requested), home_url('/stock/acceso/'));
+                wp_safe_redirect($login);
+                exit;
+            }
+
+            if (!current_user_can('frn_manage_stock')) {
+                wp_die('Este usuario no tiene acceso a la herramienta interna FRN.', 'Acceso restringido', ['response' => 403]);
+            }
+        }
+
         return FRN_SP_PATH . ($catalog === 'hub' ? 'templates/hub.php' : 'templates/catalog.php');
     }
 
     public function enqueue_assets(): void
     {
-        if (!in_array(get_query_var('frn_catalog'), ['hub', 'pescado-marisco', 'carne'], true)) { return; }
+        if (!in_array(get_query_var('frn_catalog'), ['login', 'hub', 'pescado-marisco', 'carne'], true)) { return; }
 
         wp_enqueue_style('frn-stock-prices', FRN_SP_URL . 'assets/catalog.css', [], FRN_SP_VERSION);
 
@@ -130,13 +195,9 @@ final class FRN_Stock_Prices
 
     public function home_buttons(): string
     {
-        $fish = home_url('/stock/pescado-marisco/');
-        $meat = home_url('/stock/carne/');
-
         return sprintf(
-            '<div class="frn-home-stock-links"><a href="%s">Pescado / Marisco</a><a href="%s">Carne</a></div>',
-            esc_url($fish),
-            esc_url($meat)
+            '<div class="frn-home-stock-links"><a href="%s">Productos, stock y precios</a></div>',
+            esc_url(home_url('/stock/'))
         );
     }
 }
