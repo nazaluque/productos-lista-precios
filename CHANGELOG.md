@@ -1,5 +1,19 @@
 # FRN Stock & Prices
 
+## 0.9.0 — Tarifa semanal operativa
+
+- Stock 0 queda destildado por defecto para productos normales.
+- Próximos ingresos XXX permanecen disponibles para selección sin stock.
+- Tarifa Carne y Tarifa Pescado / Marisco se generan por separado.
+- Añade presets General, Distribuidor, Disponibilidad y Personalizado.
+- Añade controles masivos de selección y oferta.
+- Sincroniza Mostrar stock / Mostrar precio con los checks de cada línea.
+- El PDF oculta columnas completas cuando stock o precio están desactivados.
+- Simplifica la edición quitando Estado/Borrador/Final de la interfaz.
+- Mantiene una única fila de acciones al final de la tarifa.
+
+# FRN Stock & Prices
+
 ## 0.6.0 — Tarifas semanales y PDF
 
 - Añade un módulo independiente **Tarifas semanales** dentro de FRN Stock.
