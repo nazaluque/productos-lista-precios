@@ -1,4 +1,4 @@
-FRN · PAQUETE v1.0.1 · FORMATO REAL ODOO
+FRN · PAQUETE v1.0.2 · FORMATO REAL ODOO
 =========================================
 
 SOLO PARA frnatlantico.es
@@ -62,3 +62,9 @@ PDF
 - Bandas alternas claro/gris.
 - PRÓXIMOS INGRESOS aparece siempre.
 - PDF/CSV guardan primero los cambios actuales.
+
+
+UNIDADES
+--------
+La 1.0.2 también lee "Unidad de medida" del stock Odoo.
+Así, si una referencia está en Unidades, el modo stock exacto no la etiqueta erróneamente como kg.
