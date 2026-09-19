@@ -94,7 +94,7 @@ final class FRN_Tariff_Repository
         $showCost = 0;
 
         $catalog = new FRN_Catalog_Repository();
-        $products = $catalog->all($scope, true);
+        $products = $catalog->all($scope, false);
         if (!$products) {
             throw new RuntimeException('No hay productos importados para esta familia.');
         }
