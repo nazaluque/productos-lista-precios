@@ -1,58 +1,84 @@
-FRN · PAQUETE COMPLETO v0.6
-===========================
-
-OBJETIVO
---------
-Mantener frnatlantico.es como portal comercial de stock/precios y añadir una
-aplicación interna de tarifas semanales sin tocar la web corporativa .com.
-
-PASO 1 · ACTUALIZAR FRN STOCK & PRICES
----------------------------------------
-En WordPress:
-Plugins > Añadir plugin > Subir plugin
-
-Instala:
-01-INSTALAR-FRN-STOCK-PRECIOS-v0.6.0.zip
-
-Si WordPress detecta una versión anterior, pulsa Reemplazar.
-
-PASO 2 · HOME
--------------
-FRN Home sigue en versión 1.0.0.
-No hace falta reinstalarlo si ya está activo y funcionando.
-
-FLUJO DE LOS LUNES
-------------------
-1. FRN Stock > importar Excel.
-2. Previsualizar.
-3. Publicar Carne y Pescado / Marisco.
-4. FRN Stock > Tarifas semanales.
-5. Crear tarifa desde el catálogo actual.
-6. Ajustar productos, precios, stock, ofertas y columnas visibles.
-7. Guardar tarifa.
-8. Descargar PDF.
-9. Si hace falta, descargar CSV.
+FRN · PAQUETE v0.7 · PORTAL .ES + HERRAMIENTA INTERNA
+=================================================
 
 IMPORTANTE
 ----------
-Los cambios dentro de una tarifa NO modifican los datos originales importados.
-Cada tarifa es una copia semanal y queda guardada en el histórico.
+Este paquete es para frnatlantico.es.
+NO instalar ni modificar la web corporativa frnatlantico.com.
 
-PDF
----
-El PDF incluye los datos comerciales configurados en Tarifas semanales.
-Si WordPress tiene un logo personalizado PNG/JPG configurado, se intenta usar
-automáticamente en el documento.
-
-RUTAS PÚBLICAS EXISTENTES
--------------------------
-- https://frnatlantico.es/
-- https://frnatlantico.es/stock/
-- https://frnatlantico.es/stock/pescado-marisco/
-- https://frnatlantico.es/stock/carne/
-
-EXCEL ODOO
+QUÉ CAMBIA
 ----------
-El importador actual usa CARNE_IMPORT y PESCADO_IMPORT.
-Cuando se entregue el export real de Odoo, se adapta el parser sin cambiar
-el editor de tarifas ni los PDFs.
+1. El Home .es queda simplificado.
+2. Se elimina el bloque público "Consulta lo que hay disponible hoy".
+3. Se elimina "Explorar catálogos".
+4. El Home conserva un único acceso a "Ver productos, stock y precios".
+5. Ese acceso pasa a ser PRIVADO con usuario y contraseña.
+6. Pescado, Marisco y Carne del menú superior abren la web oficial .com.
+7. La herramienta interna incluye:
+   - importación de Excel;
+   - catálogo interno;
+   - tarifas semanales;
+   - edición de precio/stock por tarifa;
+   - PDF;
+   - CSV;
+   - histórico.
+
+INSTALACIÓN
+-----------
+En WordPress de frnatlantico.es:
+
+1. Plugins > Añadir plugin > Subir plugin
+2. Instalar 01-INSTALAR-FRN-STOCK-PRECIOS-v0.7.0.zip
+3. Reemplazar la versión anterior.
+4. Instalar 02-INSTALAR-FRN-HOME-v1.1.0.zip
+5. Reemplazar la versión anterior.
+
+USUARIO Y CONTRASEÑA
+--------------------
+La versión 0.7 crea el rol:
+FRN Comercial
+
+Para crear un acceso:
+Usuarios > Añadir nuevo
+- Usuario: el que quieras
+- Contraseña: la que quieras
+- Rol: FRN Comercial
+
+Ese usuario podrá entrar a la herramienta de stock/tarifas pero no tendrá
+permisos de administrador general del sitio.
+
+ACCESO
+------
+Desde el Home .es:
+Ver productos, stock y precios
+        ↓
+/stock/acceso/
+        ↓
+usuario + contraseña
+        ↓
+/stock/ · Herramienta interna FRN
+
+DENTRO DE LA HERRAMIENTA
+-------------------------
+- Importar Excel semanal
+- Crear tarifa PDF
+- Revisar Pescado / Marisco
+- Revisar Carne
+- Cerrar sesión
+
+FLUJO DE LOS LUNES
+------------------
+Excel Odoo
+→ Previsualizar
+→ Publicar datos
+→ Crear tarifa
+→ Ajustar precio/stock/ofertas
+→ Guardar
+→ Descargar PDF
+
+NOTA SOBRE EL EXCEL DE ODOO
+---------------------------
+La aplicación y el generador de tarifas ya están preparados.
+El importador actual entiende CARNE_IMPORT y PESCADO_IMPORT.
+Cuando se entregue un Excel real exportado por Odoo se adapta el parser sin
+cambiar la herramienta ni el formato de salida.
