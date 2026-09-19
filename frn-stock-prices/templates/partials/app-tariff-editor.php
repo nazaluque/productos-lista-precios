@@ -47,7 +47,7 @@ $renderTariffLines = static function(array $rows, string $group): void {
                     <th>Código</th>
                     <th>Marca</th>
                     <th>Producto</th>
-                    <th>Stock origen</th>
+                    <th>Stock origen</th><th>Unidad</th>
                     <th>Stock PDF</th>
                     <th>Ver stock</th>
                     <th>Precio origen</th>
@@ -69,6 +69,7 @@ $renderTariffLines = static function(array $rows, string $group): void {
                     <td><input type="text" name="lines[<?php echo $id; ?>][brand]" value="<?php echo esc_attr($line['brand']); ?>"></td>
                     <td><input class="frn-wide" type="text" name="lines[<?php echo $id; ?>][product_name]" value="<?php echo esc_attr($line['product_name']); ?>"></td>
                     <td><?php echo esc_html(number_format_i18n((float)$line['source_stock'],2)); ?></td>
+                    <td><?php echo esc_html((string)($line['unit'] ?? '')); ?></td>
                     <td><input type="number" step="0.01" name="lines[<?php echo $id; ?>][display_stock]" value="<?php echo esc_attr((float)$line['display_stock']); ?>"></td>
                     <td><input class="frn-line-stock" type="checkbox" name="lines[<?php echo $id; ?>][show_stock]" value="1" <?php checked((int)$line['show_stock'],1); ?>></td>
                     <td><?php echo $sourcePrice > 0 ? esc_html(number_format_i18n($sourcePrice,2)) . ' €' : '—'; ?></td>
