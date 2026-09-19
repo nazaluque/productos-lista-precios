@@ -1,74 +1,70 @@
-FRN · PAQUETE v0.8 · HERRAMIENTA 100% FRONTEND
-================================================
+FRN · PAQUETE v0.9 · TARIFAS SEMANALES
+=======================================
 
-IMPORTANTE
-----------
-Este paquete es SOLO para frnatlantico.es.
-NO instalar ni modificar frnatlantico.com.
+SOLO PARA
+---------
+frnatlantico.es
 
-QUÉ CAMBIA EN 0.8
------------------
-- El usuario FRN Comercial NO entra al panel wp-admin.
-- Después del login trabaja siempre en el frontend:
-  https://frnatlantico.es/stock/
-- Solo hay dos funciones principales:
-  1. Importar Excel semanal
-  2. Crear PDF
-- Se eliminan las vistas de catálogo Pescado/Marisco y Carne.
-- Los enlaces antiguos /stock/pescado-marisco/ y /stock/carne/ vuelven a /stock/.
-- El Excel importado se muestra como una tabla editable.
-- Se puede modificar precio, stock, nombre, marca, oferta y si una referencia se usa.
-- Los códigos formados únicamente por 3 o más X (XXX, XXXX, XXXXX...) se clasifican automáticamente como PRÓXIMOS INGRESOS.
-- Se admiten varios productos con código XXX.
-- Próximos ingresos aparecen en una sección separada al final de la tabla y del PDF.
-- Las tarifas se guardan por semana y conservan el precio/stock original.
+NO TOCAR
+--------
+frnatlantico.com
+
+CAMBIOS 0.9
+-----------
+- Productos normales con stock 0 quedan destildados automáticamente.
+- Al actualizar desde 0.8, también se destildan los productos existentes con stock 0.
+- Los códigos XXX / XXXX / XXXXX... siguen como PRÓXIMOS INGRESOS aunque no tengan stock.
+- Botones rápidos:
+  - Tildar todos
+  - Destildar todos
+  - Solo con stock
+  - Marcar todas como oferta
+  - Quitar todas las ofertas
+- Se crean dos tarifas independientes:
+  - Tarifa Carne
+  - Tarifa Pescado / Marisco
+- Presets de salida:
+  - General = precio + Disponible
+  - Distribuidor = precio + stock exacto
+  - Disponibilidad = sin precio + Disponible
+  - Personalizado
+- Al desactivar Mostrar stock se destildan los "Ver stock" de todas las líneas.
+- Al desactivar Mostrar precio se destildan los "Ver precio" de todas las líneas.
+- El PDF elimina por completo la columna Stock o Precio cuando globalmente están ocultas.
+- El selector Estado/Borrador/Final desaparece de la interfaz.
+- En la tarifa editable hay una sola fila de acciones al final:
+  Guardar tarifa · Descargar PDF · Descargar CSV.
 
 INSTALACIÓN
 -----------
-En WordPress de frnatlantico.es:
+1. WordPress de frnatlantico.es
+2. Plugins > Añadir plugin > Subir plugin
+3. Instalar:
+   01-INSTALAR-FRN-STOCK-PRECIOS-v0.9.0.zip
+4. Reemplazar la versión anterior.
+5. FRN Home 1.1.0 puede quedarse como está.
 
-1. Plugins > Añadir plugin > Subir plugin
-2. Instalar 01-INSTALAR-FRN-STOCK-PRECIOS-v0.8.0.zip
-3. Reemplazar la versión anterior.
-4. Mantener FRN Home 1.1.0 si ya está instalado.
-
-USUARIO INTERNO
----------------
-Usuarios > Añadir nuevo
-
-Crear el usuario y contraseña deseados.
-Rol:
-FRN Comercial
-
-Ese usuario:
-- puede entrar en /stock/;
-- puede importar Excel;
-- puede editar los datos comerciales;
-- puede generar tarifas;
-- NO puede navegar por wp-admin.
-
-FLUJO DEL LUNES
----------------
-1. Entrar desde "Ver productos, stock y precios".
-2. Usuario + contraseña.
-3. Importar uno o varios Excel.
-4. Previsualizar.
-5. Publicar.
-6. Revisar la tabla:
-   - Productos
-   - Próximos ingresos
-7. Cambiar precio/stock/oferta si hace falta.
-8. Ir a "Crear PDF".
-9. Crear tarifa.
-10. Ajustar qué se imprime.
-11. Descargar PDF.
-
-EXCEL DE ODOO
+FLUJO SEMANAL
 -------------
-La versión 0.8 reconoce:
-- el formato maestro CARNE_IMPORT / PESCADO_IMPORT;
-- Excel separados cuyo nombre o pestaña identifique Carne o Pescado/Marisco;
-- códigos C... y P... como ayuda para detectar la categoría.
+Excel Odoo
+→ Previsualizar
+→ Publicar
+→ Revisar selección
+→ Guardar cambios
+→ Crear tarifa Carne o Pescado/Marisco
+→ Elegir formato
+→ Ajustar
+→ Guardar
+→ Descargar PDF
 
-Cuando se entregue el Excel real exportado por Odoo se termina de afinar el parser
-sin cambiar la interfaz ni el sistema de tarifas.
+PRÓXIMOS INGRESOS
+-----------------
+Los códigos formados solo por tres o más X se separan del stock actual:
+XXX, XXXX, XXXXX...
+
+No se exige stock positivo para incluirlos.
+
+NOTA
+----
+Cuando tengamos el export real definitivo de Odoo se afina únicamente el parser.
+La aplicación y los PDF no necesitan rediseñarse.
