@@ -1,56 +1,70 @@
-FRN · PAQUETE COMPLETO v0.5
-===========================
+FRN · PAQUETE v1.0.2 · FORMATO REAL ODOO
+=========================================
 
-Este paquete contiene exactamente dos plugins instalables y un Excel maestro.
-No instales el archivo FRN-PACK-COMPLETO-v0.5.zip directamente en WordPress:
-primero ábrelo y utiliza los archivos numerados de su interior.
+SOLO PARA frnatlantico.es
+NO TOCAR frnatlantico.com
 
-PASO 1 · ACTUALIZAR STOCK Y PRECIOS
------------------------------------
-En WordPress ve a Plugins > Añadir plugin > Subir plugin.
-Instala 01-INSTALAR-FRN-STOCK-PRECIOS-v0.5.0.zip.
-Si WordPress pregunta si deseas reemplazar la versión actual, confirma.
-Activa el plugin.
+STOCK ODOO
+----------
+La aplicación acepta directamente el formato real probado:
 
-PASO 2 · INSTALAR LA NUEVA PORTADA
-----------------------------------
-En Plugins > Añadir plugin > Subir plugin instala
-02-INSTALAR-FRN-HOME-v1.0.0.zip y actívalo.
+Pestañas:
+- Carne
+- pescado
 
-Este segundo plugin cambia solamente el Home. Incluye la foto compuesta,
-el menú Inicio / Productos, stock y precios / Pescado-Marisco / Carne,
-el teléfono y los botones de WhatsApp.
+Cabeceras:
+- Productos
+- Cantidad a la mano
+- Categoría del producto
+- Unidad de medida
+- Marca
+- Modelo
 
-PASO 3 · IMPORTAR LOS PRODUCTOS
--------------------------------
-En el menú izquierdo abre FRN Stock.
+Ejemplo:
+[P00663] FRN: PULPO T3 LIMPIO FAO 27 2-3K
 
-1. Sube 03-IMPORTAR-FRN-CATALOGO-v0.4.xlsx.
-2. Pulsa Previsualizar las dos categorías.
-3. Comprueba 34 filas de Carne y 46 de Pescado / Marisco.
-4. Pulsa Publicar Carne y Pescado / Marisco.
+La aplicación extrae automáticamente:
+Código: P00663
+Producto: FRN: PULPO T3 LIMPIO FAO 27 2-3K
 
-Resultado esperado: 80 referencias visibles. Los productos sin precio se
-muestran como «Consultar precio» y los que no tienen stock como «Consultar stock».
+No hay que modificar el Excel semanal de stock.
 
-EDICIÓN FÁCIL
--------------
-En FRN Stock puedes cambiar código, marca, producto, kilos y precio.
-La columna Visible tiene un selector Sí/No. Elige No solo si quieres ocultar
-esa referencia. Después pulsa el botón Guardar cambios de la categoría.
+TARIFAS DE PRECIOS
+------------------
+Pueden viajar en un único Excel con dos pestañas:
+- CARNE
+- PESCADO
 
-PASO 4 · VER Y COMPROBAR
-------------------------
-Abre estas direcciones:
-- https://frnatlantico.es/
-- https://frnatlantico.es/stock/
-- https://frnatlantico.es/stock/pescado-marisco/
-- https://frnatlantico.es/stock/carne/
+Para unir precio y stock de forma segura, cada referencia debe incluir CODIGO.
+El nombre comercial puede ser distinto del nombre Odoo.
 
-Si sigues viendo la portada anterior, limpia la caché de WordPress/hosting y
-abre la web en una ventana privada. No necesitas tocar el tema ni crear páginas.
+Columnas recomendadas:
+CODIGO | NOMBRE | MARCA | PRECIO | UNIDAD | OFERTA | PUBLICAR
 
-ACTUALIZACIÓN SEMANAL
----------------------
-Cada lunes usa el mismo Excel maestro actualizado y realiza una sola importación.
-Siempre previsualiza las dos categorías antes de publicar.
+El precio se une al stock por CODIGO, nunca por parecido de texto.
+
+IMPORTANTE
+----------
+La lista histórica de precios JULIO 2026 no tiene columna CODIGO.
+La versión 1.0.1 la detecta pero NO permite publicarla silenciosamente:
+marca "falta código de producto" para evitar asignar un precio a una referencia equivocada.
+
+PRÓXIMOS INGRESOS
+-----------------
+Códigos XXX / XXXX / XXXXX...
+Para estos códigos es obligatorio completar NOMBRE.
+Se permiten varios XXX con nombres diferentes.
+
+PDF
+---
+- Línea destildada: no sale.
+- Precio 0: queda vacío, nunca 0,00 €.
+- Bandas alternas claro/gris.
+- PRÓXIMOS INGRESOS aparece siempre.
+- PDF/CSV guardan primero los cambios actuales.
+
+
+UNIDADES
+--------
+La 1.0.2 también lee "Unidad de medida" del stock Odoo.
+Así, si una referencia está en Unidades, el modo stock exacto no la etiqueta erróneamente como kg.
