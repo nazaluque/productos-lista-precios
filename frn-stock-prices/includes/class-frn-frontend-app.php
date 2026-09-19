@@ -440,12 +440,15 @@ final class FRN_Frontend_App
 
         echo "\xEF\xBB\xBF";
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['Sección','Código','Marca','Producto','Stock','Precio'], ';');
+        $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
+        $headers = ['Sección','Código','Marca','Producto','Stock','Precio'];
+        if ($showCost) { $headers[] = 'Coste promedio'; }
+        fputcsv($out, $headers, ';');
 
         foreach ($lines as $line) {
             $price = (float) ($line['display_price'] ?? 0);
 
-            fputcsv($out, [
+            $csvRow = [
                 (int) $line['incoming'] === 1 ? 'Próximos ingresos' : 'Productos',
                 $line['product_code'],
                 $line['brand'],
@@ -456,7 +459,14 @@ final class FRN_Frontend_App
                 ((int) $tariff['show_price'] && (int) $line['show_price'] && $price > 0)
                     ? number_format($price, 2, ',', '.') . ' €/kg'
                     : '',
-            ], ';');
+            ];
+            if ($showCost) {
+                $cost = (float) ($line['display_cost'] ?? 0);
+                $csvRow[] = ((int) ($line['show_cost'] ?? 0) === 1 && $cost > 0)
+                    ? number_format($cost, 2, ',', '.') . ' €/kg'
+                    : '';
+            }
+            fputcsv($out, $csvRow, ';');
         }
 
         fclose($out);
@@ -485,7 +495,8 @@ final class FRN_Frontend_App
 
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
-        $columnCount = 3 + ($showStock ? 1 : 0) + ($showPrice ? 1 : 0);
+        $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
+        $columnCount = 3 + ($showStock ? 1 : 0) + ($showPrice ? 1 : 0) + ($showCost ? 1 : 0);
 
         $regular = array_values(array_filter(
             $lines,
@@ -516,6 +527,9 @@ final class FRN_Frontend_App
         }
         if ($showPrice) {
             $headers .= '<th class="price-head">Precio</th>';
+        }
+        if ($showCost) {
+            $headers .= '<th class="price-head">Coste promedio</th>';
         }
 
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
@@ -573,6 +587,7 @@ final class FRN_Frontend_App
         $html = '';
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
+        $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
         $index = 0;
 
         foreach ($lines as $line) {
@@ -610,6 +625,15 @@ final class FRN_Frontend_App
                     : '';
 
                 $html .= '<td class="num price">' . esc_html($price) . '</td>';
+            }
+
+            if ($showCost) {
+                $costValue = (float) ($line['display_cost'] ?? 0);
+                $cost = ((int) ($line['show_cost'] ?? 0) === 1 && $costValue > 0)
+                    ? number_format($costValue, 2, ',', '.') . ' €/kg'
+                    : '';
+
+                $html .= '<td class="num">' . esc_html($cost) . '</td>';
             }
 
             $html .= '</tr>';
