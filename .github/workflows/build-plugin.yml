@@ -27,6 +27,14 @@ jobs:
           tools: composer:v2
       - name: Validate PHP syntax
         run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validate FRN 1.0 contract
+        run: |
+          grep -q "Version: 1.0.0" frn-stock-prices/frn-stock-prices.php
+          grep -q "class FRN_Price_List_Repository" frn-stock-prices/includes/class-frn-price-list-repository.php
+          grep -q "frn_front_preview_stock" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "frn_front_preview_prices" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "Actualmente no hay próximos ingresos informados" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "frn_front_tariff_pdf" frn-stock-prices/templates/partials/app-tariff-editor.php
       - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
