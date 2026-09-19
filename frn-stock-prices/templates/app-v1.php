@@ -19,8 +19,8 @@ $postUrl = admin_url('admin-post.php');
     <a href="<?php echo esc_url(home_url('/')); ?>" class="frn-brand"><strong>FRN</strong><span>ATLÁNTICO</span></a>
     <nav>
         <span class="frn-user">Hola, <?php echo esc_html($currentUser->display_name ?: $currentUser->user_login); ?></span>
+        <span class="frn-version">v<?php echo esc_html(FRN_SP_VERSION); ?></span>
         <a href="<?php echo esc_url(home_url('/')); ?>">Inicio .es</a>
-        <a href="https://www.frnatlantico.com/" target="_blank" rel="noopener">Web oficial .com</a>
         <a href="<?php echo esc_url($logoutUrl); ?>">Cerrar sesión</a>
     </nav>
 </header>
@@ -28,15 +28,18 @@ $postUrl = admin_url('admin-post.php');
 <main class="frn-app-shell">
     <section class="frn-app-hero">
         <div>
-            <p>Herramienta interna FRN</p>
+            <p>Herramienta interna FRN · versión <?php echo esc_html(FRN_SP_VERSION); ?></p>
             <h1>Stock, precios<br>y tarifas.</h1>
         </div>
-        <span>El stock semanal y las tarifas comerciales se cargan por separado. Al crear el PDF eliges qué precios combinar con el stock vigente.</span>
+        <span>Un único Excel semanal actualiza disponibilidad, precio de origen y coste promedio. El precio comercial se revisa aquí antes de exportar Carne o Pescado / Marisco.</span>
     </section>
 
     <nav class="frn-app-tabs" aria-label="Herramienta">
         <a class="<?php echo $tab === 'importar' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','importar',home_url('/stock/'))); ?>">1. Datos semanales</a>
         <a class="<?php echo in_array($tab,['tarifas','tarifa'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','tarifas',home_url('/stock/'))); ?>">2. Crear PDF</a>
+        <?php if ($canManageUsers) : ?>
+            <a class="<?php echo $tab === 'usuarios' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','usuarios',home_url('/stock/'))); ?>">Usuarios</a>
+        <?php endif; ?>
     </nav>
 
     <?php foreach ($messages as [$kind,$message]) : ?>
@@ -50,12 +53,14 @@ $postUrl = admin_url('admin-post.php');
         require FRN_SP_PATH . 'templates/partials/app-tariffs.php';
     } elseif ($tab === 'tarifa' && $tariff) {
         require FRN_SP_PATH . 'templates/partials/app-tariff-editor.php';
+    } elseif ($tab === 'usuarios' && $canManageUsers) {
+        require FRN_SP_PATH . 'templates/partials/app-users.php';
     }
     ?>
 </main>
 
 <footer class="frn-footer">
-    <span>FRN Atlántico · Herramienta interna</span>
+    <span>FRN Atlántico · Herramienta interna · v<?php echo esc_html(FRN_SP_VERSION); ?></span>
     <a href="https://wa.me/<?php echo esc_attr($whatsapp); ?>" target="_blank" rel="noopener">WhatsApp comercial</a>
     <a href="<?php echo esc_url($logoutUrl); ?>">Cerrar sesión</a>
 </footer>
