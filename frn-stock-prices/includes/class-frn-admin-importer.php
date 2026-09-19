@@ -17,12 +17,12 @@ final class FRN_Admin_Importer
 
     public function menu(): void
     {
-        add_menu_page('FRN Stock & Prices', 'FRN Stock', 'manage_options', 'frn-stock-prices', [$this, 'page'], 'dashicons-chart-line', 58);
+        add_menu_page('FRN Stock & Prices', 'FRN Stock', 'frn_manage_stock', 'frn-stock-prices', [$this, 'page'], 'dashicons-chart-line', 58);
     }
 
     public function page(): void
     {
-        if (!current_user_can('manage_options')) { return; }
+        if (!current_user_can('frn_manage_stock')) { return; }
         $token = sanitize_key($_GET['preview'] ?? '');
         $preview = $token ? get_transient(self::PREVIEW_PREFIX . $token) : null;
         ?>
@@ -100,7 +100,7 @@ final class FRN_Admin_Importer
 
     private function guard(string $nonce): void
     {
-        if (!current_user_can('manage_options')) { wp_die('No autorizado.', 403); }
+        if (!current_user_can('frn_manage_stock')) { wp_die('No autorizado.', 403); }
         check_admin_referer($nonce);
     }
 
