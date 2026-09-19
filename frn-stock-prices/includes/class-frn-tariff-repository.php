@@ -54,6 +54,7 @@ final class FRN_Tariff_Repository
             product_code varchar(80) NOT NULL DEFAULT '',
             brand varchar(160) NOT NULL DEFAULT '',
             product_name varchar(255) NOT NULL,
+            unit varchar(20) NOT NULL DEFAULT '',
             source_stock decimal(14,2) NOT NULL DEFAULT 0,
             source_price decimal(12,2) NULL,
             display_stock decimal(14,2) NOT NULL DEFAULT 0,
@@ -169,6 +170,10 @@ final class FRN_Tariff_Repository
                 ? (string) $priceItem['brand']
                 : (string) $product['brand'];
 
+            $unit = trim((string) ($product['unit'] ?? '')) !== ''
+                ? (string) $product['unit']
+                : (string) ($priceItem['unit'] ?? '');
+
             $name = $priceItem && trim((string) $priceItem['product_name']) !== ''
                 ? (string) $priceItem['product_name']
                 : (string) $product['product_name'];
@@ -179,6 +184,7 @@ final class FRN_Tariff_Repository
                 'product_code' => (string) $product['product_code'],
                 'brand' => $brand,
                 'product_name' => $name,
+                'unit' => $unit,
                 'source_stock' => $stock,
                 'source_price' => $price,
                 'display_stock' => $stock,
@@ -189,7 +195,7 @@ final class FRN_Tariff_Repository
                 'featured' => $featured,
                 'incoming' => $incoming ? 1 : 0,
                 'sort_order' => $sort,
-            ], ['%d','%s','%s','%s','%s','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d']);
+            ], ['%d','%s','%s','%s','%s','%s','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d']);
 
             if ($wpdb->last_error) {
                 throw new RuntimeException($wpdb->last_error);
