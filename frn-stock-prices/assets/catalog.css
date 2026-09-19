@@ -316,3 +316,65 @@
   .frn-tool-divider{width:100%;margin:6px 0 0}
   .frn-tariff-actions>*{width:100%}
 }
+
+
+/* FRN Stock & Prices 1.0.0 · stock + price lists */
+.frn-import-grid{align-items:stretch}
+.frn-import-grid>.frn-app-card{margin-bottom:0}
+.frn-card-copy{margin:-8px 0 22px;color:var(--frn-muted);line-height:1.55}
+.frn-upload-form-single{grid-template-columns:1fr}
+.frn-price-upload{display:grid;gap:14px}
+.frn-price-upload button{
+  min-height:52px;
+  padding:0 22px;
+  border:1px solid var(--frn-gold);
+  background:var(--frn-gold);
+  color:#080808;
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  cursor:pointer
+}
+.frn-price-name{display:grid;gap:7px;color:#aaa69e;font-size:11px}
+.frn-price-name input{
+  width:100%;
+  min-height:44px;
+  padding:0 12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:#040505;
+  color:#f4f0e8
+}
+.frn-preview-label{
+  margin:-6px 0 16px;
+  padding:10px 12px;
+  border-left:2px solid var(--frn-gold);
+  background:#080a0b;
+  color:#aaa69e
+}
+.frn-price-list-history{display:grid;gap:8px}
+.frn-price-list-item{
+  display:grid;
+  grid-template-columns:minmax(220px,1.2fr) minmax(220px,.8fr) minmax(180px,.8fr);
+  gap:18px;
+  align-items:center;
+  padding:14px 16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:#07090a
+}
+.frn-price-list-item strong{font:400 17px Georgia,serif;color:var(--frn-ivory)}
+.frn-price-list-item span,.frn-price-list-item small{color:#8d8981;font-size:10px}
+.frn-master-table{min-width:980px}
+.frn-master-table input.frn-wide{width:390px}
+.frn-create-tariff-form select{
+  width:100%;
+  min-height:42px;
+  padding:0 10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:#040505;
+  color:#f4f0e8
+}
+.frn-tariff-actions button{display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:900px){
+  .frn-price-list-item{grid-template-columns:1fr}
+}
