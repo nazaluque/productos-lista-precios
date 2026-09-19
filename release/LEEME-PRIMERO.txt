@@ -1,4 +1,4 @@
-FRN · PAQUETE v1.1.0 · MAESTRO SEMANAL UNIFICADO
+FRN · PAQUETE v1.1.1 · MAESTRO SEMANAL UNIFICADO
 ================================================
 
 SOLO PARA frnatlantico.es
@@ -88,11 +88,11 @@ Opciones:
 - coste promedio (solo con permiso)
 
 Línea destildada: nunca sale.
-Precio 0: vacío.
+Precio 0 o vacío: Consultar precio.
 Coste 0: vacío.
 Próximos ingresos aparece siempre.
 
 VERSIÓN
 -------
 La versión instalada se muestra dentro de /stock/ en cabecera, pantalla y pie.
-Versión de este paquete: 1.1.0
+Versión de este paquete: 1.1.1
