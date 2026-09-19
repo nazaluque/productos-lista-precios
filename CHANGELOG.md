@@ -1,5 +1,16 @@
 # FRN Stock & Prices
 
+## 1.1.1 — Ajustes finales de PDF comercial
+
+- Mantiene intacta la tipografía general del documento.
+- Mejora exclusivamente el footer: centrado, más legible y ligeramente más grande.
+- Reordena las columnas del PDF/CSV: Código, Producto, Marca, Coste promedio, Stock, Precio.
+- Mantiene Precio siempre como última columna y destacado en negrita.
+- Muestra “Consultar precio” cuando una referencia visible no tiene precio comercial.
+- Mejora el distintivo OFERTA con una insignia visual más marcada y profesional.
+- Mueve CARNE / PESCADO Y MARISCO y la fecha al bloque superior derecho del encabezado.
+- Mantiene el resto del diseño, tamaños y jerarquía visual de la versión anterior.
+
 ## 1.1.0 — Maestro semanal unificado, histórico y permisos
 
 - Sustituye el flujo operativo de stock + tarifa importada por un único Excel semanal.
