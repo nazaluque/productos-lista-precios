@@ -52,6 +52,7 @@ final class FRN_Frontend_App
             'previewToken' => $previewToken,
             'preview' => is_array($preview) ? $preview : null,
             'products' => $this->catalog->all_combined(false),
+            'latestImport' => $this->catalog->latest_import_meta(),
             'priceLists' => $this->priceLists->all(),
             'tariffs' => $this->tariffs->all_tariffs(),
             'tariff' => $tariffId ? $this->tariffs->get_tariff($tariffId) : null,
