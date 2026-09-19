@@ -2,88 +2,119 @@
 
 Herramienta privada de **frnatlantico.es** para preparar stock, precios y tarifas comerciales de FRN Atlántico.
 
-La web corporativa **frnatlantico.com no forma parte de este proyecto**.
+La web corporativa **frnatlantico.com no forma parte de este proyecto y no debe modificarse**.
 
-## Arquitectura 1.0
+## Arquitectura 1.1.0
 
 La aplicación funciona 100% en frontend:
 
 - `/stock/acceso/` — login privado.
 - `/stock/` — herramienta interna.
-- **Datos semanales** — Stocks + Tarifas de precios.
-- **Crear PDF** — combina stock vigente y lista comercial.
+- **Datos semanales** — un único Excel semanal.
+- **Crear PDF** — Carne y Pescado / Marisco por separado.
+- **Usuarios** — administración frontend para perfiles autorizados.
 
-## Dos fuentes independientes
+La versión instalada se muestra dentro de la aplicación.
 
-### STOCKS
+## Excel semanal
 
-Se importa el archivo semanal de Odoo.
+El flujo normal utiliza un único archivo Odoo. El parser admite XLSX/XLS, varias hojas y varios archivos.
 
-- Actualiza cantidades.
-- Un producto normal con stock 0 queda destildado.
-- Un producto que no aparece en el stock de esa semana queda con stock 0 y destildado.
-- No modifica las tarifas comerciales.
+Cabeceras soportadas, entre otras:
 
-### TARIFAS DE PRECIOS
-
-Se importa otro Excel independiente.
-
-Cada importación se guarda con un nombre, por ejemplo:
-
-- General 21/09/2026
-- Valdepeice
-- Madrid
-- HORECA Norte
-
-Una tarifa de precios no modifica el stock.
-
-## Generación de PDF
-
-Al crear una tarifa se selecciona:
-
-1. Carne o Pescado / Marisco.
-2. Tarifa de precios.
-3. Formato General, Distribuidor, Disponibilidad o Personalizado.
-
-La aplicación crea un snapshot editable.
+- Nombre del producto / Producto / Descripción
+- Referencia Interna / Código / Referencia / SKU
+- Marca
+- Modelo
+- Categoria del producto / Categoría / Familia
+- Precio de venta / Precio
+- Costo / Coste / Costo promedio / Coste promedio
+- Stock / Cantidad a la mano / Existencia
+- Unidad / Unidad de medida
 
 Reglas:
 
-- línea destildada = no sale;
-- precio 0 = celda vacía;
-- stock oculto = columna eliminada;
-- precio oculto = columna eliminada;
-- PDF/CSV guardan los cambios antes de exportar;
-- filas con bandas alternas para lectura;
-- Próximos ingresos aparece siempre.
+- producto normal con stock > 0: se importa;
+- stock 0 o vacío: no entra en la disponibilidad semanal;
+- producto ya conocido que desaparece del archivo: permanece en el maestro e histórico, pero queda stock 0 y oculto;
+- el código es la identidad principal del producto;
+- códigos XXX / XXXX / XXXXX... son Próximos ingresos;
+- hojas mixtas Carne + Pescado se clasifican por Categoria del producto y, como respaldo, por prefijo C/P.
 
-## Próximos ingresos
+## Maestro e histórico
 
-Código formado solo por tres o más X:
+Cada producto conserva:
 
-- XXX
-- XXXX
-- XXXXX
-
-Se clasifica como **Próximo ingreso** aunque todavía no tenga stock.
-
-## Seguridad
-
-- Rol `FRN Comercial`.
-- Sin acceso al wp-admin para ese rol.
-- Aplicación `noindex, nofollow, noarchive`.
-- Administradores mantienen acceso normal a WordPress.
-
-## Excel
-
-El parser acepta XLSX/XLS y detecta columnas habituales de:
-
-- código / referencia / SKU;
-- producto / descripción;
-- stock / cantidad / existencia;
-- precio / tarifa / €/kg;
+- código;
 - marca;
-- oferta;
-- visible/publicar.
+- nombre;
+- categoría;
+- unidad;
+- stock vigente;
+- precio origen;
+- precio comercial editable;
+- coste promedio;
+- estado visible/oferta;
+- histórico de importaciones.
 
-Cuando se disponga del export definitivo de Odoo se pueden afinar aliases sin cambiar la arquitectura.
+El histórico guarda stock, precio origen, precio comercial y coste promedio de cada importación.
+
+## Precios
+
+El precio comercial vive en el maestro y puede editarse por perfiles autorizados.
+
+La importación semanal actualiza **precio origen** y **coste promedio**, pero no pisa un precio comercial ya editado. Si un producto nuevo no tiene precio comercial todavía, se inicializa con el precio de origen cuando existe.
+
+Precio 0 o vacío nunca se imprime como 0,00 €.
+
+## Coste promedio
+
+El coste solo se muestra y exporta si el usuario tiene la capability `frn_view_cost`.
+
+Quien no tiene ese permiso:
+
+- no ve coste en la tabla;
+- no ve coste al preparar la tarifa;
+- no puede activarlo;
+- no lo recibe en PDF ni CSV.
+
+## Roles
+
+- **FRN Administrador** — stock, precios, coste, exportación y usuarios.
+- **FRN Stock** — importa/edita stock y exporta; sin coste.
+- **FRN Director Comercial** — edita precios, ve/exporta coste y exporta.
+- **FRN Comercial** — consulta y exporta; sin coste.
+- **FRN Consulta** — consulta y exporta; sin edición ni coste.
+
+Los perfiles FRN trabajan en frontend y no necesitan acceso operativo a wp-admin.
+
+## PDF / CSV
+
+Al crear una tarifa se selecciona:
+
+1. fecha;
+2. Carne o Pescado / Marisco;
+3. preset General, Distribuidor, Disponibilidad o Personalizado.
+
+Después puede decidirse:
+
+- mostrar/ocultar stock;
+- stock exacto, redondeado o “Disponible”;
+- mostrar/ocultar precio;
+- mostrar/ocultar coste promedio, solo con permiso;
+- incluir/excluir líneas;
+- marcar ofertas;
+- ordenar.
+
+Reglas críticas:
+
+- línea destildada = no sale;
+- PDF/CSV guardan primero el estado actual;
+- precio 0 = vacío;
+- coste 0 = vacío;
+- Próximos ingresos aparece siempre;
+- Carne y Pescado / Marisco nunca se mezclan en el mismo PDF.
+
+## Compatibilidad
+
+Las tablas y listas de precios anteriores se conservan para no romper instalaciones existentes, pero desde 1.1.0 ya no son necesarias para el flujo operativo normal.
