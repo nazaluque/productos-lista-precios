@@ -1,5 +1,22 @@
 # FRN Stock & Prices
 
+## 1.1.0 — Maestro semanal unificado, histórico y permisos
+
+- Sustituye el flujo operativo de stock + tarifa importada por un único Excel semanal.
+- Adapta el parser al formato real de Odoo con Nombre del producto, Referencia Interna, Precio de venta, Costo/Coste promedio, Categoria del producto, Stock y Unidad.
+- Importa solo referencias con stock positivo; las referencias históricas ausentes permanecen en el maestro con stock 0.
+- Conserva un histórico semanal de stock, precio de origen, precio comercial y coste promedio.
+- Mantiene el precio comercial editable sin sobrescribirlo en cada importación semanal.
+- Separa Precio origen, Precio comercial y Coste promedio.
+- Protege el coste promedio mediante capability: quien no tiene permiso no lo ve ni puede exportarlo.
+- Genera Carne y Pescado / Marisco por separado desde el mismo maestro.
+- Añade roles FRN Administrador, FRN Stock, FRN Director Comercial, FRN Comercial y FRN Consulta.
+- Añade administración de usuarios desde el frontend de /stock/.
+- Mantiene bloqueado wp-admin para perfiles FRN no administradores de WordPress.
+- Muestra la versión instalada en la cabecera, hero y pie de la aplicación.
+- Mantiene compatibilidad de lectura con listas de precios antiguas, pero ya no forman parte del flujo normal.
+- El PDF/CSV sigue excluyendo estrictamente líneas destildadas y nunca imprime precio 0.
+
 ## 1.0.0 — Stock y tarifas comerciales separados
 
 - Separa importación de STOCKS e importación de TARIFAS DE PRECIOS.
