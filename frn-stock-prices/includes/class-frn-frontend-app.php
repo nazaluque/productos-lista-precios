@@ -441,8 +441,10 @@ final class FRN_Frontend_App
         echo "\xEF\xBB\xBF";
         $out = fopen('php://output', 'w');
         $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
-        $headers = ['Sección','Código','Marca','Producto','Stock','Precio'];
+        $headers = ['Sección','Código','Producto','Marca'];
         if ($showCost) { $headers[] = 'Coste promedio'; }
+        $headers[] = 'Stock';
+        $headers[] = 'Precio';
         fputcsv($out, $headers, ';');
 
         foreach ($lines as $line) {
@@ -451,21 +453,27 @@ final class FRN_Frontend_App
             $csvRow = [
                 (int) $line['incoming'] === 1 ? 'Próximos ingresos' : 'Productos',
                 $line['product_code'],
-                $line['brand'],
                 $line['product_name'],
-                ((int) $tariff['show_stock'] && (int) $line['show_stock'])
-                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'], (int) $line['incoming'] === 1, (string) ($line['unit'] ?? ''))
-                    : '',
-                ((int) $tariff['show_price'] && (int) $line['show_price'] && $price > 0)
-                    ? number_format($price, 2, ',', '.') . ' €/kg'
-                    : '',
+                $line['brand'],
             ];
+
             if ($showCost) {
                 $cost = (float) ($line['display_cost'] ?? 0);
                 $csvRow[] = ((int) ($line['show_cost'] ?? 0) === 1 && $cost > 0)
                     ? number_format($cost, 2, ',', '.') . ' €/kg'
                     : '';
             }
+
+            $csvRow[] = ((int) $tariff['show_stock'] && (int) $line['show_stock'])
+                ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'], (int) $line['incoming'] === 1, (string) ($line['unit'] ?? ''))
+                : '';
+
+            $csvRow[] = ((int) $tariff['show_price'])
+                ? (((int) $line['show_price'] === 1 && $price > 0)
+                    ? number_format($price, 2, ',', '.') . ' €/kg'
+                    : 'Consultar precio')
+                : '';
+
             fputcsv($out, $csvRow, ';');
         }
 
@@ -522,36 +530,43 @@ final class FRN_Frontend_App
         }
 
         $headers = '<th class="code">Código</th><th class="product">Producto</th><th class="brand">Marca</th>';
+        if ($showCost) {
+            $headers .= '<th class="cost-head">Coste promedio</th>';
+        }
         if ($showStock) {
             $headers .= '<th class="stock">Stock</th>';
         }
         if ($showPrice) {
             $headers .= '<th class="price-head">Precio</th>';
         }
-        if ($showCost) {
-            $headers .= '<th class="price-head">Coste promedio</th>';
-        }
 
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
         $date = mysql2date('d/m/Y', $tariff['tariff_date'] . ' 00:00:00');
         $scopeLabel = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado y marisco';
         $priceListLabel = trim((string) ($tariff['price_list_name'] ?? ''));
+        $pdfTitle = preg_replace('/\s*·\s*\d{2}\/\d{2}\/\d{4}\s*$/', '', (string) $tariff['title']);
+        $productWidth = 75 - ($showCost ? 13 : 0) - ($showStock ? 13 : 0) - ($showPrice ? 14 : 0);
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
-            @page{margin:24px 24px 38px}
+            @page{margin:24px 24px 44px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:9px}
             .header{background:#080a0c;color:#fff;padding:20px 22px;border-bottom:4px solid #a9823f}
+            .header-grid{width:100%;border-collapse:collapse;table-layout:auto;margin:0}
+            .header-grid td{border:0!important;padding:0!important;background:transparent!important;vertical-align:top}
+            .header-right{text-align:right}
+            .header-scope{color:#d6b36a;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:1.2px}
+            .header-date{margin-top:5px;color:#d3d3d3;font-size:8px}
             .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:29px;font-weight:bold;letter-spacing:2px}
-            .eyebrow{margin-top:11px;color:#d6b36a;font-size:8px;text-transform:uppercase;letter-spacing:1.2px}
-            .title{margin-top:7px;font-family:DejaVu Serif,serif;font-size:24px;line-height:1.05}
+            .title{margin-top:9px;font-family:DejaVu Serif,serif;font-size:24px;line-height:1.05}
             .meta{margin-top:7px;color:#d3d3d3;font-size:8px}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:16px}
             th{background:#202733;color:#fff;padding:7px 7px;text-align:left;font-size:7.5px;text-transform:uppercase}
-            th.code{width:12%}
-            th.product{width:' . ($showStock && $showPrice ? '43%' : '55%') . '}
-            th.brand{width:15%}
-            th.stock{width:15%;text-align:right}
-            th.price-head{width:15%;text-align:right}
+            th.code{width:11%}
+            th.product{width:' . $productWidth . '%}
+            th.brand{width:14%}
+            th.cost-head{width:13%;text-align:right}
+            th.stock{width:13%;text-align:right}
+            th.price-head{width:14%;text-align:right}
             td{padding:6px 7px;border-bottom:1px solid #dfe2e4;vertical-align:top;line-height:1.25}
             tr.product-row.row-light td{background:#ffffff}
             tr.product-row.row-dark td{background:#eef0f2}
@@ -561,18 +576,23 @@ final class FRN_Frontend_App
             td.brand-cell{word-wrap:break-word}
             .incoming-title td{background:#11161b!important;color:#d6b36a;font-weight:bold;letter-spacing:1px;padding:8px}
             .incoming-empty td{background:#f3f0e9;color:#777;font-style:italic;padding:9px}
-            .offer{display:inline-block;background:#a9823f;color:#fff;padding:2px 4px;font-size:6px;white-space:nowrap}
-            .footer{position:fixed;left:0;right:0;bottom:-20px;border-top:1px solid #d6d0c5;padding-top:6px;color:#777;font-size:7px}
+            .offer{display:inline-block;background:#b5482b;color:#fff4dc;border:1px solid #d6b36a;padding:2px 5px;border-radius:6px;font-size:6px;font-weight:bold;white-space:nowrap}
+            .footer{position:fixed;left:0;right:0;bottom:-18px;border-top:1px solid #d6d0c5;padding-top:7px;color:#5f5b54;font-size:9px;font-weight:600;text-align:center;line-height:1.35}
             .terms{margin-top:12px;color:#666;font-size:7px}
         </style></head><body>
-        <div class="header">' .
-            $logoHtml .
-            '<div class="eyebrow">' . esc_html($scopeLabel) . '</div>' .
-            '<div class="title">' . esc_html($tariff['title']) . '</div>' .
-            '<div class="meta">Fecha: ' . esc_html($date) . ' · ' . esc_html($company) .
-            ($priceListLabel !== '' ? ' · Precios: ' . esc_html($priceListLabel) : '') .
-            '</div>' .
-        '</div>
+        <div class="header">
+            <table class="header-grid"><tr>
+                <td>' . $logoHtml . '</td>
+                <td class="header-right">
+                    <div class="header-scope">' . esc_html(strtoupper($scopeLabel)) . '</div>
+                    <div class="header-date">Fecha: ' . esc_html($date) . '</div>
+                </td>
+            </tr></table>
+            <div class="title">' . esc_html($pdfTitle) . '</div>
+            <div class="meta">' . esc_html($company) .
+                ($priceListLabel !== '' ? ' · Precios: ' . esc_html($priceListLabel) : '') .
+            '</div>
+        </div>
         <table>
             <thead><tr>' . $headers . '</tr></thead>
             <tbody>' . $rowsHtml . '</tbody>
@@ -597,13 +617,22 @@ final class FRN_Frontend_App
             $index++;
 
             $offer = (int) $line['featured'] === 1
-                ? '<span class="offer">OFERTA</span> '
+                ? '<span class="offer">★ OFERTA</span> '
                 : '';
 
             $html .= '<tr class="product-row ' . $class . '">'
                 . '<td>' . esc_html($line['product_code']) . '</td>'
                 . '<td class="product-cell">' . $offer . esc_html($line['product_name']) . '</td>'
                 . '<td class="brand-cell">' . esc_html($line['brand']) . '</td>';
+
+            if ($showCost) {
+                $costValue = (float) ($line['display_cost'] ?? 0);
+                $cost = ((int) ($line['show_cost'] ?? 0) === 1 && $costValue > 0)
+                    ? number_format($costValue, 2, ',', '.') . ' €/kg'
+                    : '';
+
+                $html .= '<td class="num">' . esc_html($cost) . '</td>';
+            }
 
             if ($showStock) {
                 $stock = (int) $line['show_stock']
@@ -622,18 +651,9 @@ final class FRN_Frontend_App
                 $priceValue = (float) ($line['display_price'] ?? 0);
                 $price = ((int) $line['show_price'] === 1 && $priceValue > 0)
                     ? number_format($priceValue, 2, ',', '.') . ' €/kg'
-                    : '';
+                    : 'Consultar precio';
 
                 $html .= '<td class="num price">' . esc_html($price) . '</td>';
-            }
-
-            if ($showCost) {
-                $costValue = (float) ($line['display_cost'] ?? 0);
-                $cost = ((int) ($line['show_cost'] ?? 0) === 1 && $costValue > 0)
-                    ? number_format($costValue, 2, ',', '.') . ' €/kg'
-                    : '';
-
-                $html .= '<td class="num">' . esc_html($cost) . '</td>';
             }
 
             $html .= '</tr>';
