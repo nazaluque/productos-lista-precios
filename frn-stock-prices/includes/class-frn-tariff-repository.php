@@ -230,7 +230,7 @@ final class FRN_Tariff_Repository
             $wpdb->prepare(
                 'SELECT * FROM ' . self::lines_table() .
                 ' WHERE tariff_id = %d' . $visible .
-                ' ORDER BY incoming ASC, featured DESC, sort_order ASC, product_name ASC',
+                ' ORDER BY incoming ASC, sort_order ASC, product_name ASC, brand ASC, product_code ASC',
                 $tariffId
             ),
             ARRAY_A
