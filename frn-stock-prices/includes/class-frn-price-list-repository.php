@@ -102,7 +102,7 @@ final class FRN_Price_List_Repository
                     'product_code' => sanitize_text_field((string) ($row['code'] ?? '')),
                     'brand' => sanitize_text_field((string) ($row['brand'] ?? '')),
                     'product_name' => sanitize_text_field((string) ($row['name'] ?? '')),
-                    'price_kg' => $price > 0 ? $price : null,
+                    'price_kg' => $price > 0 ? $price : 0,
                     'featured' => !empty($row['featured']) ? 1 : 0,
                     'visible' => (!empty($row['publish']) || $incoming) ? 1 : 0,
                     'sort_order' => $order,
