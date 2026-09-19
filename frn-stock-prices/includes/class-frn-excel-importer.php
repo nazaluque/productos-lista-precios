@@ -132,6 +132,13 @@ final class FRN_Excel_Importer
             $code = trim((string) ($item['code'] ?? ''));
             $nameValue = trim((string) ($item['product'] ?? ''));
 
+            if ($mode === 'price') {
+                $sectionMarker = strtolower(remove_accents($nameValue));
+                if ($sectionMarker === 'contacto') {
+                    break;
+                }
+            }
+
             if ($code === '' && $nameValue === '') { continue; }
 
             // Native Odoo stock export arrives as:
