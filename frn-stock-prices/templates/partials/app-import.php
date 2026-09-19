@@ -24,14 +24,32 @@ $incomingProducts = array_values(array_filter(
             <label class="frn-dropzone">
                 <span>Arrastra el Excel semanal</span>
                 <small>XLSX / XLS · una o varias hojas · uno o varios archivos</small>
-                <input type="file" name="stock_files[]" accept=".xlsx,.xls" multiple required>
+                <input id="frn-stock-files" type="file" name="stock_files[]" accept=".xlsx,.xls" multiple required>
             </label>
+            <div id="frn-file-status" class="frn-file-status" aria-live="polite">
+                <strong>Ningún archivo seleccionado</strong>
+                <span>Selecciona el Excel para poder previsualizarlo.</span>
+            </div>
             <button type="submit">Previsualizar importación</button>
         </form>
     <?php else : ?>
         <div class="frn-empty">Tu perfil puede consultar y exportar, pero no importar stock.</div>
     <?php endif; ?>
 </section>
+
+<?php if (!empty($latestImport)) : ?>
+<section class="frn-active-source">
+    <div>
+        <small>Semana activa</small>
+        <strong><?php echo esc_html($latestImport['source_file'] ?: 'Excel semanal'); ?></strong>
+    </div>
+    <span>
+        Publicada <?php echo esc_html(mysql2date('d/m/Y H:i', $latestImport['imported_at'])); ?>
+        <?php if (!empty($latestImport['user_name'])) : ?>· por <?php echo esc_html($latestImport['user_name']); ?><?php endif; ?>
+        · <?php echo (int)$latestImport['active_count']; ?> referencias activas
+    </span>
+</section>
+<?php endif; ?>
 
 <?php if (is_array($preview)) { require FRN_SP_PATH . 'templates/partials/app-preview.php'; } ?>
 
