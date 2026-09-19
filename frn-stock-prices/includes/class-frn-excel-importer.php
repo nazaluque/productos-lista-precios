@@ -5,7 +5,7 @@ final class FRN_Excel_Importer
 {
     public function parse_files(array $files): array
     {
-        return $this->parse($files, 'combined');
+        return $this->parse($files, 'stock');
     }
 
     public function parse_stock_files(array $files): array
@@ -13,6 +13,11 @@ final class FRN_Excel_Importer
         return $this->parse($files, 'stock');
     }
 
+    /**
+     * Legacy import retained for backwards compatibility. The normal 1.1
+     * workflow uses the weekly unified stock file, which may already contain
+     * source selling price and average cost.
+     */
     public function parse_price_files(array $files): array
     {
         return $this->parse($files, 'price');
@@ -51,7 +56,7 @@ final class FRN_Excel_Importer
 
         $total = count($catalogs['carne']) + count($catalogs['pescado-marisco']);
         if ($total === 0) {
-            $label = $mode === 'stock' ? 'stocks' : ($mode === 'price' ? 'precios' : 'datos');
+            $label = $mode === 'price' ? 'precios' : 'productos con stock';
             throw new RuntimeException('No se encontraron ' . $label . ' reconocibles en el Excel.');
         }
 
@@ -79,43 +84,24 @@ final class FRN_Excel_Importer
         $workbook = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
         $catalogs = ['carne' => [], 'pescado-marisco' => []];
 
-        $known = [
-            'carne' => $workbook->getSheetByName('CARNE_IMPORT'),
-            'pescado-marisco' => $workbook->getSheetByName('PESCADO_IMPORT'),
-        ];
-
-        $usedKnown = false;
-        foreach ($known as $category => $sheet) {
-            if (!$sheet) { continue; }
-
-            $usedKnown = true;
-            $catalogs[$category] = array_merge(
-                $catalogs[$category],
-                $this->rows_from_raw($sheet->toArray(null, true, false, false), $category, $mode)
-            );
-        }
-
-        if ($usedKnown) {
-            return $catalogs;
-        }
-
         foreach ($workbook->getWorksheetIterator() as $sheet) {
             $raw = $sheet->toArray(null, true, false, false);
             if (count($raw) < 2) { continue; }
 
-            $category = $this->detect_category($sheet->getTitle(), $name, $raw, $mode);
-            if (!$category) { continue; }
+            $sheetCategory = $this->detect_category($sheet->getTitle(), $name, $raw, $mode);
+            $rows = $this->rows_from_raw($raw, $sheetCategory, $mode);
 
-            $catalogs[$category] = array_merge(
-                $catalogs[$category],
-                $this->rows_from_raw($raw, $category, $mode)
-            );
+            foreach ($rows as $row) {
+                $category = (string) ($row['category'] ?? '');
+                if (!isset($catalogs[$category])) { continue; }
+                $catalogs[$category][] = $row;
+            }
         }
 
         return $catalogs;
     }
 
-    private function rows_from_raw(array $raw, string $category, string $mode): array
+    private function rows_from_raw(array $raw, ?string $fallbackCategory, string $mode): array
     {
         if (count($raw) < 2) { return []; }
 
@@ -125,40 +111,43 @@ final class FRN_Excel_Importer
         $headers = array_map([$this, 'normalize_header'], $raw[$headerIndex]);
         $rows = [];
 
-        foreach (array_slice($raw, $headerIndex + 1) as $index => $values) {
+        foreach (array_slice($raw, $headerIndex + 1) as $values) {
             $values = array_pad($values, count($headers), '');
             $item = array_combine($headers, array_slice($values, 0, count($headers))) ?: [];
+
+            if ($this->is_repeated_header($values)) { continue; }
 
             $code = trim((string) ($item['code'] ?? ''));
             $nameValue = trim((string) ($item['product'] ?? ''));
 
-            if ($mode === 'price') {
-                $sectionMarker = strtolower(remove_accents($nameValue));
-                if ($sectionMarker === 'contacto') {
-                    break;
-                }
-            }
-
-            if ($code === '' && $nameValue === '') { continue; }
-
-            // Native Odoo stock export arrives as:
-            // [P00663] FRN: PULPO T3 LIMPIO...
-            // Extract the stable SKU from the product label automatically.
             if ($code === '' && preg_match('/^\\[([A-Z0-9]+)\\]\\s*(.+)$/i', $nameValue, $match)) {
                 $code = strtoupper(trim($match[1]));
                 $nameValue = trim($match[2]);
             }
 
+            if ($code === '' && $nameValue === '') { continue; }
+            if ($this->is_summary_row($code, $nameValue)) { continue; }
+
+            if ($mode === 'price') {
+                $sectionMarker = strtolower(remove_accents($nameValue));
+                if ($sectionMarker === 'contacto') { break; }
+            }
+
             $stock = $this->number($item['stock'] ?? null, true);
             $price = $this->number($item['price'] ?? null, true);
+            $cost = $this->number($item['cost'] ?? null, true);
             $incoming = self::is_incoming_code($code);
-            $sourcePublish = !array_key_exists('publish', $item) || $this->truthy($item['publish']);
+            $category = $this->row_category($item, $code, $fallbackCategory);
 
-            if ($mode === 'stock') {
-                $publish = $incoming
-                    ? $sourcePublish
-                    : ($sourcePublish && (($stock ?? 0) > 0));
-            } elseif ($mode === 'price') {
+            // Weekly FRN rule: regular rows with stock 0 / blank are not imported.
+            // Existing catalogue records are reset to stock 0 by the repository,
+            // preserving the product master and historical record.
+            if ($mode !== 'price' && !$incoming && (($stock ?? 0) <= 0)) {
+                continue;
+            }
+
+            $sourcePublish = !array_key_exists('publish', $item) || $this->truthy($item['publish']);
+            if ($mode === 'price') {
                 $publish = $incoming
                     ? $sourcePublish
                     : ($sourcePublish && (($price ?? 0) > 0));
@@ -173,7 +162,12 @@ final class FRN_Excel_Importer
             if ($code === '') {
                 $errors[] = $mode === 'price'
                     ? 'falta código de producto'
-                    : 'no se pudo leer el código Odoo';
+                    : 'producto con stock sin Referencia Interna/código';
+            }
+
+            if (!$category) {
+                $errors[] = 'no se pudo determinar Carne o Pescado/Marisco';
+                continue;
             }
 
             if ($incoming && $nameValue === '') {
@@ -188,13 +182,19 @@ final class FRN_Excel_Importer
                 $errors[] = 'precio inválido';
             }
 
+            if ($cost !== null && $cost < 0) {
+                $errors[] = 'coste promedio inválido';
+            }
+
             $rows[] = [
                 'category' => $category,
                 'code' => sanitize_text_field($code),
                 'brand' => sanitize_text_field((string) ($item['brand'] ?? '')),
                 'name' => sanitize_text_field($nameValue),
+                'model' => sanitize_text_field((string) ($item['model'] ?? '')),
                 'stock' => $stock ?? 0,
                 'price' => $price ?? 0,
+                'cost' => $cost ?? 0,
                 'unit' => sanitize_text_field((string) ($item['unit'] ?? '')),
                 'featured' => $this->truthy($item['featured'] ?? ''),
                 'publish' => $publish,
@@ -206,6 +206,42 @@ final class FRN_Excel_Importer
         }
 
         return $rows;
+    }
+
+    private function row_category(array $item, string $code, ?string $fallback): ?string
+    {
+        $labels = [
+            (string) ($item['category'] ?? ''),
+            (string) ($item['model'] ?? ''),
+        ];
+
+        foreach ($labels as $label) {
+            $value = strtolower(remove_accents(trim($label)));
+            if ($value === '') { continue; }
+
+            if (
+                str_contains($value, 'carne') ||
+                str_contains($value, 'vacuno') ||
+                str_contains($value, 'bovino') ||
+                str_contains($value, 'beef')
+            ) {
+                return 'carne';
+            }
+
+            if (
+                str_contains($value, 'pesc') ||
+                str_contains($value, 'marisc') ||
+                str_contains($value, 'seafood')
+            ) {
+                return 'pescado-marisco';
+            }
+        }
+
+        $normalizedCode = strtoupper(trim($code));
+        if (preg_match('/^C\\d+/i', $normalizedCode)) { return 'carne'; }
+        if (preg_match('/^P\\d+/i', $normalizedCode)) { return 'pescado-marisco'; }
+
+        return $fallback;
     }
 
     private function detect_category(string $sheet, string $filename, array $raw, string $mode): ?string
@@ -233,26 +269,44 @@ final class FRN_Excel_Importer
 
         $headers = array_map([$this, 'normalize_header'], $raw[$headerIndex]);
         $codePos = array_search('code', $headers, true);
-        if ($codePos === false) { return null; }
+        $categoryPos = array_search('category', $headers, true);
 
         $c = 0;
         $p = 0;
 
-        foreach (array_slice($raw, $headerIndex + 1, 50) as $row) {
-            $code = strtoupper(trim((string) ($row[$codePos] ?? '')));
-            if (preg_match('/^C\d+/i', $code)) { $c++; }
-            if (preg_match('/^P\d+/i', $code)) { $p++; }
+        foreach (array_slice($raw, $headerIndex + 1, 80) as $row) {
+            if ($categoryPos !== false) {
+                $categoryValue = strtolower(remove_accents(trim((string) ($row[$categoryPos] ?? ''))));
+                if (
+                    str_contains($categoryValue, 'carne') ||
+                    str_contains($categoryValue, 'vacuno') ||
+                    str_contains($categoryValue, 'bovino')
+                ) {
+                    $c++;
+                }
+                if (str_contains($categoryValue, 'pesc') || str_contains($categoryValue, 'marisc')) {
+                    $p++;
+                }
+            }
+
+            if ($codePos !== false) {
+                $code = strtoupper(trim((string) ($row[$codePos] ?? '')));
+                if (preg_match('/^C\\d+/i', $code)) { $c++; }
+                if (preg_match('/^P\\d+/i', $code)) { $p++; }
+            }
         }
 
-        if ($c > $p && $c > 0) { return 'carne'; }
-        if ($p > $c && $p > 0) { return 'pescado-marisco'; }
+        if ($c > 0 && $p === 0) { return 'carne'; }
+        if ($p > 0 && $c === 0) { return 'pescado-marisco'; }
 
+        // Mixed sheets are intentionally left without a sheet-level category;
+        // each row will be classified using Categoria del producto / code.
         return null;
     }
 
     private function find_header_row(array $raw, string $mode): ?int
     {
-        foreach (array_slice($raw, 0, 20, true) as $index => $row) {
+        foreach (array_slice($raw, 0, 30, true) as $index => $row) {
             $headers = array_map([$this, 'normalize_header'], $row);
 
             $hasProduct = in_array('product', $headers, true);
@@ -267,14 +321,7 @@ final class FRN_Excel_Importer
                 continue;
             }
 
-            if ($mode === 'stock') {
-                if ($hasStock && ($hasCode || $hasProduct)) {
-                    return (int) $index;
-                }
-                continue;
-            }
-
-            if (($hasStock || $hasPrice) && ($hasCode || $hasProduct)) {
+            if ($hasStock && ($hasCode || $hasProduct)) {
                 return (int) $index;
             }
         }
@@ -285,27 +332,82 @@ final class FRN_Excel_Importer
     private function normalize_header(mixed $value): string
     {
         $value = remove_accents(strtolower(trim((string) $value)));
-        $value = preg_replace('/\s+/', ' ', $value);
+        $value = preg_replace('/\\s+/', ' ', $value);
 
         return match (true) {
-            in_array($value, ['codigo','código','id','referencia','ref','sku','cod','cod.'], true) => 'code',
+            in_array($value, [
+                'codigo','id','referencia','referencia interna','ref','sku','cod','cod.'
+            ], true) => 'code',
+
             str_contains($value, 'marca') || str_contains($value, 'brand') => 'brand',
-            in_array($value, ['producto','productos','nombre','descripcion','descripción','product','products','description','articulo','artículo'], true) => 'product',
-            str_contains($value, 'stock') || str_contains($value, 'cantidad') || str_contains($value, 'disponible') || str_contains($value, 'existencia') => 'stock',
-            str_contains($value, 'precio') || str_contains($value, 'price') || str_contains($value, 'tarifa') || str_contains($value, '€/kg') || str_contains($value, 'eur/kg') => 'price',
-            str_contains($value, 'unidad') || $value === 'unit' || $value === 'udm' => 'unit',
-            in_array($value, ['oferta','destacado','featured','promocion','promoción'], true) => 'featured',
+
+            in_array($value, [
+                'producto','productos','nombre','nombre del producto','descripcion','product',
+                'products','description','articulo'
+            ], true) => 'product',
+
+            str_contains($value, 'stock') ||
+                str_contains($value, 'cantidad a la mano') ||
+                str_contains($value, 'cantidad') ||
+                str_contains($value, 'disponible') ||
+                str_contains($value, 'existencia') => 'stock',
+
+            str_contains($value, 'precio de venta') ||
+                str_contains($value, 'precio') ||
+                str_contains($value, 'price') ||
+                str_contains($value, 'tarifa') ||
+                str_contains($value, '€/kg') ||
+                str_contains($value, 'eur/kg') => 'price',
+
+            in_array($value, [
+                'costo','coste','costo promedio','coste promedio','costo medio','coste medio',
+                'average cost','avg cost'
+            ], true) ||
+                str_contains($value, 'coste promedio') ||
+                str_contains($value, 'costo promedio') => 'cost',
+
+            str_contains($value, 'categoria del producto') ||
+                str_contains($value, 'categoria') ||
+                str_contains($value, 'familia') => 'category',
+
+            in_array($value, ['modelo','model'], true) => 'model',
+
+            str_contains($value, 'unidad de medida') ||
+                str_contains($value, 'unidad') ||
+                $value === 'unit' ||
+                $value === 'udm' => 'unit',
+
+            in_array($value, ['oferta','destacado','featured','promocion'], true) => 'featured',
             in_array($value, ['publicar','publicado','visible','usar','activo'], true) => 'publish',
             in_array($value, ['estado','status'], true) => 'status',
             default => sanitize_key($value),
         };
     }
 
+    private function is_summary_row(string $code, string $name): bool
+    {
+        if (trim($code) !== '') { return false; }
+
+        $value = strtolower(remove_accents(trim($name)));
+        return (bool) preg_match('/^(total(?: general)?|subtotal)(\\b|\\s|:|-)/', $value);
+    }
+
+    private function is_repeated_header(array $row): bool
+    {
+        $normalized = array_map([$this, 'normalize_header'], $row);
+        $hasProduct = in_array('product', $normalized, true);
+        $hasCode = in_array('code', $normalized, true);
+        $hasStock = in_array('stock', $normalized, true);
+        $hasPrice = in_array('price', $normalized, true);
+
+        return ($hasProduct || $hasCode) && ($hasStock || $hasPrice);
+    }
+
     private function truthy(mixed $value): bool
     {
         return in_array(
             strtolower(trim(remove_accents((string) $value))),
-            ['si','sí','1','true','x','yes','y','ok'],
+            ['si','1','true','x','yes','y','ok'],
             true
         );
     }
