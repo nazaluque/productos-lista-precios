@@ -78,7 +78,7 @@ $whatsapp = preg_replace('/\D+/', '', (string) get_option('frn_sp_whatsapp_numbe
                     <button type="submit">Entrar a la herramienta</button>
                 </form>
 
-                <a class="frn-login-back" href="<?php echo esc_url(home_url('/')); ?>">← Volver a FRN Atlántico</a>
+                <div class="frn-login-version">Versión <?php echo esc_html(FRN_SP_VERSION); ?></div>\n                <a class="frn-login-back" href="<?php echo esc_url(home_url('/')); ?>">← Volver a FRN Atlántico</a>
             </div>
         </section>
     </main>
