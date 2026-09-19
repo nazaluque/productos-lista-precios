@@ -1,4 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.querySelector('#frn-stock-files');
+  const fileStatus = document.querySelector('#frn-file-status');
+
+  const refreshFileStatus = () => {
+    if (!fileInput || !fileStatus) return;
+    const files = Array.from(fileInput.files || []);
+    const strong = fileStatus.querySelector('strong');
+    const span = fileStatus.querySelector('span');
+
+    if (!files.length) {
+      fileStatus.classList.remove('is-ready');
+      if (strong) strong.textContent = 'Ningún archivo seleccionado';
+      if (span) span.textContent = 'Selecciona el Excel para poder previsualizarlo.';
+      return;
+    }
+
+    fileStatus.classList.add('is-ready');
+    if (strong) strong.textContent = files.length === 1 ? files[0].name : files.length + ' archivos seleccionados';
+    if (span) span.textContent = 'Archivo cargado en el navegador · listo para previsualizar';
+  };
+
+  if (fileInput) {
+    fileInput.addEventListener('change', refreshFileStatus);
+    refreshFileStatus();
+  }
+
   const setChecked = (selector, checked) => {
     document.querySelectorAll(selector).forEach((el) => { el.checked = checked; });
   };
