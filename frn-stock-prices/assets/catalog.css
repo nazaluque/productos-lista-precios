@@ -173,3 +173,75 @@
   .frn-internal-grid{grid-template-columns:1fr}
   .frn-internal-note{align-items:flex-start;flex-direction:column}
 }
+
+
+/* FRN Stock & Prices 0.8.0 · workspace frontend */
+.frn-app-body{background:#050607}
+.frn-app-top{position:relative}
+.frn-app-shell{width:min(1480px,calc(100% - 48px));margin:0 auto;padding:58px 0 80px}
+.frn-app-hero{display:flex;align-items:end;justify-content:space-between;gap:60px;padding:36px 0 48px;border-bottom:1px solid var(--frn-line)}
+.frn-app-hero p{margin:0 0 14px;color:var(--frn-gold-light);text-transform:uppercase;letter-spacing:.18em;font-size:10px}
+.frn-app-hero h1{margin:0;font:400 clamp(54px,6vw,88px)/.9 Georgia,serif;letter-spacing:-.045em}
+.frn-app-hero>span{max-width:520px;color:var(--frn-muted);font-size:17px;line-height:1.55}
+.frn-app-tabs{display:flex;gap:8px;padding:26px 0}
+.frn-app-tabs a{padding:14px 18px;border:1px solid rgba(255,255,255,.10);background:#0b0d0f;color:#c8c4bb;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.frn-app-tabs a.is-active,.frn-app-tabs a:hover{border-color:var(--frn-gold);background:var(--frn-gold);color:#070707}
+.frn-app-message{margin:0 0 18px;padding:14px 16px;border-left:3px solid var(--frn-gold);background:#111417;color:#e8e4dc}
+.frn-app-message.error{border-left-color:#b85050;background:#1a1010}
+.frn-app-card{margin:0 0 24px;padding:28px;border:1px solid rgba(255,255,255,.10);background:#0a0c0e}
+.frn-card-heading{display:flex;align-items:start;justify-content:space-between;gap:50px;margin-bottom:24px}
+.frn-card-heading small{color:var(--frn-gold-light);text-transform:uppercase;letter-spacing:.16em;font-size:9px}
+.frn-card-heading h2{margin:8px 0 0;font:400 clamp(30px,3vw,48px)/1 Georgia,serif}
+.frn-card-heading p{max-width:620px;margin:0;color:var(--frn-muted);line-height:1.55}
+.frn-upload-form{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:stretch}
+.frn-dropzone{position:relative;min-height:150px;padding:34px;border:1px dashed rgba(180,138,69,.55);background:rgba(180,138,69,.04);display:flex;flex-direction:column;justify-content:center;cursor:pointer}
+.frn-dropzone span{font:400 26px Georgia,serif}
+.frn-dropzone small{margin-top:8px;color:var(--frn-muted)}
+.frn-dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.frn-upload-form button,.frn-inline-action button,.frn-simple-form button,.frn-tariff-actions button,.frn-tariff-actions a{
+  min-height:52px;padding:0 22px;border:1px solid var(--frn-gold);background:var(--frn-gold);color:#080808;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;cursor:pointer
+}
+.frn-app-table-wrap{overflow:auto;border:1px solid rgba(255,255,255,.09)}
+.frn-app-table{width:100%;min-width:1180px;border-collapse:collapse;background:#07090a}
+.frn-app-table th{position:sticky;top:0;z-index:1;padding:11px 10px;background:#151a1f;color:#c9c6bf;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.frn-app-table td{padding:9px 10px;border-top:1px solid rgba(255,255,255,.07);color:#ddd8cf;vertical-align:middle}
+.frn-app-table input[type=text],.frn-app-table input[type=number],.frn-tariff-settings input,.frn-tariff-settings select,.frn-simple-form input{
+  width:120px;min-height:38px;padding:0 9px;border:1px solid rgba(255,255,255,.12);background:#040505;color:#f4f0e8
+}
+.frn-app-table input.frn-wide{width:340px}
+.frn-app-table tr:hover td{background:rgba(255,255,255,.018)}
+.frn-incoming-row td{background:rgba(180,138,69,.05)}
+.frn-incoming-title{margin:32px 0 12px;color:var(--frn-gold-light);font:400 25px Georgia,serif}
+.frn-incoming-title small{margin-left:10px;color:#8f8b83;font:400 11px Arial,sans-serif}
+.frn-inline-action{margin-top:18px;display:flex;justify-content:flex-end}
+.frn-preview-groups h3{margin:22px 0 10px}
+.frn-empty{padding:24px;border:1px solid rgba(255,255,255,.08);color:#8f8b83;background:#070809}
+.frn-app-grid-two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.frn-simple-form{display:grid;gap:14px}
+.frn-simple-form label,.frn-tariff-settings label{display:grid;gap:7px;color:#aaa69e;font-size:11px}
+.frn-simple-form input{width:100%}
+.frn-secondary-button{background:transparent!important;color:var(--frn-gold-light)!important}
+.frn-history{display:grid;gap:8px}
+.frn-history>a{display:flex;justify-content:space-between;gap:20px;padding:16px 18px;border:1px solid rgba(255,255,255,.08);background:#07090a}
+.frn-history>a:hover{border-color:var(--frn-gold)}
+.frn-history span{color:#8d8981;font-size:11px}
+.frn-text-link{color:var(--frn-gold-light)!important}
+.frn-tariff-settings{display:grid;grid-template-columns:2fr 160px 150px repeat(3,auto);gap:14px;align-items:end;margin-bottom:26px}
+.frn-tariff-settings input[type=checkbox]{width:auto}
+.frn-tariff-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.frn-tariff-actions a{display:inline-flex;align-items:center;text-decoration:none}
+.frn-tariff-edit-table{min-width:1600px}
+@media(max-width:960px){
+ .frn-app-shell{width:calc(100% - 32px)}
+ .frn-app-hero{align-items:start;flex-direction:column}
+ .frn-card-heading{flex-direction:column;gap:16px}
+ .frn-upload-form{grid-template-columns:1fr}
+ .frn-app-grid-two{grid-template-columns:1fr}
+ .frn-tariff-settings{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+ .frn-app-tabs{display:grid;grid-template-columns:1fr}
+ .frn-app-tabs a{text-align:center}
+ .frn-tariff-settings{grid-template-columns:1fr}
+ .frn-history>a{flex-direction:column}
+}
