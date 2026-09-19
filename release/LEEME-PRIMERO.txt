@@ -1,70 +1,98 @@
-FRN · PAQUETE v1.0.2 · FORMATO REAL ODOO
-=========================================
+FRN · PAQUETE v1.1.0 · MAESTRO SEMANAL UNIFICADO
+================================================
 
 SOLO PARA frnatlantico.es
 NO TOCAR frnatlantico.com
 
-STOCK ODOO
-----------
-La aplicación acepta directamente el formato real probado:
+FLUJO
+-----
+1. Entrar en /stock/acceso/
+2. Importar el Excel semanal de Odoo.
+3. Revisar stock y precios comerciales.
+4. Guardar.
+5. Crear PDF/CSV de Carne o Pescado / Marisco.
 
-Pestañas:
-- Carne
-- pescado
+EXCEL SEMANAL
+-------------
+La aplicación admite XLSX/XLS, una o varias hojas y uno o varios archivos.
 
-Cabeceras:
-- Productos
-- Cantidad a la mano
-- Categoría del producto
-- Unidad de medida
+Cabeceras soportadas:
+- Nombre del producto
+- Referencia Interna
 - Marca
 - Modelo
+- Categoria del producto
+- Precio de venta
+- Costo / Coste / Costo promedio / Coste promedio
+- Stock
+- Unidad / Unidad de medida
 
-Ejemplo:
-[P00663] FRN: PULPO T3 LIMPIO FAO 27 2-3K
+REGLA DE STOCK
+--------------
+Solo se incorporan a la disponibilidad actual productos con stock > 0.
+Los productos históricos que ya existían no se borran: quedan con stock 0 y fuera de la selección semanal.
 
-La aplicación extrae automáticamente:
-Código: P00663
-Producto: FRN: PULPO T3 LIMPIO FAO 27 2-3K
+PRECIOS
+-------
+El archivo puede traer Precio de venta como precio origen.
+El precio comercial se puede editar dentro de /stock/ y se conserva entre semanas.
+La importación no pisa un precio comercial ya ajustado.
 
-No hay que modificar el Excel semanal de stock.
+COSTE PROMEDIO
+--------------
+Se guarda desde Odoo, pero solo es visible y exportable para usuarios con permiso frn_view_cost.
+Un usuario sin ese permiso no ve el coste ni en pantalla ni en PDF/CSV.
 
-TARIFAS DE PRECIOS
-------------------
-Pueden viajar en un único Excel con dos pestañas:
-- CARNE
-- PESCADO
+ROLES
+-----
+FRN Administrador:
+- stock
+- precios
+- coste
+- exportación
+- usuarios
 
-Para unir precio y stock de forma segura, cada referencia debe incluir CODIGO.
-El nombre comercial puede ser distinto del nombre Odoo.
+FRN Stock:
+- importar/editar stock
+- exportar
+- sin coste
 
-Columnas recomendadas:
-CODIGO | NOMBRE | MARCA | PRECIO | UNIDAD | OFERTA | PUBLICAR
+FRN Director Comercial:
+- editar precios
+- ver/exportar coste
+- exportar
 
-El precio se une al stock por CODIGO, nunca por parecido de texto.
+FRN Comercial:
+- consultar/exportar
+- sin coste
 
-IMPORTANTE
-----------
-La lista histórica de precios JULIO 2026 no tiene columna CODIGO.
-La versión 1.0.1 la detecta pero NO permite publicarla silenciosamente:
-marca "falta código de producto" para evitar asignar un precio a una referencia equivocada.
+FRN Consulta:
+- consultar/exportar
+- sin edición
+- sin coste
 
-PRÓXIMOS INGRESOS
------------------
-Códigos XXX / XXXX / XXXXX...
-Para estos códigos es obligatorio completar NOMBRE.
-Se permiten varios XXX con nombres diferentes.
-
-PDF
----
-- Línea destildada: no sale.
-- Precio 0: queda vacío, nunca 0,00 €.
-- Bandas alternas claro/gris.
-- PRÓXIMOS INGRESOS aparece siempre.
-- PDF/CSV guardan primero los cambios actuales.
-
-
-UNIDADES
+USUARIOS
 --------
-La 1.0.2 también lee "Unidad de medida" del stock Odoo.
-Así, si una referencia está en Unidades, el modo stock exacto no la etiqueta erróneamente como kg.
+Los crea un FRN Administrador desde la pestaña Usuarios de /stock/.
+Todos acceden por /stock/acceso/.
+Los perfiles FRN no necesitan wp-admin.
+
+PDF / CSV
+---------
+Carne y Pescado / Marisco se generan siempre por separado.
+Opciones:
+- precio
+- stock exacto
+- stock redondeado
+- Disponible
+- coste promedio (solo con permiso)
+
+Línea destildada: nunca sale.
+Precio 0: vacío.
+Coste 0: vacío.
+Próximos ingresos aparece siempre.
+
+VERSIÓN
+-------
+La versión instalada se muestra dentro de /stock/ en cabecera, pantalla y pie.
+Versión de este paquete: 1.1.0
