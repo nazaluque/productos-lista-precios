@@ -27,7 +27,7 @@ final class FRN_Tariff_Manager
             'frn-stock-prices',
             'Tarifas semanales',
             'Tarifas semanales',
-            'manage_options',
+            'frn_manage_stock',
             'frn-tariffs',
             [$this, 'page']
         );
@@ -35,7 +35,7 @@ final class FRN_Tariff_Manager
 
     public function page(): void
     {
-        if (!current_user_can('manage_options')) { return; }
+        if (!current_user_can('frn_manage_stock')) { return; }
 
         $tariffId = absint($_GET['tariff'] ?? 0);
         echo '<div class="wrap"><h1>Tarifas semanales FRN <small style="font-size:13px;color:#646970">v' . esc_html(FRN_SP_VERSION) . '</small></h1>';
@@ -437,13 +437,13 @@ final class FRN_Tariff_Manager
 
     private function guard(string $nonce): void
     {
-        if (!current_user_can('manage_options')) { wp_die('No autorizado.', 403); }
+        if (!current_user_can('frn_manage_stock')) { wp_die('No autorizado.', 403); }
         check_admin_referer($nonce);
     }
 
     private function guard_get(string $nonce): void
     {
-        if (!current_user_can('manage_options')) { wp_die('No autorizado.', 403); }
+        if (!current_user_can('frn_manage_stock')) { wp_die('No autorizado.', 403); }
         check_admin_referer($nonce);
     }
 
