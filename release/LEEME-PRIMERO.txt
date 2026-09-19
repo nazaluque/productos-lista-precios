@@ -1,5 +1,5 @@
-FRN · PAQUETE v0.9 · TARIFAS SEMANALES
-=======================================
+FRN · PAQUETE v1.0 · STOCK + TARIFAS COMERCIALES
+=================================================
 
 SOLO PARA
 ---------
@@ -9,62 +9,73 @@ NO TOCAR
 --------
 frnatlantico.com
 
-CAMBIOS 0.9
------------
-- Productos normales con stock 0 quedan destildados automáticamente.
-- Al actualizar desde 0.8, también se destildan los productos existentes con stock 0.
-- Los códigos XXX / XXXX / XXXXX... siguen como PRÓXIMOS INGRESOS aunque no tengan stock.
-- Botones rápidos:
-  - Tildar todos
-  - Destildar todos
-  - Solo con stock
-  - Marcar todas como oferta
-  - Quitar todas las ofertas
-- Se crean dos tarifas independientes:
-  - Tarifa Carne
-  - Tarifa Pescado / Marisco
-- Presets de salida:
-  - General = precio + Disponible
-  - Distribuidor = precio + stock exacto
-  - Disponibilidad = sin precio + Disponible
-  - Personalizado
-- Al desactivar Mostrar stock se destildan los "Ver stock" de todas las líneas.
-- Al desactivar Mostrar precio se destildan los "Ver precio" de todas las líneas.
-- El PDF elimina por completo la columna Stock o Precio cuando globalmente están ocultas.
-- El selector Estado/Borrador/Final desaparece de la interfaz.
-- En la tarifa editable hay una sola fila de acciones al final:
-  Guardar tarifa · Descargar PDF · Descargar CSV.
+CAMBIO PRINCIPAL
+----------------
+A partir de 1.0 los datos se cargan por separado:
+
+1. STOCKS
+   - export semanal de Odoo;
+   - lo que no venga o venga con stock 0 queda destildado;
+   - no modifica precios.
+
+2. TARIFA DE PRECIOS
+   - archivo comercial independiente;
+   - puede guardarse con nombres distintos:
+     General, Valdepeice, Madrid, HORECA, etc.;
+   - no modifica el stock.
+
+Al crear el PDF se combinan:
+STOCK VIGENTE + TARIFA DE PRECIOS ELEGIDA.
+
+PDF
+---
+- Nunca imprime 0,00 € como precio.
+- Una línea destildada no sale.
+- Descargar PDF/CSV guarda antes los cambios de la pantalla.
+- Filas alternas claro/oscuro para facilitar lectura.
+- La sección PRÓXIMOS INGRESOS aparece siempre.
+- Si está vacía, muestra:
+  "Actualmente no hay próximos ingresos informados."
+- Los códigos XXX / XXXX / XXXXX... se consideran próximos ingresos.
+- Carne y Pescado/Marisco generan PDFs separados.
 
 INSTALACIÓN
 -----------
-1. WordPress de frnatlantico.es
-2. Plugins > Añadir plugin > Subir plugin
-3. Instalar:
-   01-INSTALAR-FRN-STOCK-PRECIOS-v0.9.0.zip
-4. Reemplazar la versión anterior.
-5. FRN Home 1.1.0 puede quedarse como está.
+En WordPress de frnatlantico.es:
 
-FLUJO SEMANAL
--------------
-Excel Odoo
-→ Previsualizar
-→ Publicar
-→ Revisar selección
-→ Guardar cambios
-→ Crear tarifa Carne o Pescado/Marisco
-→ Elegir formato
-→ Ajustar
-→ Guardar
-→ Descargar PDF
+1. Plugins > Añadir plugin > Subir plugin
+2. Instalar:
+   01-INSTALAR-FRN-STOCK-PRECIOS-v1.0.0.zip
+3. Reemplazar la versión anterior.
+4. FRN Home 1.1.0 puede quedarse instalado sin cambios.
 
-PRÓXIMOS INGRESOS
------------------
-Los códigos formados solo por tres o más X se separan del stock actual:
-XXX, XXXX, XXXXX...
+FLUJO DE TRABAJO
+----------------
+LUNES / STOCK:
+Odoo → Exportar stocks → Importar STOCKS → Previsualizar → Actualizar stock.
 
-No se exige stock positivo para incluirlos.
+COMERCIAL / PRECIOS:
+Excel de precios → Importar TARIFA → poner nombre → Previsualizar → Guardar tarifa.
 
-NOTA
-----
-Cuando tengamos el export real definitivo de Odoo se afina únicamente el parser.
-La aplicación y los PDF no necesitan rediseñarse.
+SALIDA:
+Crear PDF → elegir Carne o Pescado/Marisco → elegir tarifa de precios →
+elegir General / Distribuidor / Disponibilidad → ajustar → Descargar PDF.
+
+PRESets
+-------
+General:
+precio + "Disponible"
+
+Distribuidor:
+precio + stock exacto
+
+Disponibilidad:
+sin precio + "Disponible"
+
+Personalizado:
+configuración manual.
+
+SEGURIDAD
+---------
+El usuario FRN Comercial continúa trabajando solo en frontend.
+No tiene acceso al panel general de WordPress.
