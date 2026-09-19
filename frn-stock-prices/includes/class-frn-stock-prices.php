@@ -27,6 +27,7 @@ final class FRN_Stock_Prices
         update_option('frn_sp_version', FRN_SP_VERSION, false);
 
         FRN_Catalog_Repository::create_table();
+        FRN_Price_List_Repository::create_tables();
         FRN_Tariff_Repository::create_tables();
 
         self::instance()->register_routes();
@@ -58,6 +59,7 @@ final class FRN_Stock_Prices
 
         if ($installed !== FRN_SP_VERSION) {
             FRN_Catalog_Repository::create_table();
+            FRN_Price_List_Repository::create_tables();
             FRN_Tariff_Repository::create_tables();
             self::ensure_roles();
 
