@@ -20,6 +20,7 @@ final class FRN_Tariff_Repository
     {
         global $wpdb;
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
         $charset = $wpdb->get_charset_collate();
         $tariffs = self::tariffs_table();
         $lines = self::lines_table();
@@ -55,32 +56,31 @@ final class FRN_Tariff_Repository
             show_price tinyint(1) NOT NULL DEFAULT 1,
             visible tinyint(1) NOT NULL DEFAULT 1,
             featured tinyint(1) NOT NULL DEFAULT 0,
+            incoming tinyint(1) NOT NULL DEFAULT 0,
             sort_order int NOT NULL DEFAULT 0,
             PRIMARY KEY  (id),
             KEY tariff_id (tariff_id),
-            KEY tariff_category (tariff_id, category)
+            KEY tariff_category (tariff_id, category),
+            KEY incoming (incoming)
         ) {$charset};");
     }
 
     public function create_from_catalog(string $title, string $date): int
     {
         global $wpdb;
-        $catalog = new FRN_Catalog_Repository();
-        $sourceFile = '';
-        $all = [];
 
-        foreach (['pescado-marisco', 'carne'] as $category) {
-            $products = $catalog->all($category, true);
-            foreach ($products as $product) {
-                if ($sourceFile === '' && !empty($product['source_file'])) {
-                    $sourceFile = (string) $product['source_file'];
-                }
-                $all[] = [$category, $product];
-            }
+        $catalog = new FRN_Catalog_Repository();
+        $products = $catalog->all_combined(true);
+
+        if (!$products) {
+            throw new RuntimeException('No hay productos importados. Importa primero el Excel semanal.');
         }
 
-        if (!$all) {
-            throw new RuntimeException('No hay productos en el catálogo actual. Importa primero el Excel semanal.');
+        $sourceFile = '';
+        foreach ($products as $product) {
+            if ($sourceFile === '' && !empty($product['source_file'])) {
+                $sourceFile = (string) $product['source_file'];
+            }
         }
 
         $now = current_time('mysql');
@@ -103,11 +103,12 @@ final class FRN_Tariff_Repository
         $tariffId = (int) $wpdb->insert_id;
         $sort = 0;
 
-        foreach ($all as [$category, $product]) {
+        foreach ($products as $product) {
             $sort++;
+
             $wpdb->insert(self::lines_table(), [
                 'tariff_id' => $tariffId,
-                'category' => $category,
+                'category' => (string) $product['category'],
                 'product_code' => (string) $product['product_code'],
                 'brand' => (string) $product['brand'],
                 'product_name' => (string) $product['product_name'],
@@ -119,8 +120,9 @@ final class FRN_Tariff_Repository
                 'show_price' => 1,
                 'visible' => (int) $product['visible'] === 1 ? 1 : 0,
                 'featured' => (int) $product['featured'] === 1 ? 1 : 0,
+                'incoming' => (int) $product['incoming'] === 1 ? 1 : 0,
                 'sort_order' => $sort,
-            ], ['%d','%s','%s','%s','%s','%f','%f','%f','%f','%d','%d','%d','%d','%d']);
+            ], ['%d','%s','%s','%s','%s','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d']);
 
             if ($wpdb->last_error) {
                 throw new RuntimeException($wpdb->last_error);
@@ -133,6 +135,7 @@ final class FRN_Tariff_Repository
     public function all_tariffs(): array
     {
         global $wpdb;
+
         return $wpdb->get_results(
             'SELECT * FROM ' . self::tariffs_table() . ' ORDER BY tariff_date DESC, id DESC',
             ARRAY_A
@@ -142,20 +145,24 @@ final class FRN_Tariff_Repository
     public function get_tariff(int $id): ?array
     {
         global $wpdb;
+
         $row = $wpdb->get_row(
             $wpdb->prepare('SELECT * FROM ' . self::tariffs_table() . ' WHERE id = %d', $id),
             ARRAY_A
         );
+
         return $row ?: null;
     }
 
     public function get_lines(int $tariffId, bool $onlyVisible = false): array
     {
         global $wpdb;
+
         $visible = $onlyVisible ? ' AND visible = 1' : '';
+
         return $wpdb->get_results(
             $wpdb->prepare(
-                'SELECT * FROM ' . self::lines_table() . ' WHERE tariff_id = %d' . $visible . ' ORDER BY category ASC, featured DESC, sort_order ASC, product_name ASC',
+                'SELECT * FROM ' . self::lines_table() . ' WHERE tariff_id = %d' . $visible . ' ORDER BY incoming ASC, category ASC, featured DESC, sort_order ASC, product_name ASC',
                 $tariffId
             ),
             ARRAY_A
@@ -184,8 +191,11 @@ final class FRN_Tariff_Repository
             $lineId = (int) $lineId;
             if ($lineId <= 0 || !is_array($line)) { continue; }
 
+            $code = sanitize_text_field((string) ($line['product_code'] ?? ''));
+            $incoming = FRN_Excel_Importer::is_incoming_code($code);
+
             $wpdb->update(self::lines_table(), [
-                'product_code' => sanitize_text_field((string) ($line['product_code'] ?? '')),
+                'product_code' => $code,
                 'brand' => sanitize_text_field((string) ($line['brand'] ?? '')),
                 'product_name' => sanitize_text_field((string) ($line['product_name'] ?? '')),
                 'display_stock' => (float) ($line['display_stock'] ?? 0),
@@ -194,8 +204,9 @@ final class FRN_Tariff_Repository
                 'show_price' => !empty($line['show_price']) ? 1 : 0,
                 'visible' => !empty($line['visible']) ? 1 : 0,
                 'featured' => !empty($line['featured']) ? 1 : 0,
+                'incoming' => $incoming ? 1 : 0,
                 'sort_order' => (int) ($line['sort_order'] ?? 0),
-            ], ['id' => $lineId, 'tariff_id' => $id], ['%s','%s','%s','%f','%f','%d','%d','%d','%d','%d'], ['%d','%d']);
+            ], ['id' => $lineId, 'tariff_id' => $id], ['%s','%s','%s','%f','%f','%d','%d','%d','%d','%d','%d'], ['%d','%d']);
         }
     }
 }
