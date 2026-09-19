@@ -312,6 +312,10 @@ final class FRN_Frontend_App
             ? '<img src="' . esc_attr($logo) . '" style="max-height:58px;max-width:220px">'
             : '<div class="wordmark">FRN ATLÁNTICO</div>';
 
+        $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
+        $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
+        $columnCount = 3 + ($showStock ? 1 : 0) + ($showPrice ? 1 : 0);
+
         $regular = array_values(array_filter(
             $lines,
             static fn(array $line): bool => (int) $line['incoming'] !== 1
@@ -323,8 +327,16 @@ final class FRN_Frontend_App
 
         $rowsHtml = $this->pdf_rows($regular, $tariff);
         if ($incoming) {
-            $rowsHtml .= '<tr class="incoming"><td colspan="5">PRÓXIMOS INGRESOS</td></tr>';
+            $rowsHtml .= '<tr class="incoming"><td colspan="' . $columnCount . '">PRÓXIMOS INGRESOS</td></tr>';
             $rowsHtml .= $this->pdf_rows($incoming, $tariff);
+        }
+
+        $headers = '<th style="width:12%">Código</th><th>Producto</th><th style="width:16%">Marca</th>';
+        if ($showStock) {
+            $headers .= '<th style="width:16%;text-align:right">Stock</th>';
+        }
+        if ($showPrice) {
+            $headers .= '<th style="width:15%;text-align:right">Precio</th>';
         }
 
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
@@ -355,13 +367,7 @@ final class FRN_Frontend_App
             '<div class="meta">Fecha: ' . esc_html($date) . ' · ' . esc_html($company) . '</div>' .
         '</div>
         <table>
-            <thead><tr>
-                <th style="width:12%">Código</th>
-                <th>Producto</th>
-                <th style="width:16%">Marca</th>
-                <th style="width:16%;text-align:right">Stock</th>
-                <th style="width:15%;text-align:right">Precio</th>
-            </tr></thead>
+            <thead><tr>' . $headers . '</tr></thead>
             <tbody>' . $rowsHtml . '</tbody>
         </table>
         <div class="terms">Stock sujeto a disponibilidad en el momento de confirmación. Precios y condiciones sujetos a validación comercial.</div>
@@ -372,16 +378,10 @@ final class FRN_Frontend_App
     private function pdf_rows(array $lines, array $tariff): string
     {
         $html = '';
+        $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
+        $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
 
         foreach ($lines as $line) {
-            $stock = ((int) $tariff['show_stock'] && (int) $line['show_stock'])
-                ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'])
-                : '—';
-
-            $price = ((int) $tariff['show_price'] && (int) $line['show_price'])
-                ? number_format((float) $line['display_price'], 2, ',', '.') . ' €/kg'
-                : '—';
-
             $offer = (int) $line['featured'] === 1
                 ? '<span class="offer">OFERTA</span> '
                 : '';
@@ -389,10 +389,23 @@ final class FRN_Frontend_App
             $html .= '<tr>'
                 . '<td>' . esc_html($line['product_code']) . '</td>'
                 . '<td>' . $offer . '<strong>' . esc_html($line['product_name']) . '</strong></td>'
-                . '<td>' . esc_html($line['brand']) . '</td>'
-                . '<td class="num">' . esc_html($stock) . '</td>'
-                . '<td class="num price">' . esc_html($price) . '</td>'
-                . '</tr>';
+                . '<td>' . esc_html($line['brand']) . '</td>';
+
+            if ($showStock) {
+                $stock = (int) $line['show_stock']
+                    ? $this->stock_text((float) $line['display_stock'], (string) $tariff['stock_mode'])
+                    : '—';
+                $html .= '<td class="num">' . esc_html($stock) . '</td>';
+            }
+
+            if ($showPrice) {
+                $price = (int) $line['show_price']
+                    ? number_format((float) $line['display_price'], 2, ',', '.') . ' €/kg'
+                    : '—';
+                $html .= '<td class="num price">' . esc_html($price) . '</td>';
+            }
+
+            $html .= '</tr>';
         }
 
         return $html;
