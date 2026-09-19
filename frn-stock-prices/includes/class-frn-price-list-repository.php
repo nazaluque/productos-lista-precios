@@ -42,6 +42,7 @@ final class FRN_Price_List_Repository
             product_code varchar(80) NOT NULL DEFAULT '',
             brand varchar(160) NOT NULL DEFAULT '',
             product_name varchar(255) NOT NULL DEFAULT '',
+            unit varchar(20) NOT NULL DEFAULT '',
             price_kg decimal(12,2) NULL,
             featured tinyint(1) NOT NULL DEFAULT 0,
             visible tinyint(1) NOT NULL DEFAULT 1,
@@ -102,11 +103,12 @@ final class FRN_Price_List_Repository
                     'product_code' => sanitize_text_field((string) ($row['code'] ?? '')),
                     'brand' => sanitize_text_field((string) ($row['brand'] ?? '')),
                     'product_name' => sanitize_text_field((string) ($row['name'] ?? '')),
+                    'unit' => sanitize_text_field((string) ($row['unit'] ?? '')),
                     'price_kg' => $price > 0 ? $price : 0,
                     'featured' => !empty($row['featured']) ? 1 : 0,
                     'visible' => (!empty($row['publish']) || $incoming) ? 1 : 0,
                     'sort_order' => $order,
-                ], ['%d','%s','%s','%s','%s','%f','%d','%d','%d']);
+                ], ['%d','%s','%s','%s','%s','%s','%f','%d','%d','%d']);
 
                 if ($wpdb->last_error) {
                     throw new RuntimeException($wpdb->last_error);
