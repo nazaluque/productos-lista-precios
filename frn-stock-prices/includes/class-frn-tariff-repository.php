@@ -30,6 +30,8 @@ final class FRN_Tariff_Repository
             title varchar(255) NOT NULL,
             tariff_date date NOT NULL,
             catalog_scope varchar(40) NOT NULL DEFAULT 'all',
+            price_list_id bigint unsigned NOT NULL DEFAULT 0,
+            price_list_name varchar(255) NOT NULL DEFAULT '',
             preset_mode varchar(30) NOT NULL DEFAULT 'general',
             show_stock tinyint(1) NOT NULL DEFAULT 1,
             show_price tinyint(1) NOT NULL DEFAULT 1,
@@ -41,6 +43,7 @@ final class FRN_Tariff_Repository
             PRIMARY KEY  (id),
             KEY tariff_date (tariff_date),
             KEY catalog_scope (catalog_scope),
+            KEY price_list_id (price_list_id),
             KEY status (status)
         ) {$charset};");
 
@@ -68,8 +71,13 @@ final class FRN_Tariff_Repository
         ) {$charset};");
     }
 
-    public function create_from_catalog(string $title, string $date, string $scope, string $preset = 'general'): int
-    {
+    public function create_from_catalog(
+        string $title,
+        string $date,
+        string $scope,
+        string $preset = 'general',
+        int $priceListId = 0
+    ): int {
         global $wpdb;
 
         if (!in_array($scope, ['carne','pescado-marisco'], true)) {
@@ -89,7 +97,16 @@ final class FRN_Tariff_Repository
             throw new RuntimeException('No hay productos importados para esta familia.');
         }
 
+        $priceRepo = new FRN_Price_List_Repository();
+        $priceList = $priceListId > 0 ? $priceRepo->get($priceListId) : null;
+
+        if ($priceListId > 0 && !$priceList) {
+            throw new RuntimeException('La tarifa de precios seleccionada ya no existe.');
+        }
+
+        $priceMap = $priceList ? $priceRepo->item_map($priceListId, $scope) : [];
         $sourceFile = '';
+
         foreach ($products as $product) {
             if ($sourceFile === '' && !empty($product['source_file'])) {
                 $sourceFile = (string) $product['source_file'];
@@ -97,10 +114,13 @@ final class FRN_Tariff_Repository
         }
 
         $now = current_time('mysql');
+
         $ok = $wpdb->insert(self::tariffs_table(), [
             'title' => sanitize_text_field($title),
             'tariff_date' => $date,
             'catalog_scope' => $scope,
+            'price_list_id' => $priceList ? $priceListId : 0,
+            'price_list_name' => $priceList ? (string) $priceList['name'] : '',
             'preset_mode' => $preset,
             'show_stock' => $showStock,
             'show_price' => $showPrice,
@@ -109,7 +129,7 @@ final class FRN_Tariff_Repository
             'source_file' => sanitize_file_name($sourceFile),
             'created_at' => $now,
             'updated_at' => $now,
-        ], ['%s','%s','%s','%s','%d','%d','%s','%s','%s','%s','%s']);
+        ], ['%s','%s','%s','%d','%s','%s','%d','%d','%s','%s','%s','%s','%s']);
 
         if (!$ok) {
             throw new RuntimeException($wpdb->last_error ?: 'No se pudo crear la tarifa.');
@@ -120,24 +140,53 @@ final class FRN_Tariff_Repository
 
         foreach ($products as $product) {
             $sort++;
+
             $incoming = (int) $product['incoming'] === 1;
-            $stockPositive = (float) $product['stock_kg'] > 0;
-            $visible = $incoming ? (int) $product['visible'] === 1 : ((int) $product['visible'] === 1 && $stockPositive);
+            $stock = (float) $product['stock_kg'];
+            $key = FRN_Price_List_Repository::match_key(
+                (string) $product['category'],
+                (string) $product['product_code'],
+                (string) $product['product_name']
+            );
+            $priceItem = $priceMap[$key] ?? null;
+            $price = $priceItem && (float) ($priceItem['price_kg'] ?? 0) > 0
+                ? (float) $priceItem['price_kg']
+                : 0.0;
+
+            $visible = $incoming
+                ? (
+                    $priceItem
+                        ? (int) $priceItem['visible'] === 1
+                        : (int) $product['visible'] === 1
+                )
+                : ((int) $product['visible'] === 1 && $stock > 0);
+
+            $featured = $priceItem
+                ? ((int) $priceItem['featured'] === 1 ? 1 : 0)
+                : ((int) $product['featured'] === 1 ? 1 : 0);
+
+            $brand = $priceItem && trim((string) $priceItem['brand']) !== ''
+                ? (string) $priceItem['brand']
+                : (string) $product['brand'];
+
+            $name = $priceItem && trim((string) $priceItem['product_name']) !== ''
+                ? (string) $priceItem['product_name']
+                : (string) $product['product_name'];
 
             $wpdb->insert(self::lines_table(), [
                 'tariff_id' => $tariffId,
                 'category' => (string) $product['category'],
                 'product_code' => (string) $product['product_code'],
-                'brand' => (string) $product['brand'],
-                'product_name' => (string) $product['product_name'],
-                'source_stock' => (float) $product['stock_kg'],
-                'source_price' => (float) $product['price_kg'],
-                'display_stock' => (float) $product['stock_kg'],
-                'display_price' => (float) $product['price_kg'],
+                'brand' => $brand,
+                'product_name' => $name,
+                'source_stock' => $stock,
+                'source_price' => $price > 0 ? $price : null,
+                'display_stock' => $stock,
+                'display_price' => $price > 0 ? $price : null,
                 'show_stock' => $showStock,
-                'show_price' => $showPrice,
+                'show_price' => ($showPrice && $price > 0) ? 1 : 0,
                 'visible' => $visible ? 1 : 0,
-                'featured' => (int) $product['featured'] === 1 ? 1 : 0,
+                'featured' => $featured,
                 'incoming' => $incoming ? 1 : 0,
                 'sort_order' => $sort,
             ], ['%d','%s','%s','%s','%s','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d']);
@@ -180,7 +229,9 @@ final class FRN_Tariff_Repository
 
         return $wpdb->get_results(
             $wpdb->prepare(
-                'SELECT * FROM ' . self::lines_table() . ' WHERE tariff_id = %d' . $visible . ' ORDER BY incoming ASC, featured DESC, sort_order ASC, product_name ASC',
+                'SELECT * FROM ' . self::lines_table() .
+                ' WHERE tariff_id = %d' . $visible .
+                ' ORDER BY incoming ASC, featured DESC, sort_order ASC, product_name ASC',
                 $tariffId
             ),
             ARRAY_A
@@ -194,10 +245,10 @@ final class FRN_Tariff_Repository
         $showStock = !empty($settings['show_stock']) ? 1 : 0;
         $showPrice = !empty($settings['show_price']) ? 1 : 0;
         $preset = in_array(($settings['preset_mode'] ?? ''), ['general','distribuidor','disponibilidad','personalizado'], true)
-            ? $settings['preset_mode']
+            ? (string) $settings['preset_mode']
             : 'personalizado';
         $stockMode = in_array(($settings['stock_mode'] ?? ''), ['exact','rounded','available','hidden'], true)
-            ? $settings['stock_mode']
+            ? (string) $settings['stock_mode']
             : 'available';
 
         $wpdb->update(self::tariffs_table(), [
@@ -221,20 +272,27 @@ final class FRN_Tariff_Repository
 
             $code = sanitize_text_field((string) ($line['product_code'] ?? ''));
             $incoming = FRN_Excel_Importer::is_incoming_code($code);
+            $displayPrice = isset($line['display_price']) && $line['display_price'] !== ''
+                ? max(0, (float) $line['display_price'])
+                : 0.0;
 
             $wpdb->update(self::lines_table(), [
                 'product_code' => $code,
                 'brand' => sanitize_text_field((string) ($line['brand'] ?? '')),
                 'product_name' => sanitize_text_field((string) ($line['product_name'] ?? '')),
                 'display_stock' => (float) ($line['display_stock'] ?? 0),
-                'display_price' => max(0, (float) ($line['display_price'] ?? 0)),
+                'display_price' => $displayPrice > 0 ? $displayPrice : null,
                 'show_stock' => $showStock ? (!empty($line['show_stock']) ? 1 : 0) : 0,
-                'show_price' => $showPrice ? (!empty($line['show_price']) ? 1 : 0) : 0,
+                'show_price' => ($showPrice && $displayPrice > 0 && !empty($line['show_price'])) ? 1 : 0,
                 'visible' => !empty($line['visible']) ? 1 : 0,
                 'featured' => !empty($line['featured']) ? 1 : 0,
                 'incoming' => $incoming ? 1 : 0,
                 'sort_order' => (int) ($line['sort_order'] ?? 0),
             ], ['id' => $lineId, 'tariff_id' => $id], ['%s','%s','%s','%f','%f','%d','%d','%d','%d','%d','%d'], ['%d','%d']);
+
+            if ($wpdb->last_error) {
+                throw new RuntimeException($wpdb->last_error);
+            }
         }
     }
 
