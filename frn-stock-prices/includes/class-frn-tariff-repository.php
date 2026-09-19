@@ -29,15 +29,18 @@ final class FRN_Tariff_Repository
             id bigint unsigned NOT NULL AUTO_INCREMENT,
             title varchar(255) NOT NULL,
             tariff_date date NOT NULL,
+            catalog_scope varchar(40) NOT NULL DEFAULT 'all',
+            preset_mode varchar(30) NOT NULL DEFAULT 'general',
             show_stock tinyint(1) NOT NULL DEFAULT 1,
             show_price tinyint(1) NOT NULL DEFAULT 1,
-            stock_mode varchar(20) NOT NULL DEFAULT 'exact',
-            status varchar(20) NOT NULL DEFAULT 'draft',
+            stock_mode varchar(20) NOT NULL DEFAULT 'available',
+            status varchar(20) NOT NULL DEFAULT 'final',
             source_file varchar(255) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
             updated_at datetime NOT NULL,
             PRIMARY KEY  (id),
             KEY tariff_date (tariff_date),
+            KEY catalog_scope (catalog_scope),
             KEY status (status)
         ) {$charset};");
 
@@ -65,15 +68,25 @@ final class FRN_Tariff_Repository
         ) {$charset};");
     }
 
-    public function create_from_catalog(string $title, string $date): int
+    public function create_from_catalog(string $title, string $date, string $scope, string $preset = 'general'): int
     {
         global $wpdb;
 
+        if (!in_array($scope, ['carne','pescado-marisco'], true)) {
+            throw new RuntimeException('Tipo de tarifa no válido.');
+        }
+
+        $preset = in_array($preset, ['general','distribuidor','disponibilidad','personalizado'], true)
+            ? $preset
+            : 'general';
+
+        [$showStock, $showPrice, $stockMode] = $this->preset_values($preset);
+
         $catalog = new FRN_Catalog_Repository();
-        $products = $catalog->all_combined(true);
+        $products = $catalog->all($scope, true);
 
         if (!$products) {
-            throw new RuntimeException('No hay productos importados. Importa primero el Excel semanal.');
+            throw new RuntimeException('No hay productos importados para esta familia.');
         }
 
         $sourceFile = '';
@@ -87,14 +100,16 @@ final class FRN_Tariff_Repository
         $ok = $wpdb->insert(self::tariffs_table(), [
             'title' => sanitize_text_field($title),
             'tariff_date' => $date,
-            'show_stock' => 1,
-            'show_price' => 1,
-            'stock_mode' => 'exact',
-            'status' => 'draft',
+            'catalog_scope' => $scope,
+            'preset_mode' => $preset,
+            'show_stock' => $showStock,
+            'show_price' => $showPrice,
+            'stock_mode' => $stockMode,
+            'status' => 'final',
             'source_file' => sanitize_file_name($sourceFile),
             'created_at' => $now,
             'updated_at' => $now,
-        ], ['%s','%s','%d','%d','%s','%s','%s','%s','%s']);
+        ], ['%s','%s','%s','%s','%d','%d','%s','%s','%s','%s','%s']);
 
         if (!$ok) {
             throw new RuntimeException($wpdb->last_error ?: 'No se pudo crear la tarifa.');
@@ -105,6 +120,9 @@ final class FRN_Tariff_Repository
 
         foreach ($products as $product) {
             $sort++;
+            $incoming = (int) $product['incoming'] === 1;
+            $stockPositive = (float) $product['stock_kg'] > 0;
+            $visible = $incoming ? (int) $product['visible'] === 1 : ((int) $product['visible'] === 1 && $stockPositive);
 
             $wpdb->insert(self::lines_table(), [
                 'tariff_id' => $tariffId,
@@ -116,11 +134,11 @@ final class FRN_Tariff_Repository
                 'source_price' => (float) $product['price_kg'],
                 'display_stock' => (float) $product['stock_kg'],
                 'display_price' => (float) $product['price_kg'],
-                'show_stock' => 1,
-                'show_price' => 1,
-                'visible' => (int) $product['visible'] === 1 ? 1 : 0,
+                'show_stock' => $showStock,
+                'show_price' => $showPrice,
+                'visible' => $visible ? 1 : 0,
                 'featured' => (int) $product['featured'] === 1 ? 1 : 0,
-                'incoming' => (int) $product['incoming'] === 1 ? 1 : 0,
+                'incoming' => $incoming ? 1 : 0,
                 'sort_order' => $sort,
             ], ['%d','%s','%s','%s','%s','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d']);
 
@@ -162,7 +180,7 @@ final class FRN_Tariff_Repository
 
         return $wpdb->get_results(
             $wpdb->prepare(
-                'SELECT * FROM ' . self::lines_table() . ' WHERE tariff_id = %d' . $visible . ' ORDER BY incoming ASC, category ASC, featured DESC, sort_order ASC, product_name ASC',
+                'SELECT * FROM ' . self::lines_table() . ' WHERE tariff_id = %d' . $visible . ' ORDER BY incoming ASC, featured DESC, sort_order ASC, product_name ASC',
                 $tariffId
             ),
             ARRAY_A
@@ -173,15 +191,25 @@ final class FRN_Tariff_Repository
     {
         global $wpdb;
 
+        $showStock = !empty($settings['show_stock']) ? 1 : 0;
+        $showPrice = !empty($settings['show_price']) ? 1 : 0;
+        $preset = in_array(($settings['preset_mode'] ?? ''), ['general','distribuidor','disponibilidad','personalizado'], true)
+            ? $settings['preset_mode']
+            : 'personalizado';
+        $stockMode = in_array(($settings['stock_mode'] ?? ''), ['exact','rounded','available','hidden'], true)
+            ? $settings['stock_mode']
+            : 'available';
+
         $wpdb->update(self::tariffs_table(), [
             'title' => sanitize_text_field((string) ($settings['title'] ?? 'Tarifa FRN')),
             'tariff_date' => sanitize_text_field((string) ($settings['tariff_date'] ?? current_time('Y-m-d'))),
-            'show_stock' => !empty($settings['show_stock']) ? 1 : 0,
-            'show_price' => !empty($settings['show_price']) ? 1 : 0,
-            'stock_mode' => in_array(($settings['stock_mode'] ?? ''), ['exact','rounded','available','hidden'], true) ? $settings['stock_mode'] : 'exact',
-            'status' => in_array(($settings['status'] ?? ''), ['draft','final'], true) ? $settings['status'] : 'draft',
+            'preset_mode' => $preset,
+            'show_stock' => $showStock,
+            'show_price' => $showPrice,
+            'stock_mode' => $stockMode,
+            'status' => 'final',
             'updated_at' => current_time('mysql'),
-        ], ['id' => $id], ['%s','%s','%d','%d','%s','%s','%s'], ['%d']);
+        ], ['id' => $id], ['%s','%s','%s','%d','%d','%s','%s','%s'], ['%d']);
 
         if ($wpdb->last_error) {
             throw new RuntimeException($wpdb->last_error);
@@ -200,13 +228,28 @@ final class FRN_Tariff_Repository
                 'product_name' => sanitize_text_field((string) ($line['product_name'] ?? '')),
                 'display_stock' => (float) ($line['display_stock'] ?? 0),
                 'display_price' => max(0, (float) ($line['display_price'] ?? 0)),
-                'show_stock' => !empty($line['show_stock']) ? 1 : 0,
-                'show_price' => !empty($line['show_price']) ? 1 : 0,
+                'show_stock' => $showStock ? (!empty($line['show_stock']) ? 1 : 0) : 0,
+                'show_price' => $showPrice ? (!empty($line['show_price']) ? 1 : 0) : 0,
                 'visible' => !empty($line['visible']) ? 1 : 0,
                 'featured' => !empty($line['featured']) ? 1 : 0,
                 'incoming' => $incoming ? 1 : 0,
                 'sort_order' => (int) ($line['sort_order'] ?? 0),
             ], ['id' => $lineId, 'tariff_id' => $id], ['%s','%s','%s','%f','%f','%d','%d','%d','%d','%d','%d'], ['%d','%d']);
         }
+    }
+
+    public function scope_label(string $scope): string
+    {
+        return $scope === 'carne' ? 'Carne' : 'Pescado y marisco';
+    }
+
+    private function preset_values(string $preset): array
+    {
+        return match ($preset) {
+            'distribuidor' => [1, 1, 'exact'],
+            'disponibilidad' => [1, 0, 'available'],
+            'personalizado' => [1, 1, 'available'],
+            default => [1, 1, 'available'],
+        };
     }
 }
