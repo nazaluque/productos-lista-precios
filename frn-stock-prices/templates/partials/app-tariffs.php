@@ -8,6 +8,9 @@ if (!defined('ABSPATH')) { exit; }
             <div><small>Paso 02</small><h2>Crear tarifa PDF</h2></div>
             <p>Se genera desde el maestro vigente. Carne y Pescado / Marisco salen siempre por separado.</p>
         </div>
+        <?php if (!empty($latestImport)) : ?>
+            <div class="frn-source-chip"><span>Base semanal activa</span><strong><?php echo esc_html($latestImport['source_file']); ?></strong><small><?php echo esc_html(mysql2date('d/m/Y H:i',$latestImport['imported_at'])); ?> · <?php echo (int)$latestImport['active_count']; ?> referencias</small></div>
+        <?php endif; ?>
 
         <?php if ($canExport) : ?>
         <form method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-simple-form frn-create-tariff-form">
