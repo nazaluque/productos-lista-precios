@@ -36,20 +36,47 @@ final class FRN_Stock_Prices
 
     public static function ensure_roles(): void
     {
-        $role = get_role('frn_comercial');
+        $roles = [
+            'frn_administrator' => [
+                'label' => 'FRN Administrador',
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_view_cost','frn_export_tariffs','frn_manage_users'],
+            ],
+            'frn_stock' => [
+                'label' => 'FRN Stock',
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_export_tariffs'],
+            ],
+            'frn_director_comercial' => [
+                'label' => 'FRN Director Comercial',
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_prices','frn_view_cost','frn_export_tariffs'],
+            ],
+            'frn_comercial' => [
+                'label' => 'FRN Comercial',
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_export_tariffs'],
+            ],
+            'frn_consulta' => [
+                'label' => 'FRN Consulta',
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_export_tariffs'],
+            ],
+        ];
 
-        if (!$role) {
-            $role = add_role('frn_comercial', 'FRN Comercial', [
-                'read' => true,
-                'frn_manage_stock' => true,
-            ]);
-        } elseif (!$role->has_cap('frn_manage_stock')) {
-            $role->add_cap('frn_manage_stock');
+        foreach ($roles as $slug => $definition) {
+            $role = get_role($slug);
+            if (!$role) {
+                $role = add_role($slug, $definition['label'], ['read' => true]);
+            }
+            if (!$role) { continue; }
+
+            $role->add_cap('read');
+            foreach ($definition['caps'] as $cap) {
+                $role->add_cap($cap);
+            }
         }
 
         $admin = get_role('administrator');
-        if ($admin && !$admin->has_cap('frn_manage_stock')) {
-            $admin->add_cap('frn_manage_stock');
+        if ($admin) {
+            foreach (['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_view_cost','frn_export_tariffs','frn_manage_users'] as $cap) {
+                $admin->add_cap($cap);
+            }
         }
     }
 
@@ -164,7 +191,7 @@ final class FRN_Stock_Prices
         status_header(200);
 
         if ($tool === 'login') {
-            if (is_user_logged_in() && current_user_can('frn_manage_stock')) {
+            if (is_user_logged_in() && current_user_can('frn_access_tool')) {
                 wp_safe_redirect(home_url('/stock/'));
                 exit;
             }
@@ -179,7 +206,7 @@ final class FRN_Stock_Prices
             exit;
         }
 
-        if (!current_user_can('frn_manage_stock')) {
+        if (!current_user_can('frn_access_tool')) {
             wp_die('Este usuario no tiene acceso a la herramienta interna FRN.', 'Acceso restringido', ['response' => 403]);
         }
 
@@ -199,7 +226,7 @@ final class FRN_Stock_Prices
 
     public function hide_admin_bar_for_commercial(bool $show): bool
     {
-        if (is_user_logged_in() && current_user_can('frn_manage_stock') && !current_user_can('manage_options')) {
+        if (is_user_logged_in() && current_user_can('frn_access_tool') && !current_user_can('manage_options')) {
             return false;
         }
 
@@ -208,7 +235,7 @@ final class FRN_Stock_Prices
 
     public function block_backend_for_commercial(): void
     {
-        if (!is_user_logged_in() || !current_user_can('frn_manage_stock') || current_user_can('manage_options')) {
+        if (!is_user_logged_in() || !current_user_can('frn_access_tool') || current_user_can('manage_options')) {
             return;
         }
 
