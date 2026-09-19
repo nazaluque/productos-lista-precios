@@ -114,8 +114,11 @@ final class FRN_Excel_Importer
 
             $stock = $this->number($item['stock'] ?? null);
             $price = $this->number($item['price'] ?? null, true);
-            $publish = !array_key_exists('publish', $item) || $this->truthy($item['publish']);
             $incoming = self::is_incoming_code($code);
+            $sourcePublish = !array_key_exists('publish', $item) || $this->truthy($item['publish']);
+            // Weekly tariff rule: normal products with zero stock start unchecked.
+            // Upcoming products (XXX...) may be promoted before stock exists.
+            $publish = $incoming ? $sourcePublish : ($sourcePublish && (($stock ?? 0) > 0));
 
             $errors = [];
             if (!$incoming && $stock === null) { $errors[] = 'stock no válido'; }
