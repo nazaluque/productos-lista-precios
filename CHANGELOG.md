@@ -1,5 +1,17 @@
 # FRN Stock & Prices
 
+## 1.1.5 — PDF bloqueado al mockup aprobado
+
+- El mockup aprobado pasa a ser la especificación visual del PDF.
+- El header deja de usar el logo del tema de WordPress y deja de recomponer foto, logo y título con capas HTML.
+- Usa cabeceras FRN prerenderizadas y optimizadas para Carne y Pescado/Marisco, con el logo oficial integrado.
+- Solo la fecha permanece dinámica sobre la cabecera.
+- Añade una marca de agua FRN centrada en todas las páginas mediante el canvas de Dompdf.
+- El footer vuelve al formato de marca del mockup: FRN ATLÁNTICO + datos comerciales centrados.
+- Código, producto y marca se validan como UTF-8 antes de renderizarse.
+- Se confirma que textos como “GAMBON” proceden así del Excel origen; no se alteran nombres comerciales automáticamente.
+- Mantiene sin cambios el badge OFERTA, orden alfabético, stock, precios y “Consultar precio”.
+
 ## 1.1.4 — Cabeceras fotográficas definitivas
 
 - Usa exactamente las imágenes aportadas por FRN para Carne y Pescado/Marisco.
