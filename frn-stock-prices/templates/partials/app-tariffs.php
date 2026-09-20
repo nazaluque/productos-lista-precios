@@ -42,15 +42,47 @@ if (!defined('ABSPATH')) { exit; }
 
     <article class="frn-app-card">
         <div class="frn-card-heading">
-            <div><small>Opciones de salida</small><h2>Qué puede aparecer</h2></div>
+            <div><small>Pie de página</small><h2>Datos del PDF</h2></div>
+            <p>Estos datos aparecen automáticamente en el footer de todas las tarifas.</p>
         </div>
-        <p class="frn-card-copy">Al abrir una tarifa podrás decidir si mostrar precio, stock exacto/redondeado/“Disponible” y, únicamente si tu usuario tiene permiso, coste promedio.</p>
-        <?php if ($canViewCost) : ?>
-            <div class="frn-preview-label">Tu usuario tiene permiso para ver y exportar <strong>Coste promedio</strong>.</div>
+
+        <?php if ($canEditPrices) : ?>
+        <form method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-simple-form">
+            <input type="hidden" name="action" value="frn_front_settings">
+            <?php wp_nonce_field('frn_front_settings'); ?>
+            <label>Empresa
+                <input type="text" name="frn_tariff_company" value="<?php echo esc_attr((string)get_option('frn_tariff_company','FRN Atlántico')); ?>">
+            </label>
+            <label>Dirección
+                <input type="text" name="frn_tariff_address" value="<?php echo esc_attr((string)get_option('frn_tariff_address','')); ?>">
+            </label>
+            <label>Teléfono
+                <input type="text" name="frn_tariff_phone" value="<?php echo esc_attr((string)get_option('frn_tariff_phone','')); ?>">
+            </label>
+            <label>Email
+                <input type="text" name="frn_tariff_email" value="<?php echo esc_attr((string)get_option('frn_tariff_email','')); ?>">
+            </label>
+            <label>Página web
+                <input type="text" name="frn_tariff_web" value="<?php echo esc_attr((string)get_option('frn_tariff_web','www.frnatlantico.com')); ?>">
+            </label>
+            <button type="submit" class="frn-secondary-button">Guardar datos del PDF</button>
+        </form>
         <?php else : ?>
-            <div class="frn-preview-label">El <strong>Coste promedio</strong> está oculto para tu perfil y no puede exportarse.</div>
+            <div class="frn-empty">Tu perfil puede exportar tarifas, pero no modificar los datos corporativos del PDF.</div>
         <?php endif; ?>
     </article>
+</section>
+
+<section class="frn-app-card">
+    <div class="frn-card-heading">
+        <div><small>Opciones de salida</small><h2>Qué puede aparecer</h2></div>
+        <p>Al abrir una tarifa podrás decidir si mostrar precio, stock exacto/redondeado/“Disponible” y, si tu perfil tiene permiso, coste promedio.</p>
+    </div>
+    <?php if ($canViewCost) : ?>
+        <div class="frn-preview-label">Tu usuario tiene permiso para ver y exportar <strong>Coste promedio</strong>.</div>
+    <?php else : ?>
+        <div class="frn-preview-label">El <strong>Coste promedio</strong> está oculto para tu perfil y no puede exportarse.</div>
+    <?php endif; ?>
 </section>
 
 <section class="frn-app-card">
