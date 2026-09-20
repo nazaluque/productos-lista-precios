@@ -38,6 +38,7 @@ $postUrl = admin_url('admin-post.php');
         <a class="<?php echo $tab === 'importar' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','importar',home_url('/stock/'))); ?>">1. Datos semanales</a>
         <a class="<?php echo in_array($tab,['tarifas','tarifa'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','tarifas',home_url('/stock/'))); ?>">2. Crear PDF</a>
         <?php if ($canManageUsers) : ?>
+            <a class="<?php echo $tab === 'diseno' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','diseno',home_url('/stock/'))); ?>">Diseño PDF</a>
             <a class="<?php echo $tab === 'usuarios' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','usuarios',home_url('/stock/'))); ?>">Usuarios</a>
         <?php endif; ?>
     </nav>
@@ -53,6 +54,8 @@ $postUrl = admin_url('admin-post.php');
         require FRN_SP_PATH . 'templates/partials/app-tariffs.php';
     } elseif ($tab === 'tarifa' && $tariff) {
         require FRN_SP_PATH . 'templates/partials/app-tariff-editor.php';
+    } elseif ($tab === 'diseno' && $canManageUsers) {
+        require FRN_SP_PATH . 'templates/partials/app-pdf-design.php';
     } elseif ($tab === 'usuarios' && $canManageUsers) {
         require FRN_SP_PATH . 'templates/partials/app-users.php';
     }
