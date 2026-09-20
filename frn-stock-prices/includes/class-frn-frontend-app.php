@@ -579,7 +579,7 @@ final class FRN_Frontend_App
             .meta{margin-top:6px;color:#ffffff;font-size:8pt}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:13px}
             th{background:#1d2733;color:#fff;padding:6px 6px;text-align:left;font-size:6.8pt;text-transform:uppercase;letter-spacing:.15px}
-            th.code{width:10.5%}
+            th.code{width:11%}
             th.product{width:' . $productWidth . '%}
             th.brand{width:14%}
             th.cost-head{width:13%;text-align:right}
@@ -588,13 +588,14 @@ final class FRN_Frontend_App
             td{padding:5px 6px;border-bottom:.45px solid #d5d9dc;vertical-align:middle;line-height:1.18;font-size:8pt}
             tr.product-row.row-light td{background:#ffffff}
             tr.product-row.row-dark td{background:#edf0f2}
-            td.num{text-align:right;white-space:nowrap}
+            td.code-cell{font-family:DejaVu Sans,Arial,sans-serif;white-space:nowrap;letter-spacing:0;font-weight:normal}
+            td.num{text-align:right;white-space:nowrap;letter-spacing:0}
             td.price{font-weight:bold;white-space:nowrap;font-size:8.3pt}
             td.product-cell{font-weight:bold;word-wrap:break-word}
             td.brand-cell{word-wrap:break-word}
             .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:7px}
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
-            .offer{display:inline-block;background:#d72e27;color:#fff;border:1px solid #a51f1a;padding:2px 4px;border-radius:3px;font-size:6.1pt;font-weight:bold;white-space:nowrap;vertical-align:middle}
+            .offer-badge{display:inline-block;width:50px;height:12px;vertical-align:middle;margin-right:3px}
             .terms{margin-top:10px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
             .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:9.5pt;font-weight:bold;text-align:center;line-height:1.25;padding-top:7px}
             .footer-mark{position:absolute;right:12px;top:4px}
@@ -642,11 +643,11 @@ final class FRN_Frontend_App
             $index++;
 
             $offer = (int) $line['featured'] === 1
-                ? '<span class="offer">&#9832; OFERTA</span> '
+                ? '<img class="offer-badge" src="' . esc_attr($this->offer_badge_data_uri()) . '" alt="OFERTA"> '
                 : '';
 
             $html .= '<tr class="product-row ' . $class . '">'
-                . '<td>' . esc_html($line['product_code']) . '</td>'
+                . '<td class="code-cell">' . esc_html($line['product_code']) . '</td>'
                 . '<td class="product-cell">' . $offer . esc_html($line['product_name']) . '</td>'
                 . '<td class="brand-cell">' . esc_html($line['brand']) . '</td>';
 
@@ -685,6 +686,18 @@ final class FRN_Frontend_App
         }
 
         return $html;
+    }
+
+    private function offer_badge_data_uri(): string
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="42" viewBox="0 0 180 42">'
+            . '<rect x="0.5" y="0.5" width="179" height="41" rx="8" fill="#d72e27" stroke="#9f1f1a"/>'
+            . '<path d="M22 34c-8-4-10-11-6-17 2-3 5-5 6-10 5 5 8 9 6 15 3-2 5-5 5-8 5 5 6 12 2 17-3 4-8 6-13 3z" fill="#fff"/>'
+            . '<path d="M24 32c-4-2-5-5-3-8 1-2 3-3 3-6 3 3 4 6 3 9 2-1 3-2 4-4 2 4 1 8-2 10-2 1-4 1-5-1z" fill="#d72e27"/>'
+            . '<text x="47" y="28" font-family="DejaVu Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#fff">OFERTA</text>'
+            . '</svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
     private function pdf_header_image_data_uri(string $scope): string
