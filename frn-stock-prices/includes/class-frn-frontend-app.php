@@ -397,9 +397,19 @@ final class FRN_Frontend_App
         $dompdf->loadHtml($this->pdf_html($tariff, $lines), 'UTF-8');
         $dompdf->render();
 
-        // Page numbering is drawn by Dompdf's canvas, outside the HTML layout.
-        // This avoids interfering with table cells or fixed footer content.
+        // Watermark and page numbering are drawn by Dompdf's canvas, outside
+        // the HTML layout. This makes them deterministic on every page.
         $canvas = $dompdf->getCanvas();
+        $watermarkPath = $this->pdf_watermark_path();
+        if ($watermarkPath !== '') {
+            $canvas->page_script(
+                static function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($watermarkPath): void {
+                    // A4 portrait in points. The PNG already contains low opacity.
+                    $canvas->image($watermarkPath, 172, 325, 250, 117);
+                }
+            );
+        }
+
         $fontMetrics = $dompdf->getFontMetrics();
         $pageFont = $fontMetrics->getFont('DejaVu Sans', 'normal');
         if ($pageFont) {
@@ -512,12 +522,7 @@ final class FRN_Frontend_App
         $phone = get_option('frn_tariff_phone', '');
         $email = get_option('frn_tariff_email', '');
         $web = get_option('frn_tariff_web', 'www.frnatlantico.com');
-        $logo = $this->logo_data_uri();
         $headerImage = $this->pdf_header_image_data_uri((string) ($tariff['catalog_scope'] ?? ''));
-
-        $logoHtml = $logo
-            ? '<img src="' . esc_attr($logo) . '" style="max-height:58px;max-width:220px">'
-            : '<div class="wordmark">FRN ATLÁNTICO</div>';
 
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
@@ -560,23 +565,13 @@ final class FRN_Frontend_App
 
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
         $date = mysql2date('d/m/Y', $tariff['tariff_date'] . ' 00:00:00');
-        $scopeLabel = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado y marisco';
-        $priceListLabel = trim((string) ($tariff['price_list_name'] ?? ''));
-        $pdfTitle = preg_replace('/\s*·\s*\d{2}\/\d{2}\/\d{4}\s*$/', '', (string) $tariff['title']);
         $productWidth = 75 - ($showCost ? 13 : 0) - ($showStock ? 13 : 0) - ($showPrice ? 14 : 0);
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:22px 22px 58px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
-            .header{color:#fff;padding:18px 22px 17px;border-bottom:3px solid #b28a42;background-color:#080a0c;background-repeat:no-repeat;background-position:center center;background-size:cover}
-            .header-grid{width:100%;border-collapse:collapse;table-layout:auto;margin:0}
-            .header-grid td{border:0!important;padding:0!important;background:transparent!important;vertical-align:top}
-            .header-right{text-align:right}
-            .header-scope{color:#e1bd70;font-size:13pt;font-weight:bold;text-transform:uppercase;letter-spacing:1.1px}
-            .header-date{margin-top:4px;color:#ffffff;font-size:9pt}
-            .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:28pt;font-weight:bold;letter-spacing:2px}
-            .title{margin-top:8px;font-family:DejaVu Serif,serif;font-size:21pt;line-height:1.05}
-            .meta{margin-top:6px;color:#ffffff;font-size:8pt}
+            .header{position:relative;height:188px;border-bottom:3px solid #b28a42;background-color:#07131a;background-repeat:no-repeat;background-position:center center;background-size:100% 100%;overflow:hidden}
+            .header-date-dynamic{position:absolute;right:24px;top:49px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:9pt;font-weight:600;text-align:right;white-space:nowrap}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:13px}
             th{background:#1d2733;color:#fff;padding:6px 6px;text-align:left;font-size:6.8pt;text-transform:uppercase;letter-spacing:.15px}
             th.code{width:11%}
@@ -597,34 +592,24 @@ final class FRN_Frontend_App
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
             .offer-badge{display:inline-block;width:50px;height:12px;vertical-align:middle;margin-right:3px}
             .terms{margin-top:10px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
-            .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:8pt;font-weight:600;text-align:center;line-height:1.25;padding-top:7px}
-            .footer-mark{position:absolute;right:12px;top:4px}
-            .footer-mark img{max-height:20px;max-width:72px;opacity:.16}
+            .footer{position:fixed;left:0;right:0;bottom:-43px;height:43px;border-top:1px solid #b28a42;color:#172535;text-align:center;line-height:1.18;padding-top:5px}
+            .footer-brand{font-family:DejaVu Sans,Arial,sans-serif;font-size:10pt;font-weight:bold;letter-spacing:1.7px}
+            .footer-contact{margin-top:2px;font-size:7.5pt;font-weight:500;color:#303943}
         </style></head><body>
         <div class="header"' .
             ($headerImage ? ' style="background-image:url(\'' . esc_attr($headerImage) . '\')"' : '') .
             '>
-            <table class="header-grid"><tr>
-                <td>' . $logoHtml . '</td>
-                <td class="header-right">
-                    <div class="header-scope">' . esc_html(strtoupper($scopeLabel)) . '</div>
-                    <div class="header-date">Fecha: ' . esc_html($date) . '</div>
-                </td>
-            </tr></table>
-            <div class="title">' . esc_html($pdfTitle) . '</div>
-            <div class="meta">' . esc_html($company) .
-                ($priceListLabel !== '' ? ' · Precios: ' . esc_html($priceListLabel) : '') .
-            '</div>
+            <div class="header-date-dynamic">Fecha: ' . esc_html($date) . '</div>
         </div>
         <table>
             <thead><tr>' . $headers . '</tr></thead>
             <tbody>' . $rowsHtml . '</tbody>
         </table>
         <div class="terms">Stock sujeto a disponibilidad en el momento de confirmación. Precios y condiciones sujetos a validación comercial.</div>
-        <div class="footer">' .
-            esc_html($contact) .
-            ($logo ? '<span class="footer-mark"><img src="' . esc_attr($logo) . '"></span>' : '') .
-        '</div>
+        <div class="footer">
+            <div class="footer-brand">FRN ATLÁNTICO</div>
+            <div class="footer-contact">' . esc_html($contact) . '</div>
+        </div>
         </body></html>';
     }
 
@@ -647,9 +632,9 @@ final class FRN_Frontend_App
                 : '';
 
             $html .= '<tr class="product-row ' . $class . '">'
-                . '<td class="code-cell">' . esc_html($line['product_code']) . '</td>'
-                . '<td class="product-cell">' . $offer . esc_html($line['product_name']) . '</td>'
-                . '<td class="brand-cell">' . esc_html($line['brand']) . '</td>';
+                . '<td class="code-cell">' . esc_html(wp_check_invalid_utf8((string) $line['product_code'], true)) . '</td>'
+                . '<td class="product-cell">' . $offer . esc_html(wp_check_invalid_utf8((string) $line['product_name'], true)) . '</td>'
+                . '<td class="brand-cell">' . esc_html(wp_check_invalid_utf8((string) $line['brand'], true)) . '</td>';
 
             if ($showCost) {
                 $costValue = (float) ($line['display_cost'] ?? 0);
@@ -698,6 +683,12 @@ final class FRN_Frontend_App
             . '</svg>';
 
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    private function pdf_watermark_path(): string
+    {
+        $path = FRN_SP_PATH . 'assets/pdf-watermark-frn.png';
+        return is_readable($path) ? $path : '';
     }
 
     private function pdf_header_image_data_uri(string $scope): string
