@@ -397,6 +397,22 @@ final class FRN_Frontend_App
         $dompdf->loadHtml($this->pdf_html($tariff, $lines), 'UTF-8');
         $dompdf->render();
 
+        // Page numbering is drawn by Dompdf's canvas, outside the HTML layout.
+        // This avoids interfering with table cells or fixed footer content.
+        $canvas = $dompdf->getCanvas();
+        $fontMetrics = $dompdf->getFontMetrics();
+        $pageFont = $fontMetrics->getFont('DejaVu Sans', 'normal');
+        if ($pageFont) {
+            $canvas->page_text(
+                505,
+                818,
+                'Página {PAGE_NUM} de {PAGE_COUNT}',
+                $pageFont,
+                7,
+                [0.38, 0.38, 0.38]
+            );
+        }
+
         $scope = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado-Marisco';
 
         $dompdf->stream(
@@ -550,48 +566,43 @@ final class FRN_Frontend_App
         $productWidth = 75 - ($showCost ? 13 : 0) - ($showStock ? 13 : 0) - ($showPrice ? 14 : 0);
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
-            @page{margin:24px 24px 44px}
-            body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:9px}
-            .header{position:relative;overflow:hidden;background:#080a0c;color:#fff;padding:20px 22px;border-bottom:4px solid #a9823f}
-            .header-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42}
-            .header-shade{position:absolute;inset:0;background:rgba(3,5,6,.58)}
-            .header-content{position:relative;z-index:2}
+            @page{margin:22px 22px 58px}
+            body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
+            .header{color:#fff;padding:18px 22px 17px;border-bottom:3px solid #b28a42;background-color:#080a0c;background-repeat:no-repeat;background-position:center center;background-size:100% 100%}
             .header-grid{width:100%;border-collapse:collapse;table-layout:auto;margin:0}
             .header-grid td{border:0!important;padding:0!important;background:transparent!important;vertical-align:top}
             .header-right{text-align:right}
-            .header-scope{color:#d6b36a;font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:1.2px}
-            .header-date{margin-top:5px;color:#f0f0ee;font-size:10px}
-            .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:29px;font-weight:bold;letter-spacing:2px}
-            .title{margin-top:9px;font-family:DejaVu Serif,serif;font-size:24px;line-height:1.05}
-            .meta{margin-top:7px;color:#f0f0ee;font-size:9px}
-            table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:16px}
-            th{background:#202733;color:#fff;padding:7px 7px;text-align:left;font-size:7.5px;text-transform:uppercase}
-            th.code{width:11%}
+            .header-scope{color:#e1bd70;font-size:13pt;font-weight:bold;text-transform:uppercase;letter-spacing:1.1px}
+            .header-date{margin-top:4px;color:#ffffff;font-size:9pt}
+            .wordmark{font-family:DejaVu Serif,serif;color:#d6b36a;font-size:28pt;font-weight:bold;letter-spacing:2px}
+            .title{margin-top:8px;font-family:DejaVu Serif,serif;font-size:21pt;line-height:1.05}
+            .meta{margin-top:6px;color:#ffffff;font-size:8pt}
+            table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:13px}
+            th{background:#1d2733;color:#fff;padding:6px 6px;text-align:left;font-size:6.8pt;text-transform:uppercase;letter-spacing:.15px}
+            th.code{width:10.5%}
             th.product{width:' . $productWidth . '%}
             th.brand{width:14%}
             th.cost-head{width:13%;text-align:right}
             th.stock{width:13%;text-align:right}
-            th.price-head{width:14%;text-align:right}
-            td{padding:6px 7px;border-bottom:1px solid #dfe2e4;vertical-align:top;line-height:1.25}
+            th.price-head{width:14.5%;text-align:right}
+            td{padding:5px 6px;border-bottom:.45px solid #d5d9dc;vertical-align:middle;line-height:1.18;font-size:8pt}
             tr.product-row.row-light td{background:#ffffff}
-            tr.product-row.row-dark td{background:#eef0f2}
+            tr.product-row.row-dark td{background:#edf0f2}
             td.num{text-align:right;white-space:nowrap}
-            td.price{font-weight:bold;white-space:nowrap}
+            td.price{font-weight:bold;white-space:nowrap;font-size:8.3pt}
             td.product-cell{font-weight:bold;word-wrap:break-word}
             td.brand-cell{word-wrap:break-word}
-            .incoming-title td{background:#11161b!important;color:#d6b36a;font-weight:bold;letter-spacing:1px;padding:8px}
-            .incoming-empty td{background:#f3f0e9;color:#777;font-style:italic;padding:9px}
-            .offer{display:inline-block;background:#b5482b;color:#fff4dc;border:1px solid #d6b36a;padding:2px 5px;border-radius:6px;font-size:6px;font-weight:bold;white-space:nowrap}
-            .watermark{position:fixed;left:17%;right:17%;top:40%;text-align:center;opacity:.055;z-index:-1}
-            .watermark img{max-width:320px;max-height:170px}
-            .watermark-text{font-family:DejaVu Serif,serif;font-size:54px;color:#9b8b6e;letter-spacing:4px}
-            .footer{position:fixed;left:0;right:0;bottom:-18px;border-top:1px solid #d6d0c5;padding-top:8px;color:#4e4b46;font-size:11px;font-weight:600;text-align:center;line-height:1.35}
-            .terms{margin-top:12px;color:#666;font-size:7px}
+            .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:7px}
+            .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
+            .offer{display:inline-block;background:#d72e27;color:#fff;border:1px solid #a51f1a;padding:2px 4px;border-radius:3px;font-size:6.1pt;font-weight:bold;white-space:nowrap;vertical-align:middle}
+            .terms{margin-top:10px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
+            .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:9.5pt;font-weight:bold;text-align:center;line-height:1.25;padding-top:7px}
+            .footer-mark{position:absolute;right:12px;top:4px}
+            .footer-mark img{max-height:20px;max-width:72px;opacity:.16}
         </style></head><body>
-        ' . ($logo ? '<div class="watermark"><img src="' . esc_attr($logo) . '"></div>' : '<div class="watermark watermark-text">FRN ATLÁNTICO</div>') . '
-        <div class="header">' .
-            ($headerImage ? '<img class="header-photo" src="' . esc_attr($headerImage) . '"><div class="header-shade"></div>' : '') .
-            '<div class="header-content">
+        <div class="header"' .
+            ($headerImage ? ' style="background-image:url(\'' . esc_attr($headerImage) . '\')"' : '') .
+            '>
             <table class="header-grid"><tr>
                 <td>' . $logoHtml . '</td>
                 <td class="header-right">
@@ -603,14 +614,16 @@ final class FRN_Frontend_App
             <div class="meta">' . esc_html($company) .
                 ($priceListLabel !== '' ? ' · Precios: ' . esc_html($priceListLabel) : '') .
             '</div>
-            </div>
         </div>
         <table>
             <thead><tr>' . $headers . '</tr></thead>
             <tbody>' . $rowsHtml . '</tbody>
         </table>
         <div class="terms">Stock sujeto a disponibilidad en el momento de confirmación. Precios y condiciones sujetos a validación comercial.</div>
-        <div class="footer">' . esc_html($contact) . '</div>
+        <div class="footer">' .
+            esc_html($contact) .
+            ($logo ? '<span class="footer-mark"><img src="' . esc_attr($logo) . '"></span>' : '') .
+        '</div>
         </body></html>';
     }
 
@@ -629,7 +642,7 @@ final class FRN_Frontend_App
             $index++;
 
             $offer = (int) $line['featured'] === 1
-                ? '<span class="offer">OFERTA</span> '
+                ? '<span class="offer">&#9832; OFERTA</span> '
                 : '';
 
             $html .= '<tr class="product-row ' . $class . '">'
