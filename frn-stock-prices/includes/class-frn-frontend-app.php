@@ -459,6 +459,8 @@ final class FRN_Frontend_App
         $options = new \Dompdf\Options();
         $options->set('isRemoteEnabled', false);
         $options->set('isHtml5ParserEnabled', true);
+        $options->set('isFontSubsettingEnabled', false);
+        $options->set('defaultFont', 'DejaVu Sans');
 
         $dompdf = new \Dompdf\Dompdf($options);
         $dompdf->setPaper('A4', 'portrait');
@@ -602,7 +604,8 @@ final class FRN_Frontend_App
         $web = get_option('frn_tariff_web', 'www.frnatlantico.com');
         $scopeKey = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'carne' : 'pescado';
         $headerImage = $this->pdf_branding_data_uri($scopeKey);
-        $logo = $this->pdf_branding_data_uri('logo');
+        $logo = $this->pdf_header_logo_data_uri();
+        $headerOverlay = $this->pdf_header_overlay_data_uri();
 
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
@@ -650,17 +653,14 @@ final class FRN_Frontend_App
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:22px 22px 58px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
-            .header{position:relative;height:136px;border-bottom:3px solid #b28a42;background:#07131a;overflow:hidden}
-            .header-photo{position:absolute;left:0;top:-68px;width:100%;height:auto}
-            .header-photo.pescado{top:-58px}
-            .header-shade{position:absolute;left:0;top:0;width:100%;height:136px;background:rgba(1,9,14,.42)}
-            .header-left-shade{position:absolute;left:0;top:0;width:58%;height:136px;background:rgba(0,0,0,.34)}
-            .header-logo{position:absolute;left:18px;top:12px;width:135px;height:auto}
-            .header-atlantico{position:absolute;left:39px;top:61px;color:#d7b46b;font-size:7pt;font-weight:bold;letter-spacing:2.1px}
-            .header-title{position:absolute;left:20px;top:75px;color:#fff;font-family:DejaVu Serif,serif;font-size:22pt;line-height:1}
-            .header-subtitle{position:absolute;left:21px;top:110px;color:#fff;font-family:DejaVu Serif,serif;font-size:8pt}
+            .header{position:relative;height:138px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
+            .header-photo{position:absolute;left:0;top:0;width:100%;height:auto}
+            .header-shade{position:absolute;left:0;top:0;width:100%;height:138px}
+            .header-logo{position:absolute;left:16px;top:10px;width:132px;height:auto}
+            .header-title{position:absolute;left:20px;top:70px;color:#fff;font-family:DejaVu Serif,serif;font-size:22pt;line-height:1}
+            .header-subtitle{position:absolute;left:21px;top:106px;color:#fff;font-family:DejaVu Serif,serif;font-size:8pt}
             .header-scope{position:absolute;right:20px;top:14px;color:#e1bd70;font-size:12pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
-            .header-date-dynamic{position:absolute;right:20px;top:38px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:8.5pt;font-weight:600;text-align:right;white-space:nowrap}
+            .header-date-dynamic{position:absolute;right:20px;top:36px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:8.5pt;font-weight:600;text-align:right;white-space:nowrap}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:13px}
             th{background:#1d2733;color:#fff;padding:6px 6px;text-align:left;font-size:6.8pt;text-transform:uppercase;letter-spacing:.15px}
             th.code{width:11%}
@@ -675,7 +675,7 @@ final class FRN_Frontend_App
             td.code-cell{font-family:DejaVu Sans,Arial,sans-serif;white-space:nowrap;letter-spacing:0;font-weight:normal}
             td.num{text-align:right;white-space:nowrap;letter-spacing:0}
             td.price{font-weight:bold;white-space:nowrap;font-size:8.3pt}
-            td.product-cell{font-weight:bold;word-wrap:break-word}
+            td.product-cell{font-family:DejaVu Sans,Arial,sans-serif;font-weight:700;letter-spacing:0;word-wrap:break-word;overflow:visible}
             td.brand-cell{word-wrap:break-word}
             .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:7px}
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
@@ -686,11 +686,9 @@ final class FRN_Frontend_App
             .footer-contact{margin-top:2px;font-size:7.5pt;font-weight:500;color:#303943}
         </style></head><body>
         <div class="header">
-            <img class="header-photo ' . esc_attr($scopeKey) . '" src="' . esc_attr($headerImage) . '" alt="">
-            <div class="header-shade"></div>
-            <div class="header-left-shade"></div>
+            ' . ($headerImage ? '<img class="header-photo" src="' . esc_attr($headerImage) . '" alt="">' : '') . '
+            ' . ($headerOverlay ? '<img class="header-shade" src="' . esc_attr($headerOverlay) . '" alt="">' : '') . '
             <img class="header-logo" src="' . esc_attr($logo) . '" alt="FRN">
-            <div class="header-atlantico">ATLÁNTICO</div>
             <div class="header-scope">' . esc_html($scopeKey === 'carne' ? 'CARNE' : 'PESCADO Y MARISCO') . '</div>
             <div class="header-date-dynamic">Fecha: ' . esc_html($date) . '</div>
             <div class="header-title">' . esc_html($scopeKey === 'carne' ? 'Tarifa Carne' : 'Tarifa Pescado y marisco') . '</div>
@@ -723,12 +721,12 @@ final class FRN_Frontend_App
             $index++;
 
             $offer = (int) $line['featured'] === 1
-                ? '<img class="offer-badge" src="' . esc_attr($this->offer_badge_data_uri()) . '" alt="OFERTA"> '
+                ? ' <img class="offer-badge" src="' . esc_attr($this->offer_badge_data_uri()) . '" alt="OFERTA">'
                 : '';
 
             $html .= '<tr class="product-row ' . $class . '">'
                 . '<td class="code-cell">' . esc_html(wp_check_invalid_utf8((string) $line['product_code'], true)) . '</td>'
-                . '<td class="product-cell">' . $offer . esc_html(wp_check_invalid_utf8((string) $line['product_name'], true)) . '</td>'
+                . '<td class="product-cell">' . esc_html(wp_check_invalid_utf8((string) $line['product_name'], true)) . $offer . '</td>'
                 . '<td class="brand-cell">' . esc_html(wp_check_invalid_utf8((string) $line['brand'], true)) . '</td>';
 
             if ($showCost) {
@@ -772,12 +770,41 @@ final class FRN_Frontend_App
     {
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="42" viewBox="0 0 180 42">'
             . '<rect x="0.5" y="0.5" width="179" height="41" rx="8" fill="#d72e27" stroke="#9f1f1a"/>'
-            . '<path d="M22 34c-8-4-10-11-6-17 2-3 5-5 6-10 5 5 8 9 6 15 3-2 5-5 5-8 5 5 6 12 2 17-3 4-8 6-13 3z" fill="#fff"/>'
-            . '<path d="M24 32c-4-2-5-5-3-8 1-2 3-3 3-6 3 3 4 6 3 9 2-1 3-2 4-4 2 4 1 8-2 10-2 1-4 1-5-1z" fill="#d72e27"/>'
+            . '<path d="M22 34c-8-4-10-11-6-17 2-3 5-5 6-10 5 5 8 9 6 15 3-2 5-5 5-8 5 5 6 12 2 17-3 4-8 6-13 3z" fill="#ff9f1c"/>'
+            . '<path d="M24 32c-4-2-5-5-3-8 1-2 3-3 3-6 3 3 4 6 3 9 2-1 3-2 4-4 2 4 1 8-2 10-2 1-4 1-5-1z" fill="#fff4cf"/>'
+            . '<circle cx="25" cy="28" r="2.4" fill="#ffd15a"/>'
             . '<text x="47" y="28" font-family="DejaVu Sans,Arial,sans-serif" font-size="22" font-weight="700" fill="#fff">OFERTA</text>'
             . '</svg>';
 
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    private function pdf_header_overlay_data_uri(): string
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="400" viewBox="0 0 1600 400">'
+            . '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">'
+            . '<stop offset="0%" stop-color="#000" stop-opacity="0.45"/>'
+            . '<stop offset="38%" stop-color="#000" stop-opacity="0.30"/>'
+            . '<stop offset="68%" stop-color="#000" stop-opacity="0.14"/>'
+            . '<stop offset="100%" stop-color="#000" stop-opacity="0.04"/>'
+            . '</linearGradient></defs>'
+            . '<rect width="1600" height="400" fill="url(#g)"/>'
+            . '</svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    private function pdf_header_logo_data_uri(): string
+    {
+        $path = FRN_SP_PATH . 'assets/pdf-header-logo.png';
+        if (is_readable($path) && @getimagesize($path)) {
+            $bytes = @file_get_contents($path);
+            if ($bytes !== false && $bytes !== '') {
+                return 'data:image/png;base64,' . base64_encode($bytes);
+            }
+        }
+
+        return $this->pdf_branding_data_uri('logo');
     }
 
     private function pdf_branding_state(): array
