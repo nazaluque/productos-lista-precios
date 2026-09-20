@@ -1,5 +1,14 @@
 # FRN Stock & Prices
 
+## 1.1.4 — Cabeceras fotográficas definitivas
+
+- Usa exactamente las imágenes aportadas por FRN para Carne y Pescado/Marisco.
+- Las fotografías se recortan previamente a proporción de cabecera y se optimizan para PDF.
+- El header deja de estirar las imágenes y usa recorte proporcional tipo cover.
+- Los dos fondos pesan aproximadamente 10 KB y 13 KB, evitando PDFs innecesariamente pesados.
+- Reduce el footer de 11 pt a 8 pt para recuperar una presencia más equilibrada.
+- Mantiene intactos tabla, orden alfabético, precios, stock, Consultar precio y badge OFERTA de la 1.1.3.
+
 ## 1.1.3 — Render PDF estable y alineado con el mockup
 
 - Elimina las capas transparentes y z-index del PDF que podían producir artefactos visuales sobre códigos, stock y precios.
