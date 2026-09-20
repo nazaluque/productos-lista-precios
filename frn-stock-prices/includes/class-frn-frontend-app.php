@@ -32,6 +32,7 @@ final class FRN_Frontend_App
         add_action('admin_post_frn_front_tariff_csv', [$this, 'tariff_csv']);
         add_action('admin_post_frn_front_settings', [$this, 'save_settings']);
         add_action('admin_post_frn_front_user_save', [$this, 'user_save']);
+        add_action('admin_post_frn_front_pdf_branding', [$this, 'save_pdf_branding']);
     }
 
     public function render(): void
@@ -39,7 +40,7 @@ final class FRN_Frontend_App
         $this->guard_capability();
 
         $tab = sanitize_key($_GET['tab'] ?? 'importar');
-        if (!in_array($tab, ['importar','tarifas','tarifa','usuarios'], true)) {
+        if (!in_array($tab, ['importar','tarifas','tarifa','usuarios','diseno'], true)) {
             $tab = 'importar';
         }
 
@@ -64,6 +65,7 @@ final class FRN_Frontend_App
             'canExport' => current_user_can('frn_export_tariffs'),
             'canManageUsers' => current_user_can('frn_manage_users'),
             'frnUsers' => current_user_can('frn_manage_users') ? get_users(['role__in'=>['frn_administrator','frn_stock','frn_director_comercial','frn_comercial','frn_consulta'],'orderby'=>'display_name']) : [],
+            'pdfBranding' => current_user_can('frn_manage_users') ? $this->pdf_branding_state() : [],
         ];
 
         extract($data, EXTR_SKIP);
@@ -288,6 +290,60 @@ final class FRN_Frontend_App
         $this->redirect(['tab'=>'usuarios','user_saved'=>1]);
     }
 
+    public function save_pdf_branding(): void
+    {
+        $this->guard_post('frn_front_pdf_branding', 'frn_manage_users');
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        $fields = [
+            'frn_pdf_header_carne' => 'frn_pdf_header_carne_id',
+            'frn_pdf_header_pescado' => 'frn_pdf_header_pescado_id',
+            'frn_pdf_logo' => 'frn_pdf_logo_id',
+        ];
+
+        foreach ($fields as $field => $option) {
+            if (!isset($_FILES[$field]) || !is_array($_FILES[$field])) { continue; }
+
+            $error = (int) ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE);
+            if ($error === UPLOAD_ERR_NO_FILE) { continue; }
+            if ($error !== UPLOAD_ERR_OK) {
+                $this->redirect(['tab'=>'diseno','error'=>rawurlencode('No se pudo subir uno de los archivos de diseño.')]);
+            }
+
+            $size = (int) ($_FILES[$field]['size'] ?? 0);
+            if ($size <= 0 || $size > 8 * MB_IN_BYTES) {
+                $this->redirect(['tab'=>'diseno','error'=>rawurlencode('Cada imagen debe pesar menos de 8 MB.')]);
+            }
+
+            $tmp = (string) ($_FILES[$field]['tmp_name'] ?? '');
+            $name = (string) ($_FILES[$field]['name'] ?? '');
+            $checked = wp_check_filetype_and_ext($tmp, $name);
+            $mime = (string) ($checked['type'] ?? '');
+
+            if (!in_array($mime, ['image/jpeg','image/png'], true) || !@getimagesize($tmp)) {
+                $this->redirect(['tab'=>'diseno','error'=>rawurlencode('Solo se admiten JPG o PNG válidos para el diseño del PDF.')]);
+            }
+
+            $attachmentId = media_handle_upload($field, 0, [], ['test_form' => false]);
+            if (is_wp_error($attachmentId)) {
+                $this->redirect(['tab'=>'diseno','error'=>rawurlencode($attachmentId->get_error_message())]);
+            }
+
+            $path = get_attached_file((int) $attachmentId);
+            if (!$path || !is_readable($path) || !@getimagesize($path)) {
+                wp_delete_attachment((int) $attachmentId, true);
+                $this->redirect(['tab'=>'diseno','error'=>rawurlencode('WordPress guardó la imagen, pero no puede leerla desde el servidor.')]);
+            }
+
+            update_option($option, (int) $attachmentId, false);
+        }
+
+        $this->redirect(['tab'=>'diseno','branding_saved'=>1]);
+    }
+
     public function tariff_create(): void
     {
         $this->guard_post('frn_front_tariff_create', 'frn_export_tariffs');
@@ -381,6 +437,18 @@ final class FRN_Frontend_App
 
         if (!$tariff) { wp_die('Tarifa no encontrada.'); }
 
+        $scopeKey = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'carne' : 'pescado';
+        $branding = $this->pdf_branding_state();
+        if (empty($branding['logo']['valid']) || empty($branding[$scopeKey]['valid'])) {
+            wp_die(
+                'El diseño PDF no está configurado correctamente. Entra en Stock > Diseño PDF y sube la foto de ' .
+                ($scopeKey === 'carne' ? 'Carne' : 'Pescado / Marisco') .
+                ' y el logo oficial FRN antes de exportar.',
+                'Diseño PDF incompleto',
+                ['response' => 422]
+            );
+        }
+
         $autoload = FRN_SP_PATH . 'vendor/autoload.php';
         if (!file_exists($autoload)) {
             wp_die('Falta la librería PDF en el paquete instalado.');
@@ -400,12 +468,22 @@ final class FRN_Frontend_App
         // Watermark and page numbering are drawn by Dompdf's canvas, outside
         // the HTML layout. This makes them deterministic on every page.
         $canvas = $dompdf->getCanvas();
-        $watermarkPath = $this->pdf_watermark_path();
+        $watermarkPath = $this->pdf_branding_path('logo');
         if ($watermarkPath !== '') {
+            $watermarkSize = @getimagesize($watermarkPath);
+            $watermarkRatio = ($watermarkSize && !empty($watermarkSize[0]))
+                ? ((float) $watermarkSize[1] / (float) $watermarkSize[0])
+                : 0.42;
+            $watermarkWidth = 300.0;
+            $watermarkHeight = $watermarkWidth * $watermarkRatio;
+            $watermarkX = (595.28 - $watermarkWidth) / 2;
+            $watermarkY = (841.89 - $watermarkHeight) / 2;
+
             $canvas->page_script(
-                static function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($watermarkPath): void {
-                    // A4 portrait in points. The PNG already contains low opacity.
-                    $canvas->image($watermarkPath, 172, 325, 250, 117);
+                static function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($watermarkPath, $watermarkX, $watermarkY, $watermarkWidth, $watermarkHeight): void {
+                    $canvas->set_opacity(0.055);
+                    $canvas->image($watermarkPath, $watermarkX, $watermarkY, $watermarkWidth, $watermarkHeight);
+                    $canvas->set_opacity(1.0);
                 }
             );
         }
@@ -522,7 +600,9 @@ final class FRN_Frontend_App
         $phone = get_option('frn_tariff_phone', '');
         $email = get_option('frn_tariff_email', '');
         $web = get_option('frn_tariff_web', 'www.frnatlantico.com');
-        $headerImage = $this->pdf_header_image_data_uri((string) ($tariff['catalog_scope'] ?? ''));
+        $scopeKey = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'carne' : 'pescado';
+        $headerImage = $this->pdf_branding_data_uri($scopeKey);
+        $logo = $this->pdf_branding_data_uri('logo');
 
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
@@ -570,8 +650,17 @@ final class FRN_Frontend_App
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:22px 22px 58px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
-            .header{position:relative;height:188px;border-bottom:3px solid #b28a42;background-color:#07131a;background-repeat:no-repeat;background-position:center center;background-size:100% 100%;overflow:hidden}
-            .header-date-dynamic{position:absolute;right:24px;top:49px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:9pt;font-weight:600;text-align:right;white-space:nowrap}
+            .header{position:relative;height:136px;border-bottom:3px solid #b28a42;background:#07131a;overflow:hidden}
+            .header-photo{position:absolute;left:0;top:-68px;width:100%;height:auto}
+            .header-photo.pescado{top:-58px}
+            .header-shade{position:absolute;left:0;top:0;width:100%;height:136px;background:rgba(1,9,14,.42)}
+            .header-left-shade{position:absolute;left:0;top:0;width:58%;height:136px;background:rgba(0,0,0,.34)}
+            .header-logo{position:absolute;left:18px;top:12px;width:135px;height:auto}
+            .header-atlantico{position:absolute;left:39px;top:61px;color:#d7b46b;font-size:7pt;font-weight:bold;letter-spacing:2.1px}
+            .header-title{position:absolute;left:20px;top:75px;color:#fff;font-family:DejaVu Serif,serif;font-size:22pt;line-height:1}
+            .header-subtitle{position:absolute;left:21px;top:110px;color:#fff;font-family:DejaVu Serif,serif;font-size:8pt}
+            .header-scope{position:absolute;right:20px;top:14px;color:#e1bd70;font-size:12pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
+            .header-date-dynamic{position:absolute;right:20px;top:38px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:8.5pt;font-weight:600;text-align:right;white-space:nowrap}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:13px}
             th{background:#1d2733;color:#fff;padding:6px 6px;text-align:left;font-size:6.8pt;text-transform:uppercase;letter-spacing:.15px}
             th.code{width:11%}
@@ -596,10 +685,16 @@ final class FRN_Frontend_App
             .footer-brand{font-family:DejaVu Sans,Arial,sans-serif;font-size:10pt;font-weight:bold;letter-spacing:1.7px}
             .footer-contact{margin-top:2px;font-size:7.5pt;font-weight:500;color:#303943}
         </style></head><body>
-        <div class="header"' .
-            ($headerImage ? ' style="background-image:url(\'' . esc_attr($headerImage) . '\')"' : '') .
-            '>
+        <div class="header">
+            <img class="header-photo ' . esc_attr($scopeKey) . '" src="' . esc_attr($headerImage) . '" alt="">
+            <div class="header-shade"></div>
+            <div class="header-left-shade"></div>
+            <img class="header-logo" src="' . esc_attr($logo) . '" alt="FRN">
+            <div class="header-atlantico">ATLÁNTICO</div>
+            <div class="header-scope">' . esc_html($scopeKey === 'carne' ? 'CARNE' : 'PESCADO Y MARISCO') . '</div>
             <div class="header-date-dynamic">Fecha: ' . esc_html($date) . '</div>
+            <div class="header-title">' . esc_html($scopeKey === 'carne' ? 'Tarifa Carne' : 'Tarifa Pescado y marisco') . '</div>
+            <div class="header-subtitle">' . esc_html($scopeKey === 'carne' ? 'Productos de calidad para tu negocio' : 'Los mejores productos del mar, siempre a tu alcance') . '</div>
         </div>
         <table>
             <thead><tr>' . $headers . '</tr></thead>
@@ -685,38 +780,51 @@ final class FRN_Frontend_App
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    private function pdf_watermark_path(): string
+    private function pdf_branding_state(): array
     {
-        $path = FRN_SP_PATH . 'assets/pdf-watermark-frn.png';
-        return is_readable($path) ? $path : '';
-    }
+        $map = [
+            'carne' => 'frn_pdf_header_carne_id',
+            'pescado' => 'frn_pdf_header_pescado_id',
+            'logo' => 'frn_pdf_logo_id',
+        ];
 
-    private function pdf_header_image_data_uri(string $scope): string
-    {
-        $filename = $scope === 'carne'
-            ? 'pdf-header-carne.jpg'
-            : 'pdf-header-pescado.jpg';
+        $state = [];
+        foreach ($map as $key => $option) {
+            $id = (int) get_option($option, 0);
+            $path = $id > 0 ? get_attached_file($id) : '';
+            $image = ($path && is_readable($path)) ? @getimagesize($path) : false;
+            $mime = $id > 0 ? (string) get_post_mime_type($id) : '';
+            $valid = (bool) $image && in_array($mime, ['image/jpeg','image/png'], true);
 
-        $path = FRN_SP_PATH . 'assets/' . $filename;
-        if (!is_readable($path)) {
-            return '';
+            $state[$key] = [
+                'id' => $id,
+                'path' => $valid ? (string) $path : '',
+                'url' => $id > 0 ? (string) wp_get_attachment_image_url($id, 'medium') : '',
+                'mime' => $mime,
+                'valid' => $valid,
+            ];
         }
 
-        return 'data:image/jpeg;base64,' . base64_encode((string) file_get_contents($path));
+        return $state;
     }
 
-    private function logo_data_uri(): string
+    private function pdf_branding_path(string $key): string
     {
-        $logoId = (int) get_theme_mod('custom_logo');
-        if ($logoId <= 0) { return ''; }
+        $state = $this->pdf_branding_state();
+        return !empty($state[$key]['valid']) ? (string) $state[$key]['path'] : '';
+    }
 
-        $path = get_attached_file($logoId);
-        if (!$path || !is_readable($path)) { return ''; }
+    private function pdf_branding_data_uri(string $key): string
+    {
+        $state = $this->pdf_branding_state();
+        if (empty($state[$key]['valid'])) { return ''; }
 
-        $mime = get_post_mime_type($logoId);
-        if (!in_array($mime, ['image/png','image/jpeg'], true)) { return ''; }
+        $path = (string) $state[$key]['path'];
+        $mime = (string) $state[$key]['mime'];
+        $bytes = @file_get_contents($path);
+        if ($bytes === false || $bytes === '') { return ''; }
 
-        return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($path));
+        return 'data:' . $mime . ';base64,' . base64_encode($bytes);
     }
 
     private function stock_text(float $stock, string $mode, bool $incoming = false, string $unit = ''): string
@@ -769,6 +877,9 @@ final class FRN_Frontend_App
         }
         if (isset($_GET['user_saved'])) {
             $messages[] = ['success', 'Usuario FRN guardado.'];
+        }
+        if (isset($_GET['branding_saved'])) {
+            $messages[] = ['success', 'Diseño PDF guardado y validado.'];
         }
         if (!empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
