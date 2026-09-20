@@ -1,4 +1,4 @@
-FRN · PAQUETE v1.1.5 · MAESTRO SEMANAL UNIFICADO
+FRN · PAQUETE v1.1.6 · MAESTRO SEMANAL UNIFICADO
 ================================================
 
 SOLO PARA frnatlantico.es
@@ -95,4 +95,4 @@ Próximos ingresos aparece siempre.
 VERSIÓN
 -------
 La versión instalada se muestra dentro de /stock/ en cabecera, pantalla y pie.
-Versión de este paquete: 1.1.5
+Versión de este paquete: 1.1.6
