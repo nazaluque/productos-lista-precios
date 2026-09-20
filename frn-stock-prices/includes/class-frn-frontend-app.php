@@ -568,7 +568,7 @@ final class FRN_Frontend_App
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:22px 22px 58px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
-            .header{color:#fff;padding:18px 22px 17px;border-bottom:3px solid #b28a42;background-color:#080a0c;background-repeat:no-repeat;background-position:center center;background-size:100% 100%}
+            .header{color:#fff;padding:18px 22px 17px;border-bottom:3px solid #b28a42;background-color:#080a0c;background-repeat:no-repeat;background-position:center center;background-size:cover}
             .header-grid{width:100%;border-collapse:collapse;table-layout:auto;margin:0}
             .header-grid td{border:0!important;padding:0!important;background:transparent!important;vertical-align:top}
             .header-right{text-align:right}
@@ -597,7 +597,7 @@ final class FRN_Frontend_App
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
             .offer-badge{display:inline-block;width:50px;height:12px;vertical-align:middle;margin-right:3px}
             .terms{margin-top:10px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
-            .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:11pt;font-weight:bold;text-align:center;line-height:1.25;padding-top:7px}
+            .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:8pt;font-weight:600;text-align:center;line-height:1.25;padding-top:7px}
             .footer-mark{position:absolute;right:12px;top:4px}
             .footer-mark img{max-height:20px;max-width:72px;opacity:.16}
         </style></head><body>
