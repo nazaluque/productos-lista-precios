@@ -597,7 +597,7 @@ final class FRN_Frontend_App
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
             .offer-badge{display:inline-block;width:50px;height:12px;vertical-align:middle;margin-right:3px}
             .terms{margin-top:10px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
-            .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:9.5pt;font-weight:bold;text-align:center;line-height:1.25;padding-top:7px}
+            .footer{position:fixed;left:0;right:0;bottom:-36px;height:29px;border-top:1px solid #b28a42;color:#3f3d39;font-size:11pt;font-weight:bold;text-align:center;line-height:1.25;padding-top:7px}
             .footer-mark{position:absolute;right:12px;top:4px}
             .footer-mark img{max-height:20px;max-width:72px;opacity:.16}
         </style></head><body>
