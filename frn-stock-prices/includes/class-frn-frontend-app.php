@@ -604,7 +604,7 @@ final class FRN_Frontend_App
         $web = get_option('frn_tariff_web', 'www.frnatlantico.com');
         $scopeKey = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'carne' : 'pescado';
         $headerImage = $this->pdf_branding_data_uri($scopeKey);
-        $logo = $this->pdf_header_logo_data_uri();
+        $logo = $this->pdf_branding_data_uri('logo');
         $headerOverlay = $this->pdf_header_overlay_data_uri();
 
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
@@ -656,7 +656,7 @@ final class FRN_Frontend_App
             .header{position:relative;height:138px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
             .header-photo{position:absolute;left:0;top:0;width:100%;height:auto}
             .header-shade{position:absolute;left:0;top:0;width:100%;height:138px}
-            .header-logo{position:absolute;left:16px;top:10px;width:132px;height:auto}
+            .header-logo{position:absolute;left:16px;top:8px;width:126px;height:auto}
             .header-title{position:absolute;left:20px;top:70px;color:#fff;font-family:DejaVu Serif,serif;font-size:22pt;line-height:1}
             .header-subtitle{position:absolute;left:21px;top:106px;color:#fff;font-family:DejaVu Serif,serif;font-size:8pt}
             .header-scope{position:absolute;right:20px;top:14px;color:#e1bd70;font-size:12pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
@@ -675,7 +675,7 @@ final class FRN_Frontend_App
             td.code-cell{font-family:DejaVu Sans,Arial,sans-serif;white-space:nowrap;letter-spacing:0;font-weight:normal}
             td.num{text-align:right;white-space:nowrap;letter-spacing:0}
             td.price{font-weight:bold;white-space:nowrap;font-size:8.3pt}
-            td.product-cell{font-family:DejaVu Sans,Arial,sans-serif;font-weight:700;letter-spacing:0;word-wrap:break-word;overflow:visible}
+            td.product-cell{font-family:DejaVu Sans,Arial,sans-serif;font-weight:700;letter-spacing:0;line-height:1.22;word-wrap:break-word;overflow:visible}
             td.brand-cell{word-wrap:break-word}
             .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:7px}
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
@@ -783,10 +783,10 @@ final class FRN_Frontend_App
     {
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="400" viewBox="0 0 1600 400">'
             . '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">'
-            . '<stop offset="0%" stop-color="#000" stop-opacity="0.45"/>'
-            . '<stop offset="38%" stop-color="#000" stop-opacity="0.30"/>'
-            . '<stop offset="68%" stop-color="#000" stop-opacity="0.14"/>'
-            . '<stop offset="100%" stop-color="#000" stop-opacity="0.04"/>'
+            . '<stop offset="0%" stop-color="#000" stop-opacity="0.50"/>'
+            . '<stop offset="34%" stop-color="#000" stop-opacity="0.40"/>'
+            . '<stop offset="68%" stop-color="#000" stop-opacity="0.18"/>'
+            . '<stop offset="100%" stop-color="#000" stop-opacity="0.03"/>'
             . '</linearGradient></defs>'
             . '<rect width="1600" height="400" fill="url(#g)"/>'
             . '</svg>';
