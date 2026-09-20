@@ -1,5 +1,17 @@
 # FRN Stock & Prices
 
+## 1.1.3 — Render PDF estable y alineado con el mockup
+
+- Elimina las capas transparentes y z-index del PDF que podían producir artefactos visuales sobre códigos, stock y precios.
+- Mantiene los datos reales intactos y refuerza anchuras/nowrap en Código, Stock y Precio.
+- Sustituye el distintivo OFERTA por un badge vectorial rojo con llama blanca, embebido en el propio PDF.
+- Mantiene OFERTA dentro de su posición alfabética; nunca reordena productos.
+- El header fotográfico pasa a ser un fondo único sin capas superpuestas sobre la tabla.
+- El branding FRN se repite en el footer de todas las páginas, sin una marca de agua flotante sobre el contenido.
+- Añade numeración Página X de Y mediante el canvas de Dompdf, fuera del flujo HTML.
+- Footer ampliado y centrado para mejorar lectura.
+- Conserva Consultar precio cuando una referencia visible no tiene precio comercial.
+
 ## 1.1.2 — Trazabilidad semanal, cockpit ancho y PDF refinado
 
 - Muestra el nombre del Excel seleccionado antes de previsualizar y confirma que está listo.
