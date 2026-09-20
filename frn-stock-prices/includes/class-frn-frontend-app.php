@@ -393,7 +393,7 @@ final class FRN_Frontend_App
 
     public function save_settings(): void
     {
-        $this->guard_post('frn_front_settings');
+        $this->guard_post('frn_front_settings', 'frn_edit_prices');
 
         $fields = [
             'frn_tariff_company' => 'FRN Atlántico',
@@ -605,7 +605,6 @@ final class FRN_Frontend_App
         $scopeKey = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'carne' : 'pescado';
         $headerImage = $this->pdf_branding_data_uri($scopeKey);
         $logo = $this->pdf_branding_data_uri('logo');
-        $headerOverlay = $this->pdf_header_overlay_data_uri();
 
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
@@ -655,7 +654,7 @@ final class FRN_Frontend_App
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
             .header{position:relative;height:138px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
             .header-photo{position:absolute;left:0;top:0;width:100%;height:auto}
-            .header-shade{position:absolute;left:0;top:0;width:100%;height:138px}
+            .header-shade{position:absolute;left:0;top:0;width:100%;height:138px;background:rgba(0,0,0,.16)}
             .header-logo{position:absolute;left:16px;top:8px;width:126px;height:auto}
             .header-title{position:absolute;left:20px;top:70px;color:#fff;font-family:DejaVu Serif,serif;font-size:22pt;line-height:1}
             .header-subtitle{position:absolute;left:21px;top:106px;color:#fff;font-family:DejaVu Serif,serif;font-size:8pt}
@@ -687,7 +686,7 @@ final class FRN_Frontend_App
         </style></head><body>
         <div class="header">
             ' . ($headerImage ? '<img class="header-photo" src="' . esc_attr($headerImage) . '" alt="">' : '') . '
-            ' . ($headerOverlay ? '<img class="header-shade" src="' . esc_attr($headerOverlay) . '" alt="">' : '') . '
+            <div class="header-shade"></div>
             <img class="header-logo" src="' . esc_attr($logo) . '" alt="FRN">
             <div class="header-scope">' . esc_html($scopeKey === 'carne' ? 'CARNE' : 'PESCADO Y MARISCO') . '</div>
             <div class="header-date-dynamic">Fecha: ' . esc_html($date) . '</div>
@@ -700,7 +699,7 @@ final class FRN_Frontend_App
         </table>
         <div class="terms">Stock sujeto a disponibilidad en el momento de confirmación. Precios y condiciones sujetos a validación comercial.</div>
         <div class="footer">
-            <div class="footer-brand">FRN ATLÁNTICO</div>
+            <div class="footer-brand">' . esc_html($company) . '</div>
             <div class="footer-contact">' . esc_html($contact) . '</div>
         </div>
         </body></html>';
@@ -777,34 +776,6 @@ final class FRN_Frontend_App
             . '</svg>';
 
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
-    }
-
-    private function pdf_header_overlay_data_uri(): string
-    {
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="400" viewBox="0 0 1600 400">'
-            . '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">'
-            . '<stop offset="0%" stop-color="#000" stop-opacity="0.50"/>'
-            . '<stop offset="34%" stop-color="#000" stop-opacity="0.40"/>'
-            . '<stop offset="68%" stop-color="#000" stop-opacity="0.18"/>'
-            . '<stop offset="100%" stop-color="#000" stop-opacity="0.03"/>'
-            . '</linearGradient></defs>'
-            . '<rect width="1600" height="400" fill="url(#g)"/>'
-            . '</svg>';
-
-        return 'data:image/svg+xml;base64,' . base64_encode($svg);
-    }
-
-    private function pdf_header_logo_data_uri(): string
-    {
-        $path = FRN_SP_PATH . 'assets/pdf-header-logo.png';
-        if (is_readable($path) && @getimagesize($path)) {
-            $bytes = @file_get_contents($path);
-            if ($bytes !== false && $bytes !== '') {
-                return 'data:image/png;base64,' . base64_encode($bytes);
-            }
-        }
-
-        return $this->pdf_branding_data_uri('logo');
     }
 
     private function pdf_branding_state(): array
