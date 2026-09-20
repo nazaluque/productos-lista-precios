@@ -1,5 +1,17 @@
 # FRN Stock & Prices
 
+## 1.1.6 — Branding PDF robusto en Media Library
+
+- Corrige la causa raíz de las cabeceras vacías: los JPG/PNG empaquetados en versiones anteriores estaban corruptos/truncados.
+- Elimina del plugin los assets binarios corruptos para que no puedan volver a usarse por error.
+- Añade una pestaña “Diseño PDF” para administradores.
+- Carne, Pescado/Marisco y el logo oficial FRN se suben una sola vez a la Biblioteca de Medios de WordPress.
+- Cada imagen se valida en servidor con MIME y getimagesize antes de guardarse.
+- El PDF no se exporta si falta la foto correspondiente o el logo, evitando documentos comerciales incompletos.
+- Las fotos del header se cargan como data URI desde uploads, evitando restricciones de rutas locales/chroot de Dompdf.
+- La marca de agua usa el logo cargado y se pinta con el canvas de Dompdf en el centro de cada página con opacidad baja.
+- Mantiene sin cambios tabla, orden alfabético, OFERTA, stock, precios y “Consultar precio”.
+
 ## 1.1.5 — PDF bloqueado al mockup aprobado
 
 - El mockup aprobado pasa a ser la especificación visual del PDF.
