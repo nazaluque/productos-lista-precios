@@ -1,5 +1,13 @@
 # FRN Stock & Prices
 
+## 1.1.13 — Precio de venta semanal sincronizado
+
+- Corrige la importación semanal unificada: la columna “Precio de venta” del Excel actualiza siempre el precio comercial del maestro.
+- Los productos existentes ya no conservan un precio comercial antiguo cuando el Excel trae un precio nuevo.
+- Si “Precio de venta” viene a 0, el precio comercial también se limpia a 0 y el PDF muestra “Consultar precio”.
+- El Director Comercial puede modificar el precio comercial después de importar y antes de crear/exportar la tarifa.
+- Stock, coste promedio, nombre, marca, código e histórico mantienen el comportamiento actual.
+
 ## 1.1.6 — Branding PDF robusto en Media Library
 
 - Corrige la causa raíz de las cabeceras vacías: los JPG/PNG empaquetados en versiones anteriores estaban corruptos/truncados.
