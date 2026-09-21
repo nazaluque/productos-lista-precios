@@ -93,8 +93,10 @@ final class FRN_Catalog_Repository
     /**
      * Unified weekly import. Only stock-positive regular rows reach this
      * method. Existing products not present in the weekly file are kept in
-     * the master with stock 0 / hidden. Manual commercial prices are
-     * preserved; source price and average cost are refreshed from Odoo.
+     * the master with stock 0 / hidden. The weekly Excel is the starting
+     * commercial master: Precio de venta refreshes both source_price_kg and
+     * price_kg on every import. Commercial users may edit price_kg afterwards
+     * before exporting a tariff. Average cost is refreshed from the Excel.
      */
     public function publish_stock(string $category, string $filename, array $rows): int
     {
@@ -153,13 +155,11 @@ final class FRN_Catalog_Repository
                 ];
 
                 if ($existingId > 0) {
-                    $existing = $wpdb->get_row(
-                        $wpdb->prepare("SELECT price_kg FROM {$table} WHERE id = %d", $existingId),
-                        ARRAY_A
-                    );
-                    if ((float) ($existing['price_kg'] ?? 0) <= 0 && $sourcePrice > 0) {
-                        $data['price_kg'] = $sourcePrice;
-                    }
+                    // Weekly FRN rule: "Precio de venta" from the unified Excel
+                    // becomes the commercial starting price every week.
+                    // A zero price intentionally clears any previous commercial
+                    // price so the PDF shows "Consultar precio".
+                    $data['price_kg'] = $sourcePrice;
 
                     $formats = [];
                     foreach ($data as $key => $value) {
