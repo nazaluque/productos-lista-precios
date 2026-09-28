@@ -36,6 +36,8 @@ final class FRN_Tariff_Repository
             show_price tinyint(1) NOT NULL DEFAULT 1,
             show_cost tinyint(1) NOT NULL DEFAULT 0,
             stock_mode varchar(20) NOT NULL DEFAULT 'available',
+            primary_lang varchar(20) NOT NULL DEFAULT 'es_es',
+            secondary_lang varchar(20) NOT NULL DEFAULT '',
             status varchar(20) NOT NULL DEFAULT 'final',
             source_file varchar(255) NOT NULL DEFAULT '',
             created_at datetime NOT NULL,
@@ -53,6 +55,14 @@ final class FRN_Tariff_Repository
             product_code varchar(80) NOT NULL DEFAULT '',
             brand varchar(160) NOT NULL DEFAULT '',
             product_name varchar(255) NOT NULL,
+            commercial_group varchar(190) NOT NULL DEFAULT '',
+            group_sort int NOT NULL DEFAULT 999,
+            item_sort int NOT NULL DEFAULT 999,
+            group_color varchar(20) NOT NULL DEFAULT '#59636E',
+            name_es_ar varchar(255) NOT NULL DEFAULT '',
+            name_es_es varchar(255) NOT NULL DEFAULT '',
+            name_pt_pt varchar(255) NOT NULL DEFAULT '',
+            name_en varchar(255) NOT NULL DEFAULT '',
             unit varchar(40) NOT NULL DEFAULT '',
             source_stock decimal(14,3) NOT NULL DEFAULT 0,
             source_price decimal(12,2) NULL,
@@ -79,7 +89,9 @@ final class FRN_Tariff_Repository
         string $date,
         string $scope,
         string $preset = 'general',
-        int $priceListId = 0
+        int $priceListId = 0,
+        string $primaryLang = '',
+        string $secondaryLang = ''
     ): int {
         global $wpdb;
 
@@ -92,6 +104,14 @@ final class FRN_Tariff_Repository
 
         [$showStock, $showPrice, $stockMode] = $this->preset_values($preset);
         $showCost = 0;
+
+        $allowedLangs = ['es_ar','es_es','pt_pt','en',''];
+        if (!in_array($primaryLang, $allowedLangs, true)) { $primaryLang = ''; }
+        if (!in_array($secondaryLang, $allowedLangs, true)) { $secondaryLang = ''; }
+        if ($primaryLang === '') {
+            $primaryLang = $scope === 'carne' ? 'es_ar' : 'es_es';
+        }
+        if ($secondaryLang === $primaryLang) { $secondaryLang = ''; }
 
         $catalog = new FRN_Catalog_Repository();
         $products = $catalog->all($scope, false);
@@ -131,11 +151,13 @@ final class FRN_Tariff_Repository
             'show_price' => $showPrice,
             'show_cost' => $showCost,
             'stock_mode' => $stockMode,
+            'primary_lang' => $primaryLang,
+            'secondary_lang' => $secondaryLang,
             'status' => 'final',
             'source_file' => sanitize_file_name($sourceFile),
             'created_at' => $now,
             'updated_at' => $now,
-        ], ['%s','%s','%s','%d','%s','%s','%d','%d','%d','%s','%s','%s','%s','%s']);
+        ], ['%s','%s','%s','%d','%s','%s','%d','%d','%d','%s','%s','%s','%s','%s','%s','%s']);
 
         if (!$ok) {
             throw new RuntimeException($wpdb->last_error ?: 'No se pudo crear la tarifa.');
@@ -179,6 +201,14 @@ final class FRN_Tariff_Repository
                 'product_code' => (string) $product['product_code'],
                 'brand' => $brand,
                 'product_name' => $name,
+                'commercial_group' => (string)($product['commercial_group'] ?? ''),
+                'group_sort' => (int)($product['group_sort'] ?? 999),
+                'item_sort' => (int)($product['item_sort'] ?? 999),
+                'group_color' => (string)($product['group_color'] ?? '#59636E'),
+                'name_es_ar' => (string)($product['name_es_ar'] ?? $name),
+                'name_es_es' => (string)($product['name_es_es'] ?? $name),
+                'name_pt_pt' => (string)($product['name_pt_pt'] ?? ''),
+                'name_en' => (string)($product['name_en'] ?? ''),
                 'unit' => $unit,
                 'source_stock' => $stock,
                 'source_price' => $price,
@@ -193,7 +223,7 @@ final class FRN_Tariff_Repository
                 'featured' => (int) $product['featured'] === 1 ? 1 : 0,
                 'incoming' => $incoming ? 1 : 0,
                 'sort_order' => $sort,
-            ], ['%d','%s','%s','%s','%s','%s','%f','%f','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d','%d']);
+            ], ['%d','%s','%s','%s','%s','%s','%d','%d','%s','%s','%s','%s','%s','%s','%f','%f','%f','%f','%f','%f','%d','%d','%d','%d','%d','%d','%d']);
 
             if ($wpdb->last_error) {
                 throw new RuntimeException($wpdb->last_error);
@@ -230,7 +260,7 @@ final class FRN_Tariff_Repository
             $wpdb->prepare(
                 'SELECT * FROM ' . self::lines_table() .
                 ' WHERE tariff_id = %d' . $visible .
-                ' ORDER BY incoming ASC, product_name ASC, brand ASC, product_code ASC',
+                ' ORDER BY incoming ASC, group_sort ASC, item_sort ASC, product_name ASC, brand ASC, product_code ASC',
                 $tariffId
             ),
             ARRAY_A
@@ -248,6 +278,12 @@ final class FRN_Tariff_Repository
             ? (string) $settings['preset_mode'] : 'personalizado';
         $stockMode = in_array(($settings['stock_mode'] ?? ''), ['exact','rounded','available','hidden'], true)
             ? (string) $settings['stock_mode'] : 'available';
+        $allowedLangs = ['es_ar','es_es','pt_pt','en',''];
+        $primaryLang = in_array(($settings['primary_lang'] ?? ''), $allowedLangs, true)
+            ? (string)$settings['primary_lang'] : 'es_es';
+        $secondaryLang = in_array(($settings['secondary_lang'] ?? ''), $allowedLangs, true)
+            ? (string)$settings['secondary_lang'] : '';
+        if ($secondaryLang === $primaryLang) { $secondaryLang = ''; }
 
         $wpdb->update(self::tariffs_table(), [
             'title' => sanitize_text_field((string) ($settings['title'] ?? 'Tarifa FRN')),
@@ -257,9 +293,11 @@ final class FRN_Tariff_Repository
             'show_price' => $showPrice,
             'show_cost' => $showCost,
             'stock_mode' => $stockMode,
+            'primary_lang' => $primaryLang,
+            'secondary_lang' => $secondaryLang,
             'status' => 'final',
             'updated_at' => current_time('mysql'),
-        ], ['id' => $id], ['%s','%s','%s','%d','%d','%d','%s','%s','%s'], ['%d']);
+        ], ['id' => $id], ['%s','%s','%s','%d','%d','%d','%s','%s','%s','%s','%s'], ['%d']);
 
         if ($wpdb->last_error) {
             throw new RuntimeException($wpdb->last_error);
