@@ -185,6 +185,7 @@ final class FRN_Frontend_App
                 $preview['catalogs'][$category][$i]['group_sort'] = (int)$group['sort_order'];
                 $preview['catalogs'][$category][$i]['group_color'] = (string)$group['color'];
                 $preview['catalogs'][$category][$i]['needs_group_assignment'] = false;
+                $preview['catalogs'][$category][$i]['force_group_assignment'] = true;
             }
         }
 
