@@ -602,3 +602,45 @@
   border-left:3px solid #a86f2a;background:rgba(168,111,42,.08);color:#d8c4a6
 }
 .frn-import-warnings strong{width:100%;color:#f0d19a}
+
+
+/* FRN Stock & Prices 1.1.17 · canonical categories + preview assignment */
+.frn-preview-group-select,
+.frn-group-select,
+.frn-new-group select,
+.frn-new-group input{
+  min-height:38px;padding:0 9px;border:1px solid rgba(255,255,255,.12);
+  background:#040505;color:#f4f0e8
+}
+.frn-preview-group-select{min-width:230px}
+.frn-group-select{min-width:260px}
+.frn-category-required{
+  display:block;margin-top:5px;color:#f0b06a;font-size:8px;white-space:normal
+}
+.frn-category-assignment-alert{
+  display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 16px;padding:13px 15px;
+  border-left:3px solid #a86f2a;background:rgba(168,111,42,.08);color:#cdbb9d
+}
+.frn-category-assignment-alert strong{color:#f0d19a}
+.frn-group-section-title{
+  margin:24px 0 10px;color:var(--frn-gold-light);font:400 21px Georgia,serif
+}
+.frn-group-master-table{min-width:1700px}
+.frn-group-master-table input.frn-wide{width:300px}
+.frn-group-master-table input[type=color]{width:54px;height:38px;padding:2px}
+.frn-new-group{
+  display:grid;grid-template-columns:180px 1.2fr 1fr 1fr 1fr 70px 90px;
+  gap:10px;align-items:end;margin-top:20px;padding:16px;
+  border:1px solid rgba(180,138,69,.25);background:#080a0b
+}
+.frn-new-group>strong{grid-column:1/-1;color:var(--frn-ivory);font:400 18px Georgia,serif}
+.frn-branding-item select{
+  width:100%;min-height:40px;padding:0 10px;border:1px solid rgba(255,255,255,.12);
+  background:#040505;color:#f4f0e8
+}
+@media(max-width:1100px){
+  .frn-new-group{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .frn-new-group{grid-template-columns:1fr}
+}
