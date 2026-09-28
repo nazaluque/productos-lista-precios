@@ -575,3 +575,30 @@
 @media(max-width:760px){
   .frn-analysis-ready{align-items:flex-start;flex-direction:column}
 }
+
+
+/* FRN Stock & Prices 1.1.16 · translation dictionary */
+.frn-translation-note{
+  margin:0 0 16px;padding:13px 15px;border-left:3px solid var(--frn-gold);
+  background:#080a0b;color:#aaa69e;font-size:10px;line-height:1.5
+}
+.frn-translation-note strong{color:var(--frn-ivory)}
+.frn-translation-filters{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px
+}
+.frn-translation-filters input[type=search],
+.frn-translation-filters select{
+  min-height:40px;padding:0 11px;border:1px solid rgba(255,255,255,.12);
+  background:#07090a;color:#e7e2d8
+}
+.frn-translation-filters input[type=search]{min-width:320px}
+.frn-translation-filters label{display:inline-flex;gap:7px;align-items:center;color:#aaa69e;font-size:10px}
+.frn-translation-table{min-width:2100px}
+.frn-translation-table td{white-space:normal}
+.frn-translation-table input.frn-wide{width:300px}
+.frn-original-name{min-width:300px;color:#d8d3ca;font-weight:600}
+.frn-import-warnings{
+  display:flex;flex-wrap:wrap;gap:10px 20px;margin:0 0 18px;padding:14px 16px;
+  border-left:3px solid #a86f2a;background:rgba(168,111,42,.08);color:#d8c4a6
+}
+.frn-import-warnings strong{width:100%;color:#f0d19a}
