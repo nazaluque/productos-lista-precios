@@ -492,7 +492,7 @@ final class FRN_Catalog_Repository
                     $data['average_cost_kg'] = max(0, (float) ($row['cost'] ?? 0));
                 }
 
-                if (!empty($updates['groups'])) {
+                if (!empty($updates['groups']) || !empty($row['force_group_assignment'])) {
                     $data['commercial_group'] = sanitize_text_field((string) ($row['commercial_group'] ?? ''));
                     $data['group_sort'] = (int) ($row['group_sort'] ?? 999);
                     $data['item_sort'] = (int) ($row['item_sort'] ?? 999);
