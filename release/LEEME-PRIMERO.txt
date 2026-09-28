@@ -1,83 +1,55 @@
-FRN · PAQUETE v1.1.14 · IMPORTACIÓN SELECTIVA + CATEGORÍAS + IDIOMAS
-==================================================================
+FRN · PAQUETE v1.1.15 · IMPORTACIÓN CLARA + PDF APAISADO
+==========================================================
 
 SOLO PARA frnatlantico.es
 NO TOCAR frnatlantico.com
 
-NOVEDAD PRINCIPAL
------------------
-Cada Excel indica explícitamente qué se quiere actualizar:
-- Stock
-- Precio
-- Coste promedio
-- Categorías / orden desde hojas Resumen
+CAMBIOS SOBRE 1.1.14
+--------------------
+1. Flujo de importación:
+   Seleccionar → Analizar → Publicar.
+   Analizar NO modifica la base.
 
-Un campo NO marcado nunca se modifica.
-Una columna ausente o una celda vacía no borra precios/costes existentes.
+2. Después de analizar:
+   - se muestra el nombre del Excel analizado;
+   - desaparece el mensaje confuso de “ningún archivo seleccionado”;
+   - la pantalla indica que todavía NO se publicó.
 
-EXCEL 28-09-2026
-----------------
-La hoja maestra de datos alimenta stock/precio/coste.
-Las hojas Resumen Carne y Resumen Pescado se utilizan como estructura comercial:
-- categorías;
-- orden de categorías;
-- orden de productos dentro de cada categoría.
+3. Protección de datos:
+   - Stock, Precio, Coste y Categorías/orden siguen siendo independientes.
+   - Solo se modifica lo marcado.
 
-Los productos sin categoría de Resumen se muestran en la previsualización antes de publicar.
+4. Unidades:
+   - La previsualización separa kg de unidades.
+   - No mezcla ambos valores en un único total.
 
-IDIOMAS
--------
-El maestro conserva el nombre original y añade:
-- Español Argentina / original
-- Español España
-- Português Portugal
-- English
+5. Categorías:
+   - Las referencias fuera de las hojas Resumen aparecen como SIN CATEGORÍA.
+   - En el PDF reciben una banda neutra propia.
 
-Al crear una tarifa se selecciona el mercado:
-- España
-- Portugal
-- Internacional
+6. PDF:
+   - A4 apaisado.
+   - Cabecera fotográfica corregida.
+   - La foto se inserta como imagen real para Dompdf; no como background data URI.
+   - La fotografía se recorta dentro de la cabecera y no se estira.
+   - El ajuste estético fino de encuadre podrá hacerse después de revisar un PDF real.
 
-Para Carne:
-España = Argentina + España
-Portugal = Argentina + Português
-Internacional = Argentina + English
+PRUEBA CON I 28-09-2026.xlsx
+----------------------------
+Marcar:
+[✓] Stock
+[✓] Categorías / orden desde Resumen
+[ ] Precio
+[ ] Coste promedio
 
-Para Pescado / Marisco:
-España = Español
-Portugal = Español + Português
-Internacional = Español + English
+El análisis debe detectar:
+- 67 referencias;
+- 32 Carne;
+- 35 Pescado / Marisco;
+- 8 categorías Carne;
+- 8 categorías Pescado / Marisco;
+- P00100 y P00110 sin categoría del Resumen.
 
-PDF / CSV
----------
-PDF A4 apaisado.
-Productos agrupados por categoría comercial con bandas de color.
-La cabecera usa la foto configurada en Diseño PDF con recorte proporcional tipo cover: ocupa el ancho sin deformar la imagen.
-Se mantienen:
-- badge OFERTA;
-- stock exacto / redondeado / Disponible;
-- precio / Consultar precio;
-- coste solo con permiso;
-- próximos ingresos;
-- marca de agua;
-- footer y datos FRN.
+Después de publicar, los precios existentes deben permanecer intactos.
 
-INSTALACIÓN
------------
-1. WordPress > Plugins > Añadir plugin > Subir plugin.
-2. Instalar 01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.14.zip.
-3. Sustituir la versión anterior.
-4. Entrar en /stock/ y confirmar v1.1.14.
-5. La primera carga ejecuta la migración de tablas automáticamente.
-
-PRUEBA RECOMENDADA
-------------------
-Con I 28-09-2026.xlsx:
-- marcar Stock;
-- marcar Categorías / orden;
-- NO marcar Precio;
-- NO marcar Coste.
-
-La previsualización debe mostrar que precio y coste NO SE TOCAN.
-
-Versión de este paquete: 1.1.14
+Versión de este paquete: 1.1.15
