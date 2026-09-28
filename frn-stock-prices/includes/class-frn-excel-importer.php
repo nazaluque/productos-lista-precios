@@ -132,6 +132,15 @@ final class FRN_Excel_Importer
 
                 $translations = $this->product_translations((string) ($row['name'] ?? ''), $category);
                 $row += $translations;
+                if (trim((string)($row['commercial_group'] ?? '')) === '') {
+                    $suggestion = $this->suggested_commercial_group((string)($row['name'] ?? ''), $category);
+                    if ($suggestion !== '') {
+                        $row['commercial_group'] = $suggestion;
+                        $row['group_color'] = '#59636E';
+                        $row['group_sort'] = 999;
+                        $row['item_sort'] = 999;
+                    }
+                }
             }
             unset($row);
         }
@@ -385,6 +394,35 @@ final class FRN_Excel_Importer
         return $rows;
     }
 
+    private function suggested_commercial_group(string $name, string $category): string
+    {
+        $n = strtoupper(remove_accents($name));
+
+        if ($category === 'carne') {
+            if (str_contains($n, 'BIFE ANCHO') || str_contains($n, 'TAPA DE BIFE ANCHO')) { return 'BIFE ANCHO / TAPA DE BIFE ANCHO'; }
+            if (str_contains($n, 'BIFE ANGOSTO')) { return 'BIFE ANGOSTO'; }
+            if (str_contains($n, 'LOMO SIN CORDON')) { return 'LOMO'; }
+            if (str_contains($n, 'CUADRIL')) { return 'CUADRIL (TAPA Y CORAZON)'; }
+            if (str_contains($n, 'ASADO') || str_contains($n, 'COSTILLA')) { return 'ASADO / COSTILLA'; }
+            if (str_contains($n, 'TOMAHAWK') || str_contains($n, 'T-BONE') || str_contains($n, 'COWBOY') || str_contains($n, 'CLUB STEAK')) { return 'CORTES CON HUESO BLUESMOKE'; }
+            if (str_contains($n, 'VACIO')) { return 'VACIO'; }
+            return 'OTROS CORTES';
+        }
+
+        if (str_contains($n, 'ALETA POTON') || str_contains($n, 'CHOCO') || str_contains($n, 'MANTO')) { return 'ALETA / MANTO / CHOCO (ROTACION RAPIDA)'; }
+        if (str_contains($n, 'PULPO') && str_contains($n, 'COCID')) { return 'PULPO COCIDO'; }
+        if (str_contains($n, 'PULPO SIN CABEZA')) { return 'PULPO CRUDO SIN CABEZA'; }
+        if (str_contains($n, 'PULPO') && str_contains($n, 'LIMPIO')) { return 'PULPO ENTERO LIMPIO'; }
+        if (str_contains($n, 'PULPO')) { return 'PULPO ENTERO CON VISCERAS'; }
+        if (str_contains($n, 'GAMBON')) { return 'GAMBON'; }
+        if (str_contains($n, 'GAMBA BLANCA')) { return 'GAMBA BLANCA'; }
+        if (str_contains($n, 'VIEIRA')) { return 'VIEIRA'; }
+        if (str_contains($n, 'VANNAMEI')) { return 'VANNAMEI'; }
+        if (str_contains($n, 'BOGAVANTE') || str_contains($n, 'CANGREJO')) { return 'CRUSTACEOS'; }
+
+        return 'OTROS PESCADOS / MARISCOS';
+    }
+
     private function group_translations(string $label, string $category): array
     {
         $key = strtoupper(trim(remove_accents($label)));
@@ -451,8 +489,8 @@ final class FRN_Excel_Importer
             ['BIFE ANCHO SIN TAPA','LOMO ALTO SIN TAPA','BIFE DO LOMBO ALTO SEM CAPA','CUBE ROLL / RIBEYE ROLL CAP OFF'],
             ['TAPA DE BIFE ANCHO','TAPA DE LOMO ALTO','CAPA DO LOMBO ALTO','RIBEYE CAP / CUBE ROLL COVER'],
             ['LOMO SIN CORDON','SOLOMILLO SIN CORDÓN','LOMBO SEM CORDÃO','TENDERLOIN CHAIN OFF'],
-            ['CORAZON DE CUADRIL','CENTRO DE CADERA','CORAÇÃO DA ALCATRA','HEART OF RUMP / EYE OF RUMP'],
-            ['TAPA DE CUADRIL','PICAÑA / TAPILLA DE CADERA','PICANHA','RUMP CAP / PICANHA'],
+            ['CORAZON DE CUADRIL','CADERA / CROCA','CORAÇÃO DA ALCATRA','HEART OF RUMP / EYE OF RUMP'],
+            ['TAPA DE CUADRIL','PICAÑA','PICANHA','RUMP CAP / PICANHA'],
             ['ASADO CON HUESO 3 COSTILLAS','COSTILLAR / TIRA DE ASADO CON HUESO 3 COSTILLAS','TIRA DE ENTRECOSTO COM OSSO 3 COSTELAS','BONE-IN SHORT RIBS 3 RIBS'],
             ['COSTILLA RECORTADA SELECCION','COSTILLA DE VACUNO RECORTADA','COSTELA DE BOVINO APARADA','TRIMMED BEEF RIB / SHORT RIB'],
             ['VACIO PORCIONADO A','FALDA / VACÍO PORCIONADO','FRALDINHA PORCIONADA','THIN FLANK / FLANK STEAK PORTIONED'],
@@ -578,12 +616,12 @@ final class FRN_Excel_Importer
             in_array($value, ['codigo','id','referencia','referencia interna','ref','sku','cod','cod.'], true) => 'code',
             str_contains($value, 'marca') || str_contains($value, 'brand') => 'brand',
             in_array($value, ['producto','productos','nombre','nombre del producto','descripcion','product','products','description','articulo'], true) => 'product',
-            str_contains($value, 'stock') || str_contains($value, 'cantidad pronosticada') || str_contains($value, 'cantidad a la mano') || $value === 'cantidad' || str_contains($value, 'disponible') || str_contains($value, 'existencia') => 'stock',
+            str_contains($value, 'stock') || $value === 'pronosticado' || str_contains($value, 'cantidad pronosticada') || str_contains($value, 'cantidad a la mano') || $value === 'cantidad' || str_contains($value, 'disponible') || str_contains($value, 'existencia') => 'stock',
             str_contains($value, 'precio de venta') || $value === 'precio' || str_contains($value, 'price') || str_contains($value, 'tarifa') || str_contains($value, '€/kg') || str_contains($value, 'eur/kg') => 'price',
             in_array($value, ['costo','coste','costo promedio','coste promedio','costo medio','coste medio','average cost','avg cost'], true) || str_contains($value, 'coste promedio') || str_contains($value, 'costo promedio') => 'cost',
-            str_contains($value, 'categoria del producto') || $value === 'categoria' || str_contains($value, 'familia') => 'category',
+            str_contains($value, 'categoria del producto') || str_contains($value, 'categoria de producto') || $value === 'categoria' || str_contains($value, 'familia') => 'category',
             in_array($value, ['modelo','model'], true) => 'model',
-            str_contains($value, 'unidad de medida') || $value === 'unidad' || $value === 'unit' || $value === 'udm' => 'unit',
+            str_contains($value, 'unidad de medida') || $value === 'unidad' || $value === 'unidades' || $value === 'unit' || $value === 'udm' => 'unit',
             in_array($value, ['oferta','destacado','featured','promocion'], true) => 'featured',
             in_array($value, ['publicar','publicado','visible','usar','activo'], true) => 'publish',
             in_array($value, ['estado','status'], true) => 'status',
