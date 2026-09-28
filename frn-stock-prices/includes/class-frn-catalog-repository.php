@@ -200,15 +200,17 @@ final class FRN_Catalog_Repository
                 }
 
                 if (!$existing) {
+                    $seedGroup = sanitize_text_field((string)($row['commercial_group'] ?? ''));
+                    $seedColor = sanitize_hex_color((string)($row['group_color'] ?? '')) ?: '#59636E';
                     $data += [
                         'stock_kg' => 0,
                         'source_price_kg' => null,
                         'price_kg' => null,
                         'average_cost_kg' => null,
-                        'commercial_group' => '',
-                        'group_sort' => 999,
-                        'item_sort' => 999,
-                        'group_color' => '#59636E',
+                        'commercial_group' => $seedGroup,
+                        'group_sort' => (int)($row['group_sort'] ?? 999),
+                        'item_sort' => (int)($row['item_sort'] ?? 999),
+                        'group_color' => $seedColor,
                         'name_es_ar' => sanitize_text_field((string) ($row['name_es_ar'] ?? '')),
                         'name_es_es' => sanitize_text_field((string) ($row['name_es_es'] ?? '')),
                         'name_pt_pt' => sanitize_text_field((string) ($row['name_pt_pt'] ?? '')),
@@ -321,6 +323,41 @@ final class FRN_Catalog_Repository
                 throw new RuntimeException($wpdb->last_error ?: 'No se pudo guardar el producto.');
             }
             $updated += (int) $result;
+        }
+
+        return $updated;
+    }
+
+    public function update_translations(array $rows): int
+    {
+        global $wpdb;
+        $updated = 0;
+
+        foreach ($rows as $row) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) { continue; }
+
+            $data = [
+                'commercial_group' => sanitize_text_field((string)($row['commercial_group'] ?? '')),
+                'name_es_es' => sanitize_text_field((string)($row['name_es_es'] ?? '')),
+                'name_pt_pt' => sanitize_text_field((string)($row['name_pt_pt'] ?? '')),
+                'name_en' => sanitize_text_field((string)($row['name_en'] ?? '')),
+                'translations_reviewed' => !empty($row['translations_reviewed']) ? 1 : 0,
+                'published_at' => current_time('mysql'),
+            ];
+
+            $result = $wpdb->update(
+                self::table(),
+                $data,
+                ['id'=>$id],
+                ['%s','%s','%s','%s','%d','%s'],
+                ['%d']
+            );
+
+            if ($result === false) {
+                throw new RuntimeException($wpdb->last_error ?: 'No se pudieron guardar las traducciones.');
+            }
+            $updated += (int)$result;
         }
 
         return $updated;
