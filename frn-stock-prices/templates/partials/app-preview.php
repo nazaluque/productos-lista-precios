@@ -38,7 +38,8 @@ foreach ($previewRows as $row) {
 <section class="frn-app-card frn-preview-card">
     <div class="frn-card-heading">
         <div><small>Previsualización semanal</small><h2>Antes de guardar</h2></div>
-        <p><?php echo esc_html(count($previewRows)); ?> referencias · <?php echo esc_html(count($previewIncoming)); ?> próximos ingresos · <?php echo esc_html($invalid); ?> errores.</p>
+        <?php $pendingCategories = count(array_filter($previewRows, static fn(array $row): bool => !empty($row['needs_group_assignment']))); ?>
+        <p><?php echo esc_html(count($previewRows)); ?> referencias · <?php echo esc_html(count($previewIncoming)); ?> próximos ingresos · <?php echo esc_html($invalid); ?> errores · <?php echo esc_html($pendingCategories); ?> categoría(s) por confirmar.</p>
     </div>
 
     <div class="frn-import-audit">
@@ -87,6 +88,13 @@ foreach ($previewRows as $row) {
         </div>
     <?php endif; ?>
 
+    <?php if ($pendingCategories > 0) : ?>
+        <div class="frn-category-assignment-alert">
+            <strong>Productos con categoría pendiente</strong>
+            <span>Selecciona la categoría en la columna “Grupo comercial”. La publicación no continuará si alguno queda sin asignar.</span>
+        </div>
+    <?php endif; ?>
+
     <div class="frn-app-table-wrap">
         <table class="frn-app-table frn-preview-table">
             <thead><tr>
@@ -98,7 +106,32 @@ foreach ($previewRows as $row) {
                 <tr class="<?php echo !empty($row['incoming']) ? 'frn-incoming-row' : ''; ?>">
                     <td><?php echo empty($row['valid']) ? '⚠ ' . esc_html(implode(', ', $row['errors'])) : (!empty($row['incoming']) ? 'Próximo ingreso' : 'OK'); ?></td>
                     <td><?php echo esc_html($row['category'] === 'carne' ? 'Carne' : 'Pescado / Marisco'); ?></td>
-                    <td><?php $groupName = trim((string)($row['commercial_group'] ?? '')); echo esc_html($groupName !== '' ? $groupName : 'SIN CATEGORÍA'); ?></td>
+                    <td>
+                        <?php if (!empty($row['needs_group_assignment'])) :
+                            $categoryKey = (string)($row['category'] ?? '');
+                            $suggestedGroup = (string)($row['suggested_group'] ?? '');
+                            $groupsForCategory = (array)(($preview['commercial_groups'][$categoryKey] ?? []));
+                            $codeKey = strtoupper(trim((string)($row['code'] ?? '')));
+                        ?>
+                            <select
+                                name="group_assignments[<?php echo esc_attr($categoryKey); ?>][<?php echo esc_attr($codeKey); ?>]"
+                                form="frn-publish-import"
+                                required
+                                class="frn-preview-group-select"
+                            >
+                                <option value="">Seleccionar categoría…</option>
+                                <?php foreach ($groupsForCategory as $group) : ?>
+                                    <option value="<?php echo esc_attr((string)$group['name_base']); ?>" <?php selected($suggestedGroup, (string)$group['name_base']); ?>>
+                                        <?php echo esc_html((string)$group['name_base']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="frn-category-required"><?php echo !empty($row['is_new']) ? 'Producto nuevo · confirmar categoría' : 'Categoría pendiente'; ?></small>
+                        <?php else :
+                            $groupName = trim((string)($row['commercial_group'] ?? ''));
+                            echo esc_html($groupName !== '' ? $groupName : 'SIN CATEGORÍA');
+                        endif; ?>
+                    </td>
                     <td><?php echo esc_html($row['code']); ?></td>
                     <td><?php echo esc_html($row['brand']); ?></td>
                     <td><?php echo esc_html($row['name']); ?></td>
@@ -112,7 +145,7 @@ foreach ($previewRows as $row) {
     </div>
 
     <?php if ($invalid === 0 && $previewRows) : ?>
-        <form method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-inline-action">
+        <form id="frn-publish-import" method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-inline-action">
             <input type="hidden" name="action" value="frn_front_publish_stock">
             <input type="hidden" name="preview" value="<?php echo esc_attr($previewToken); ?>">
             <?php wp_nonce_field('frn_front_publish_stock_' . $previewToken); ?>
