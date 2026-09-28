@@ -1,5 +1,19 @@
 # FRN Stock & Prices
 
+## 1.1.16 — Excel semanal definitivo + diccionario editable
+
+- Adapta el importador al formato semanal de una sola hoja usado en stock naza.xlsx.
+- Reconoce Pronosticado como stock, Unidades como unidad y Categoria de producto como familia.
+- Stock, Precio y Coste quedan activados por defecto en la importación semanal.
+- Categorías/orden quedan desactivadas por defecto para no sobrescribir la estructura comercial persistente.
+- Los productos nuevos reciben una categoría comercial sugerida sin modificar las categorías aprobadas de productos existentes.
+- Añade avisos no bloqueantes para stock negativo, precio 0 y precio de venta inferior al coste.
+- Añade pestaña Traducciones con edición por código de Grupo comercial, Español España, Português, English y estado Revisada.
+- La pestaña Traducciones incluye búsqueda, filtro Carne/Pescado y filtro Solo pendientes.
+- El nombre original/Odoo queda protegido y no se edita desde el diccionario.
+- Corrige nomenclatura española no revisada: Tapa de cuadril → Picaña; Corazón de cuadril → Cadera / Croca.
+- Las traducciones manualmente revisadas nunca se sobrescriben por la importación semanal.
+
 ## 1.1.15 — Flujo de importación claro y cabecera PDF corregida
 
 - Separa visualmente el flujo en Seleccionar → Analizar → Publicar.
