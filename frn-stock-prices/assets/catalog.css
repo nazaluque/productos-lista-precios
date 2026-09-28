@@ -493,3 +493,45 @@
   .frn-active-source,.frn-source-chip{align-items:flex-start;flex-direction:column;display:flex}
   .frn-active-source>span,.frn-source-chip small{margin-left:0}
 }
+
+
+/* FRN Stock & Prices 1.1.14 · importación selectiva + categorías + idiomas */
+.frn-import-fields{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;
+  padding:16px 18px;border:1px solid rgba(180,138,69,.28);
+  background:#080a0b;color:#d8d3ca
+}
+.frn-import-fields>strong{width:100%;color:var(--frn-ivory);font:400 18px Georgia,serif}
+.frn-import-fields label{display:inline-flex;align-items:center;gap:7px;font-size:11px}
+.frn-import-fields small{width:100%;color:#858178;line-height:1.5}
+.frn-import-audit{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px
+}
+.frn-import-audit>div{
+  padding:12px 14px;border:1px solid rgba(255,255,255,.08);background:#07090a
+}
+.frn-import-audit small{display:block;margin-bottom:5px;color:#7f7b73;text-transform:uppercase;letter-spacing:.08em;font-size:8px}
+.frn-import-audit strong{font-size:10px;color:#c9c5bd}
+.frn-import-audit strong.is-update{color:var(--frn-gold-light)}
+.frn-group-audit{
+  display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;margin:0 0 18px;
+  padding:14px 16px;border-left:3px solid var(--frn-gold);background:#080a0b;color:#aaa69e
+}
+.frn-group-audit strong{color:var(--frn-ivory)}
+.frn-group-audit .frn-warning{color:#f0b06a}
+.frn-group-audit .frn-ok{color:#9fc7a7}
+.frn-group-chip{
+  display:inline-block;padding:4px 7px;border-left:4px solid #59636E;
+  background:#101317;color:#d8d3ca;font-size:9px;white-space:nowrap
+}
+.frn-master-multilang{min-width:2100px}
+.frn-master-multilang td:nth-child(7),
+.frn-master-multilang td:nth-child(8),
+.frn-master-multilang td:nth-child(9),
+.frn-master-multilang td:nth-child(10){min-width:220px;white-space:normal}
+@media(max-width:960px){
+  .frn-import-audit{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .frn-import-audit{grid-template-columns:1fr}
+}
