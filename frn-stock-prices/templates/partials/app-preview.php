@@ -11,6 +11,19 @@ $invalid = count(array_filter($previewRows, static fn(array $row): bool => empty
 $updates = array_merge(['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false], $preview['updates'] ?? []);
 $detected = array_merge(['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false], $preview['detected'] ?? []);
 $ungrouped = $preview['ungrouped'] ?? ['carne'=>[],'pescado-marisco'=>[]];
+
+$stockTotals = [
+    'carne' => ['kg'=>0.0,'units'=>0.0],
+    'pescado-marisco' => ['kg'=>0.0,'units'=>0.0],
+];
+foreach ($previewRows as $row) {
+    if (empty($row['stock_present'])) { continue; }
+    $category = (string)($row['category'] ?? '');
+    if (!isset($stockTotals[$category])) { continue; }
+    $unit = strtolower(remove_accents(trim((string)($row['unit'] ?? ''))));
+    $bucket = str_contains($unit, 'unidad') || in_array($unit, ['ud','uds'], true) ? 'units' : 'kg';
+    $stockTotals[$category][$bucket] += (float)($row['stock'] ?? 0);
+}
 ?>
 <section class="frn-app-card frn-preview-card">
     <div class="frn-card-heading">
@@ -32,6 +45,15 @@ $ungrouped = $preview['ungrouped'] ?? ['carne'=>[],'pescado-marisco'=>[]];
             </div>
         <?php endforeach; ?>
     </div>
+
+    <?php if (!empty($detected['stock'])) : ?>
+        <div class="frn-stock-audit">
+            <strong>Totales detectados por unidad</strong>
+            <span>Carne: <?php echo esc_html(number_format_i18n($stockTotals['carne']['kg'],3)); ?> kg · <?php echo esc_html(number_format_i18n($stockTotals['carne']['units'],0)); ?> unidades</span>
+            <span>Pescado/Marisco: <?php echo esc_html(number_format_i18n($stockTotals['pescado-marisco']['kg'],3)); ?> kg · <?php echo esc_html(number_format_i18n($stockTotals['pescado-marisco']['units'],0)); ?> unidades</span>
+            <small>No se mezclan kg y unidades en un único total.</small>
+        </div>
+    <?php endif; ?>
 
     <?php if (!empty($updates['groups'])) : ?>
         <div class="frn-group-audit">
@@ -57,7 +79,7 @@ $ungrouped = $preview['ungrouped'] ?? ['carne'=>[],'pescado-marisco'=>[]];
                 <tr class="<?php echo !empty($row['incoming']) ? 'frn-incoming-row' : ''; ?>">
                     <td><?php echo empty($row['valid']) ? '⚠ ' . esc_html(implode(', ', $row['errors'])) : (!empty($row['incoming']) ? 'Próximo ingreso' : 'OK'); ?></td>
                     <td><?php echo esc_html($row['category'] === 'carne' ? 'Carne' : 'Pescado / Marisco'); ?></td>
-                    <td><?php echo esc_html((string)($row['commercial_group'] ?? '—')); ?></td>
+                    <td><?php $groupName = trim((string)($row['commercial_group'] ?? '')); echo esc_html($groupName !== '' ? $groupName : 'SIN CATEGORÍA'); ?></td>
                     <td><?php echo esc_html($row['code']); ?></td>
                     <td><?php echo esc_html($row['brand']); ?></td>
                     <td><?php echo esc_html($row['name']); ?></td>
@@ -75,7 +97,7 @@ $ungrouped = $preview['ungrouped'] ?? ['carne'=>[],'pescado-marisco'=>[]];
             <input type="hidden" name="action" value="frn_front_publish_stock">
             <input type="hidden" name="preview" value="<?php echo esc_attr($previewToken); ?>">
             <?php wp_nonce_field('frn_front_publish_stock_' . $previewToken); ?>
-            <button type="submit">Publicar solo los campos seleccionados</button>
+            <button type="submit">Publicar cambios seleccionados</button>
         </form>
     <?php endif; ?>
 </section>
