@@ -20,8 +20,8 @@ $ungrouped = $preview['ungrouped'] ?? ['carne'=>[],'pescado-marisco'=>[]];
 
     <div class="frn-import-audit">
         <div><small>Archivo</small><strong><?php echo esc_html((string)($preview['filename'] ?? '')); ?></strong></div>
-        <div><small>Hoja(s) de datos</small><strong><?php echo esc_html(implode(', ', (array)($preview['data_sheets'] ?? [])) ?: '—'; ?></strong></div>
-        <div><small>Resumen(es)</small><strong><?php echo esc_html(implode(', ', (array)($preview['summary_sheets'] ?? [])) ?: '—'; ?></strong></div>
+        <div><small>Hoja(s) de datos</small><strong><?php echo esc_html(implode(', ', (array)($preview['data_sheets'] ?? [])) ?: '—'); ?></strong></div>
+        <div><small>Resumen(es)</small><strong><?php echo esc_html(implode(', ', (array)($preview['summary_sheets'] ?? [])) ?: '—'); ?></strong></div>
         <?php foreach (['stock'=>'Stock','price'=>'Precio','cost'=>'Coste','groups'=>'Categorías / orden'] as $key=>$label) : ?>
             <div>
                 <small><?php echo esc_html($label); ?></small>
