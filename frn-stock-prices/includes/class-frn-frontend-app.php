@@ -33,6 +33,7 @@ final class FRN_Frontend_App
         add_action('admin_post_frn_front_settings', [$this, 'save_settings']);
         add_action('admin_post_frn_front_user_save', [$this, 'user_save']);
         add_action('admin_post_frn_front_pdf_branding', [$this, 'save_pdf_branding']);
+        add_action('admin_post_frn_front_save_translations', [$this, 'save_translations']);
     }
 
     public function render(): void
@@ -40,7 +41,7 @@ final class FRN_Frontend_App
         $this->guard_capability();
 
         $tab = sanitize_key($_GET['tab'] ?? 'importar');
-        if (!in_array($tab, ['importar','tarifas','tarifa','usuarios','diseno'], true)) {
+        if (!in_array($tab, ['importar','tarifas','tarifa','traducciones','usuarios','diseno'], true)) {
             $tab = 'importar';
         }
 
@@ -63,6 +64,7 @@ final class FRN_Frontend_App
             'canEditPrices' => current_user_can('frn_edit_prices'),
             'canViewCost' => current_user_can('frn_view_cost'),
             'canExport' => current_user_can('frn_export_tariffs'),
+            'canEditTranslations' => current_user_can('frn_edit_translations'),
             'canManageUsers' => current_user_can('frn_manage_users'),
             'frnUsers' => current_user_can('frn_manage_users') ? get_users(['role__in'=>['frn_administrator','frn_stock','frn_director_comercial','frn_comercial','frn_consulta'],'orderby'=>'display_name']) : [],
             'pdfBranding' => current_user_can('frn_manage_users') ? $this->pdf_branding_state() : [],
@@ -271,6 +273,34 @@ final class FRN_Frontend_App
         }
 
         $this->redirect(['tab' => 'importar', 'saved' => 1]);
+    }
+
+    public function save_translations(): void
+    {
+        $this->guard_post('frn_front_save_translations', 'frn_edit_translations');
+
+        $raw = is_array($_POST['translations'] ?? null) ? wp_unslash($_POST['translations']) : [];
+        $rows = [];
+
+        foreach ($raw as $id => $row) {
+            if (!is_array($row)) { continue; }
+            $rows[] = [
+                'id' => (int)$id,
+                'commercial_group' => sanitize_text_field((string)($row['commercial_group'] ?? '')),
+                'name_es_es' => sanitize_text_field((string)($row['name_es_es'] ?? '')),
+                'name_pt_pt' => sanitize_text_field((string)($row['name_pt_pt'] ?? '')),
+                'name_en' => sanitize_text_field((string)($row['name_en'] ?? '')),
+                'translations_reviewed' => !empty($row['translations_reviewed']),
+            ];
+        }
+
+        try {
+            $this->catalog->update_translations($rows);
+        } catch (Throwable $e) {
+            $this->redirect(['tab'=>'traducciones','error'=>rawurlencode($e->getMessage())]);
+        }
+
+        $this->redirect(['tab'=>'traducciones','translations_saved'=>1]);
     }
 
     public function user_save(): void
