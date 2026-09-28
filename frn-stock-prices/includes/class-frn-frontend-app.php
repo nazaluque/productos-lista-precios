@@ -74,15 +74,30 @@ final class FRN_Frontend_App
 
     public function preview_stock(): void
     {
-        $this->guard_post('frn_front_preview_stock', 'frn_edit_stock');
+        $this->guard_post('frn_front_preview_stock');
+
+        $rawFields = is_array($_POST['import_fields'] ?? null) ? wp_unslash($_POST['import_fields']) : [];
+        $updates = [
+            'stock' => !empty($rawFields['stock']),
+            'price' => !empty($rawFields['price']),
+            'cost' => !empty($rawFields['cost']),
+            'groups' => !empty($rawFields['groups']),
+        ];
+
+        if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
+            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
+        }
+        if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
+            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
+        }
 
         try {
-            $parsed = $this->excel->parse_stock_files($_FILES['stock_files'] ?? []);
+            $parsed = $this->excel->parse_files($_FILES['stock_files'] ?? [], $updates);
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
         }
 
-        $parsed['preview_type'] = 'stock';
+        $parsed['preview_type'] = 'selective';
         $token = wp_generate_password(20, false, false);
         set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
 
@@ -92,54 +107,68 @@ final class FRN_Frontend_App
     public function publish_stock(): void
     {
         $token = sanitize_key($_POST['preview'] ?? '');
-        $this->guard_post('frn_front_publish_stock_' . $token, 'frn_edit_stock');
+        $this->guard_post('frn_front_publish_stock_' . $token);
 
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
+        if (!$preview || !is_array($preview) || !in_array(($preview['preview_type'] ?? ''), ['stock','selective'], true)) {
+            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización ha caducado.')]);
+        }
 
-        if (!$preview || !is_array($preview) || ($preview['preview_type'] ?? '') !== 'stock') {
-            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización de stock ha caducado.')]);
+        $updates = array_merge(
+            ['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false],
+            is_array($preview['updates'] ?? null) ? $preview['updates'] : []
+        );
+
+        if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
+            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
+        }
+        if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
+            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
         }
 
         $all = array_merge(
             $preview['catalogs']['carne'] ?? [],
             $preview['catalogs']['pescado-marisco'] ?? []
         );
-
         $invalid = array_filter($all, static fn(array $row): bool => empty($row['valid']));
         if ($invalid) {
             $this->redirect([
-                'tab' => 'importar',
-                'preview' => $token,
-                'error' => rawurlencode('Hay filas de stock con errores. Corrige el Excel antes de publicar.'),
+                'tab'=>'importar','preview'=>$token,
+                'error'=>rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
             ]);
         }
 
-        $counts = ['carne' => 0, 'pescado-marisco' => 0];
-
+        $counts = ['carne'=>0,'pescado-marisco'=>0];
         try {
             foreach ($counts as $category => $_) {
                 $rows = array_values($preview['catalogs'][$category] ?? []);
                 if (!$rows) { continue; }
-
-                $counts[$category] = $this->catalog->publish_stock(
+                $counts[$category] = $this->catalog->publish_import(
                     $category,
-                    (string) ($preview['filename'] ?? 'Stock semanal'),
-                    $rows
+                    (string) ($preview['filename'] ?? 'Datos semanales'),
+                    $rows,
+                    $updates
                 );
             }
         } catch (Throwable $e) {
             $this->redirect([
-                'tab' => 'importar',
-                'preview' => $token,
-                'error' => rawurlencode($e->getMessage()),
+                'tab'=>'importar','preview'=>$token,
+                'error'=>rawurlencode($e->getMessage()),
             ]);
         }
 
         delete_transient(self::PREVIEW_PREFIX . $token);
 
+        $labels = [];
+        if ($updates['stock']) { $labels[] = 'stock'; }
+        if ($updates['price']) { $labels[] = 'precio'; }
+        if ($updates['cost']) { $labels[] = 'coste'; }
+        if ($updates['groups']) { $labels[] = 'categorías/orden'; }
+
         $this->redirect([
-            'tab' => 'importar',
-            'stock_published' => $counts['carne'] + $counts['pescado-marisco'],
+            'tab'=>'importar',
+            'stock_published'=>$counts['carne'] + $counts['pescado-marisco'],
+            'updated_fields'=>rawurlencode(implode(', ', $labels)),
         ]);
     }
 
