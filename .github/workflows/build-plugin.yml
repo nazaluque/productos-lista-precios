@@ -50,7 +50,7 @@ jobs:
           grep -q "frn_commercial_groups" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "Productos con categoría pendiente" frn-stock-prices/templates/partials/app-preview.php
           grep -q "Maestro cerrado" frn-stock-prices/templates/partials/app-translations.php
-          grep -q "header_position_pescado" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "frn_pdf_header_position_" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "height:128px" frn-stock-prices/includes/class-frn-frontend-app.php
       - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
