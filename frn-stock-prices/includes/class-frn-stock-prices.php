@@ -95,6 +95,19 @@ final class FRN_Stock_Prices
                 $wpdb->query('UPDATE ' . FRN_Catalog_Repository::table() . ' SET visible = 0 WHERE incoming = 0 AND stock_kg <= 0');
             }
 
+            if ($installed === '' || version_compare($installed, '1.1.16', '<')) {
+                global $wpdb;
+                $table = FRN_Catalog_Repository::table();
+                $wpdb->query("UPDATE {$table}
+                    SET name_es_es = 'PICAÑA'
+                    WHERE translations_reviewed = 0
+                      AND UPPER(product_name) LIKE '%TAPA DE CUADRIL%'");
+                $wpdb->query("UPDATE {$table}
+                    SET name_es_es = 'CADERA / CROCA'
+                    WHERE translations_reviewed = 0
+                      AND UPPER(product_name) LIKE '%CORAZON DE CUADRIL%'");
+            }
+
             update_option('frn_sp_catalog_protection_enabled', true, false);
             update_option('frn_sp_version', FRN_SP_VERSION, false);
 
