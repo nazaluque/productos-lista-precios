@@ -1,5 +1,22 @@
 # FRN Stock & Prices
 
+## 1.1.17 — Maestro de categorías + asignación obligatoria + header más alto
+
+- Añade un maestro canónico de categorías comerciales por familia.
+- Cada categoría existe una sola vez y guarda: nombre base, España, Português, English, color y orden.
+- La pantalla Traducciones sustituye el grupo de texto libre por un selector de categoría válido.
+- Añade gestión del maestro de categorías desde la propia plataforma, incluida creación de nuevas categorías.
+- Los productos nuevos o huérfanos de categoría aparecen en la previsualización con un selector obligatorio.
+- La plataforma puede sugerir una categoría, pero no publica hasta que exista una asignación válida.
+- Una asignación manual en previsualización se guarda aunque la importación semanal no tenga marcada la opción Categorías/orden.
+- Migra el catálogo existente: sincroniza color/orden de categorías válidas y asigna categorías a productos huérfanos por reglas conocidas.
+- Consolida todas las referencias de Vieira bajo VIEIRA.
+- Cluster de Cangrejo pasa a CANGREJO; Bogavante pasa a BOGAVANTE.
+- PDF ordena las categorías con el orden del maestro, evitando repetir visualmente la misma familia por metadatos divergentes.
+- El header del PDF pasa de 108 px a 128 px, aproximadamente 5 mm más alto.
+- Diseño PDF añade control de encuadre vertical: superior, centro o inferior.
+- La fotografía conserva proporción y se recorta, nunca se estira.
+
 ## 1.1.16 — Excel semanal definitivo + diccionario editable
 
 - Adapta el importador al formato semanal de una sola hoja usado en stock naza.xlsx.
