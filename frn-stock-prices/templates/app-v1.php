@@ -31,7 +31,7 @@ $postUrl = admin_url('admin-post.php');
             <p>Herramienta interna FRN · versión <?php echo esc_html(FRN_SP_VERSION); ?></p>
             <h1>Stock, precios<br>y tarifas.</h1>
         </div>
-        <span>Un único Excel semanal actualiza disponibilidad, precio de origen y coste promedio. El precio comercial se revisa aquí antes de exportar Carne o Pescado / Marisco.</span>
+        <span>Importación selectiva: decide si cada Excel actualiza stock, precio, coste y/o categorías. Exporta Carne o Pescado / Marisco por mercado, categorías e idiomas.</span>
     </section>
 
     <nav class="frn-app-tabs" aria-label="Herramienta">
