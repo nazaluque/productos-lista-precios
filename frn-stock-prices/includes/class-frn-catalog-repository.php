@@ -36,6 +36,15 @@ final class FRN_Catalog_Repository
             source_price_kg decimal(12,2) NULL,
             price_kg decimal(12,2) NULL,
             average_cost_kg decimal(12,2) NULL,
+            commercial_group varchar(190) NOT NULL DEFAULT '',
+            group_sort int NOT NULL DEFAULT 999,
+            item_sort int NOT NULL DEFAULT 999,
+            group_color varchar(20) NOT NULL DEFAULT '#59636E',
+            name_es_ar varchar(255) NOT NULL DEFAULT '',
+            name_es_es varchar(255) NOT NULL DEFAULT '',
+            name_pt_pt varchar(255) NOT NULL DEFAULT '',
+            name_en varchar(255) NOT NULL DEFAULT '',
+            translations_reviewed tinyint(1) NOT NULL DEFAULT 0,
             featured tinyint(1) NOT NULL DEFAULT 0,
             visible tinyint(1) NOT NULL DEFAULT 1,
             incoming tinyint(1) NOT NULL DEFAULT 0,
@@ -72,7 +81,7 @@ final class FRN_Catalog_Repository
         return $wpdb->get_results(
             $wpdb->prepare(
                 'SELECT * FROM ' . self::table() . ' WHERE category = %s' . $visibility .
-                ' ORDER BY incoming ASC, product_name ASC, brand ASC, product_code ASC',
+                ' ORDER BY incoming ASC, group_sort ASC, item_sort ASC, product_name ASC, brand ASC, product_code ASC',
                 $category
             ),
             ARRAY_A
@@ -85,20 +94,17 @@ final class FRN_Catalog_Repository
         $visibility = $include_hidden ? '' : ' WHERE visible = 1';
         return $wpdb->get_results(
             'SELECT * FROM ' . self::table() . $visibility .
-            ' ORDER BY category ASC, incoming ASC, product_name ASC, brand ASC, product_code ASC',
+            ' ORDER BY category ASC, incoming ASC, group_sort ASC, item_sort ASC, product_name ASC, brand ASC, product_code ASC',
             ARRAY_A
         ) ?: [];
     }
 
     /**
-     * Unified weekly import. Only stock-positive regular rows reach this
-     * method. Existing products not present in the weekly file are kept in
-     * the master with stock 0 / hidden. The weekly Excel is the starting
-     * commercial master: Precio de venta refreshes both source_price_kg and
-     * price_kg on every import. Commercial users may edit price_kg afterwards
-     * before exporting a tariff. Average cost is refreshed from the Excel.
+     * Selective weekly import for FRN 1.1.14.
+     * Only fields explicitly enabled in $updates are allowed to mutate.
+     * Missing columns/cells never clear existing price or cost values.
      */
-    public function publish_stock(string $category, string $filename, array $rows): int
+    public function publish_import(string $category, string $filename, array $rows, array $updates): int
     {
         global $wpdb;
         $table = self::table();
@@ -106,30 +112,32 @@ final class FRN_Catalog_Repository
         $now = current_time('mysql');
         $userId = get_current_user_id();
 
+        $updates = array_merge(
+            ['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false],
+            array_intersect_key($updates, ['stock'=>1,'price'=>1,'cost'=>1,'groups'=>1])
+        );
+
         $wpdb->query('START TRANSACTION');
 
         try {
-            $wpdb->query(
-                $wpdb->prepare(
-                    "UPDATE {$table}
-                     SET stock_kg = 0, visible = 0
-                     WHERE category = %s AND incoming = 0",
-                    $category
-                )
-            );
+            // Only a stock synchronization is allowed to zero products that
+            // disappeared from the current weekly stock source.
+            if (!empty($updates['stock'])) {
+                $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$table}
+                         SET stock_kg = 0, visible = 0
+                         WHERE category = %s AND incoming = 0",
+                        $category
+                    )
+                );
+            }
 
             $count = 0;
 
             foreach ($rows as $row) {
                 $incoming = !empty($row['incoming']) ||
                     FRN_Excel_Importer::is_incoming_code((string) ($row['code'] ?? ''));
-
-                $stock = (float) ($row['stock'] ?? 0);
-                if (!$incoming && $stock <= 0) { continue; }
-
-                $sourcePrice = max(0, (float) ($row['price'] ?? 0));
-                $averageCost = max(0, (float) ($row['cost'] ?? 0));
-                $visible = $incoming ? (!empty($row['publish']) ? 1 : 0) : 1;
 
                 $existingId = $this->find_existing_id(
                     $category,
@@ -138,6 +146,10 @@ final class FRN_Catalog_Repository
                     $incoming
                 );
 
+                $existing = $existingId > 0
+                    ? ($wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $existingId), ARRAY_A) ?: [])
+                    : [];
+
                 $data = [
                     'category' => $category,
                     'product_code' => sanitize_text_field((string) ($row['code'] ?? '')),
@@ -145,34 +157,83 @@ final class FRN_Catalog_Repository
                     'product_name' => sanitize_text_field((string) ($row['name'] ?? '')),
                     'model' => sanitize_text_field((string) ($row['model'] ?? '')),
                     'unit' => sanitize_text_field((string) ($row['unit'] ?? '')),
-                    'stock_kg' => $stock,
-                    'source_price_kg' => $sourcePrice,
-                    'average_cost_kg' => $averageCost,
-                    'visible' => $visible,
-                    'incoming' => $incoming ? 1 : 0,
                     'source_file' => sanitize_file_name($filename),
                     'published_at' => $now,
+                    'incoming' => $incoming ? 1 : 0,
                 ];
 
-                if ($existingId > 0) {
-                    // Weekly FRN rule: "Precio de venta" from the unified Excel
-                    // becomes the commercial starting price every week.
-                    // A zero price intentionally clears any previous commercial
-                    // price so the PDF shows "Consultar precio".
-                    $data['price_kg'] = $sourcePrice;
+                if (!empty($updates['stock']) && !empty($row['stock_present'])) {
+                    $stock = max(0, (float) ($row['stock'] ?? 0));
+                    $data['stock_kg'] = $stock;
+                    $data['visible'] = $incoming
+                        ? (!empty($row['publish']) ? 1 : 0)
+                        : ($stock > 0 ? 1 : 0);
+                }
 
-                    $formats = [];
-                    foreach ($data as $key => $value) {
-                        $formats[] = in_array($key, ['visible','incoming'], true)
-                            ? '%d'
-                            : (in_array($key, ['stock_kg','source_price_kg','average_cost_kg','price_kg'], true) ? '%f' : '%s');
+                if (!empty($updates['price']) && !empty($row['price_present'])) {
+                    // Explicit numeric zero clears the price; an absent/blank
+                    // cell never reaches this branch and therefore preserves it.
+                    $price = max(0, (float) ($row['price'] ?? 0));
+                    $data['source_price_kg'] = $price;
+                    $data['price_kg'] = $price;
+                }
+
+                if (!empty($updates['cost']) && !empty($row['cost_present'])) {
+                    $data['average_cost_kg'] = max(0, (float) ($row['cost'] ?? 0));
+                }
+
+                if (!empty($updates['groups'])) {
+                    $data['commercial_group'] = sanitize_text_field((string) ($row['commercial_group'] ?? ''));
+                    $data['group_sort'] = (int) ($row['group_sort'] ?? 999);
+                    $data['item_sort'] = (int) ($row['item_sort'] ?? 999);
+                    $color = sanitize_hex_color((string) ($row['group_color'] ?? ''));
+                    $data['group_color'] = $color ?: '#59636E';
+                }
+
+                // Translation seeds are populated only when a field is empty.
+                // Future manual review is therefore never overwritten weekly.
+                foreach (['name_es_ar','name_es_es','name_pt_pt','name_en'] as $translationField) {
+                    $seed = sanitize_text_field((string) ($row[$translationField] ?? ''));
+                    if ($seed !== '' && (!$existing || trim((string) ($existing[$translationField] ?? '')) === '')) {
+                        $data[$translationField] = $seed;
                     }
-                    $result = $wpdb->update($table, $data, ['id' => $existingId], $formats, ['%d']);
+                }
+
+                if (!$existing) {
+                    $data += [
+                        'stock_kg' => 0,
+                        'source_price_kg' => null,
+                        'price_kg' => null,
+                        'average_cost_kg' => null,
+                        'commercial_group' => '',
+                        'group_sort' => 999,
+                        'item_sort' => 999,
+                        'group_color' => '#59636E',
+                        'name_es_ar' => sanitize_text_field((string) ($row['name_es_ar'] ?? '')),
+                        'name_es_es' => sanitize_text_field((string) ($row['name_es_es'] ?? '')),
+                        'name_pt_pt' => sanitize_text_field((string) ($row['name_pt_pt'] ?? '')),
+                        'name_en' => sanitize_text_field((string) ($row['name_en'] ?? '')),
+                        'translations_reviewed' => 0,
+                        'featured' => 0,
+                        'visible' => (!empty($updates['stock']) && !empty($row['stock_present']) && ((float)($row['stock'] ?? 0) > 0)) ? 1 : 0,
+                    ];
+                }
+
+                $formats = [];
+                foreach ($data as $key => $value) {
+                    if (in_array($key, ['visible','incoming','translations_reviewed','group_sort','item_sort','featured'], true)) {
+                        $formats[] = '%d';
+                    } elseif (in_array($key, ['stock_kg','source_price_kg','average_cost_kg','price_kg'], true)) {
+                        $formats[] = '%f';
+                    } else {
+                        $formats[] = '%s';
+                    }
+                }
+
+                if ($existingId > 0) {
+                    $result = $wpdb->update($table, $data, ['id'=>$existingId], $formats, ['%d']);
                     $productId = $existingId;
                 } else {
-                    $data['price_kg'] = $sourcePrice;
-                    $data['featured'] = 0;
-                    $formats = ['%s','%s','%s','%s','%s','%s','%f','%f','%f','%d','%d','%s','%s','%f','%d'];
                     $result = $wpdb->insert($table, $data, $formats);
                     $productId = (int) $wpdb->insert_id;
                 }
@@ -181,18 +242,19 @@ final class FRN_Catalog_Repository
                     throw new RuntimeException($wpdb->last_error ?: 'No se pudo actualizar el catálogo semanal.');
                 }
 
-                $commercialPrice = (float) $wpdb->get_var(
-                    $wpdb->prepare("SELECT price_kg FROM {$table} WHERE id = %d", $productId)
-                );
+                $current = $wpdb->get_row(
+                    $wpdb->prepare("SELECT stock_kg,source_price_kg,price_kg,average_cost_kg FROM {$table} WHERE id = %d", $productId),
+                    ARRAY_A
+                ) ?: [];
 
                 $ok = $wpdb->insert($history, [
                     'product_id' => $productId,
                     'category' => $category,
                     'product_code' => sanitize_text_field((string) ($row['code'] ?? '')),
-                    'stock_kg' => $stock,
-                    'source_price_kg' => $sourcePrice,
-                    'commercial_price_kg' => $commercialPrice,
-                    'average_cost_kg' => $averageCost,
+                    'stock_kg' => (float) ($current['stock_kg'] ?? 0),
+                    'source_price_kg' => (float) ($current['source_price_kg'] ?? 0),
+                    'commercial_price_kg' => (float) ($current['price_kg'] ?? 0),
+                    'average_cost_kg' => (float) ($current['average_cost_kg'] ?? 0),
                     'source_file' => sanitize_file_name($filename),
                     'imported_at' => $now,
                     'imported_by' => $userId,
@@ -211,6 +273,13 @@ final class FRN_Catalog_Repository
             $wpdb->query('ROLLBACK');
             throw $e;
         }
+    }
+
+    public function publish_stock(string $category, string $filename, array $rows): int
+    {
+        return $this->publish_import($category, $filename, $rows, [
+            'stock'=>true,'price'=>false,'cost'=>false,'groups'=>true
+        ]);
     }
 
     public function update_many(array $rows, bool $canEditStock = false, bool $canEditPrices = false): int
