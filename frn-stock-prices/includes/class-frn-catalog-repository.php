@@ -647,8 +647,22 @@ final class FRN_Catalog_Repository
             $id = (int)($row['id'] ?? 0);
             if ($id <= 0) { continue; }
 
+            $product = $wpdb->get_row(
+                $wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE id = %d', $id),
+                ARRAY_A
+            );
+            if (!$product) { continue; }
+
+            $groupName = sanitize_text_field((string)($row['commercial_group'] ?? ''));
+            $group = $this->group_by_name((string)$product['category'], $groupName);
+            if (!$group) {
+                throw new RuntimeException('Selecciona una categoría comercial válida para ' . (string)$product['product_code'] . '.');
+            }
+
             $data = [
-                'commercial_group' => sanitize_text_field((string)($row['commercial_group'] ?? '')),
+                'commercial_group' => (string)$group['name_base'],
+                'group_sort' => (int)$group['sort_order'],
+                'group_color' => (string)$group['color'],
                 'name_es_es' => sanitize_text_field((string)($row['name_es_es'] ?? '')),
                 'name_pt_pt' => sanitize_text_field((string)($row['name_pt_pt'] ?? '')),
                 'name_en' => sanitize_text_field((string)($row['name_en'] ?? '')),
@@ -660,7 +674,7 @@ final class FRN_Catalog_Repository
                 self::table(),
                 $data,
                 ['id'=>$id],
-                ['%s','%s','%s','%s','%d','%s'],
+                ['%s','%d','%s','%s','%s','%s','%d','%s'],
                 ['%d']
             );
 
