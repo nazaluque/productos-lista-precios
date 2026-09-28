@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) { exit; }
 
-$translationProducts = $products;
+$translationProducts = is_array($translationProducts ?? null) ? $translationProducts : [];
 $pendingCount = count(array_filter(
     $translationProducts,
     static fn(array $p): bool =>
