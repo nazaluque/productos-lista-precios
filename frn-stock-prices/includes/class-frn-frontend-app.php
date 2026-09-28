@@ -589,7 +589,13 @@ final class FRN_Frontend_App
         echo "\xEF\xBB\xBF";
         $out = fopen('php://output', 'w');
         $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
-        $headers = ['Sección','Código','Producto','Marca'];
+        $primaryLang = (string)($tariff['primary_lang'] ?? 'es_es');
+        $secondaryLang = (string)($tariff['secondary_lang'] ?? '');
+        if ($secondaryLang === $primaryLang) { $secondaryLang = ''; }
+
+        $headers = ['Sección','Categoría comercial','Código',$this->language_label($primaryLang)];
+        if ($secondaryLang !== '') { $headers[] = $this->language_label($secondaryLang); }
+        $headers[] = 'Marca';
         if ($showCost) { $headers[] = 'Coste promedio'; }
         $headers[] = 'Stock';
         $headers[] = 'Precio';
@@ -597,13 +603,16 @@ final class FRN_Frontend_App
 
         foreach ($lines as $line) {
             $price = (float) ($line['display_price'] ?? 0);
-
             $csvRow = [
                 (int) $line['incoming'] === 1 ? 'Próximos ingresos' : 'Productos',
+                (string)($line['commercial_group'] ?? ''),
                 $line['product_code'],
-                $line['product_name'],
-                $line['brand'],
+                $this->line_name_for_locale($line, $primaryLang),
             ];
+            if ($secondaryLang !== '') {
+                $csvRow[] = $this->line_name_for_locale($line, $secondaryLang);
+            }
+            $csvRow[] = $line['brand'];
 
             if ($showCost) {
                 $cost = (float) ($line['display_cost'] ?? 0);
