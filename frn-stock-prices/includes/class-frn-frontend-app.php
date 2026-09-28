@@ -34,6 +34,7 @@ final class FRN_Frontend_App
         add_action('admin_post_frn_front_user_save', [$this, 'user_save']);
         add_action('admin_post_frn_front_pdf_branding', [$this, 'save_pdf_branding']);
         add_action('admin_post_frn_front_save_translations', [$this, 'save_translations']);
+        add_action('admin_post_frn_front_save_groups', [$this, 'save_groups']);
     }
 
     public function render(): void
@@ -55,6 +56,7 @@ final class FRN_Frontend_App
             'preview' => is_array($preview) ? $preview : null,
             'products' => $this->catalog->all_combined(false),
             'translationProducts' => current_user_can('frn_edit_translations') ? $this->catalog->all_combined(true) : [],
+            'commercialGroups' => current_user_can('frn_edit_translations') ? $this->catalog->all_groups() : ['carne'=>[],'pescado-marisco'=>[]],
             'latestImport' => $this->catalog->latest_import_meta(),
             'priceLists' => $this->priceLists->all(),
             'tariffs' => $this->tariffs->all_tariffs(),
@@ -96,6 +98,36 @@ final class FRN_Frontend_App
 
         try {
             $parsed = $this->excel->parse_files($_FILES['stock_files'] ?? [], $updates);
+
+            foreach (['carne','pescado-marisco'] as $category) {
+                foreach (($parsed['catalogs'][$category] ?? []) as $i => $row) {
+                    $existing = $this->catalog->find_product(
+                        $category,
+                        (string)($row['code'] ?? ''),
+                        (string)($row['name'] ?? ''),
+                        !empty($row['incoming'])
+                    );
+
+                    $currentGroup = $existing ? trim((string)($existing['commercial_group'] ?? '')) : '';
+                    $currentMeta = $currentGroup !== '' ? $this->catalog->group_meta($category, $currentGroup) : null;
+                    $suggested = FRN_Catalog_Repository::suggested_group_name((string)($row['name'] ?? ''), $category);
+                    $suggestedMeta = $this->catalog->group_meta($category, $suggested);
+
+                    $parsed['catalogs'][$category][$i]['is_new'] = !$existing;
+                    $parsed['catalogs'][$category][$i]['existing_product_id'] = $existing ? (int)$existing['id'] : 0;
+                    $parsed['catalogs'][$category][$i]['existing_group'] = $currentMeta ? (string)$currentMeta['name_base'] : '';
+                    $parsed['catalogs'][$category][$i]['suggested_group'] = $suggestedMeta ? (string)$suggestedMeta['name_base'] : '';
+                    $parsed['catalogs'][$category][$i]['needs_group_assignment'] = !$currentMeta;
+                    if ($currentMeta) {
+                        $parsed['catalogs'][$category][$i]['commercial_group'] = (string)$currentMeta['name_base'];
+                        $parsed['catalogs'][$category][$i]['group_sort'] = (int)$currentMeta['sort_order'];
+                        $parsed['catalogs'][$category][$i]['group_color'] = (string)$currentMeta['color'];
+                    } else {
+                        $parsed['catalogs'][$category][$i]['commercial_group'] = '';
+                    }
+                }
+            }
+            $parsed['commercial_groups'] = $this->catalog->all_groups();
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
         }
@@ -127,6 +159,33 @@ final class FRN_Frontend_App
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
             $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
+        }
+
+        $assignments = is_array($_POST['group_assignments'] ?? null)
+            ? wp_unslash($_POST['group_assignments'])
+            : [];
+
+        foreach (['carne','pescado-marisco'] as $category) {
+            foreach (($preview['catalogs'][$category] ?? []) as $i => $row) {
+                if (empty($row['needs_group_assignment'])) { continue; }
+
+                $code = strtoupper(trim((string)($row['code'] ?? '')));
+                $chosen = sanitize_text_field((string)($assignments[$category][$code] ?? ''));
+                $group = $this->catalog->group_meta($category, $chosen);
+
+                if (!$group) {
+                    $this->redirect([
+                        'tab'=>'importar',
+                        'preview'=>$token,
+                        'error'=>rawurlencode('Asigna una categoría comercial válida a ' . ($code ?: (string)($row['name'] ?? 'producto nuevo')) . ' antes de publicar.'),
+                    ]);
+                }
+
+                $preview['catalogs'][$category][$i]['commercial_group'] = (string)$group['name_base'];
+                $preview['catalogs'][$category][$i]['group_sort'] = (int)$group['sort_order'];
+                $preview['catalogs'][$category][$i]['group_color'] = (string)$group['color'];
+                $preview['catalogs'][$category][$i]['needs_group_assignment'] = false;
+            }
         }
 
         $all = array_merge(
@@ -304,6 +363,44 @@ final class FRN_Frontend_App
         $this->redirect(['tab'=>'traducciones','translations_saved'=>1]);
     }
 
+    public function save_groups(): void
+    {
+        $this->guard_post('frn_front_save_groups', 'frn_edit_translations');
+
+        $rows = is_array($_POST['groups'] ?? null) ? wp_unslash($_POST['groups']) : [];
+        $new = is_array($_POST['new_group'] ?? null) ? wp_unslash($_POST['new_group']) : [];
+
+        $normalized = [];
+        foreach ($rows as $id => $row) {
+            if (!is_array($row)) { continue; }
+            $normalized[] = [
+                'id'=>(int)$id,
+                'name_base'=>sanitize_text_field((string)($row['name_base'] ?? '')),
+                'name_es_es'=>sanitize_text_field((string)($row['name_es_es'] ?? '')),
+                'name_pt_pt'=>sanitize_text_field((string)($row['name_pt_pt'] ?? '')),
+                'name_en'=>sanitize_text_field((string)($row['name_en'] ?? '')),
+                'color'=>sanitize_hex_color((string)($row['color'] ?? '')) ?: '#59636E',
+                'sort_order'=>(int)($row['sort_order'] ?? 999),
+            ];
+        }
+
+        try {
+            $this->catalog->save_groups($normalized, [
+                'category'=>sanitize_key((string)($new['category'] ?? '')),
+                'name_base'=>sanitize_text_field((string)($new['name_base'] ?? '')),
+                'name_es_es'=>sanitize_text_field((string)($new['name_es_es'] ?? '')),
+                'name_pt_pt'=>sanitize_text_field((string)($new['name_pt_pt'] ?? '')),
+                'name_en'=>sanitize_text_field((string)($new['name_en'] ?? '')),
+                'color'=>sanitize_hex_color((string)($new['color'] ?? '')) ?: '#59636E',
+                'sort_order'=>(int)($new['sort_order'] ?? 999),
+            ]);
+        } catch (Throwable $e) {
+            $this->redirect(['tab'=>'traducciones','error'=>rawurlencode($e->getMessage())]);
+        }
+
+        $this->redirect(['tab'=>'traducciones','groups_saved'=>1]);
+    }
+
     public function user_save(): void
     {
         $this->guard_post('frn_front_user_save', 'frn_manage_users');
@@ -401,6 +498,12 @@ final class FRN_Frontend_App
             }
 
             update_option($option, (int) $attachmentId, false);
+        }
+
+        foreach (['carne','pescado'] as $scope) {
+            $position = sanitize_key((string)($_POST['header_position_' . $scope] ?? 'center'));
+            if (!in_array($position, ['top','center','bottom'], true)) { $position = 'center'; }
+            update_option('frn_pdf_header_position_' . $scope, $position, false);
         }
 
         $this->redirect(['tab'=>'diseno','branding_saved'=>1]);
@@ -736,17 +839,22 @@ final class FRN_Frontend_App
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
         $date = mysql2date('d/m/Y', $tariff['tariff_date'] . ' 00:00:00');
         $productWidth = $hasSecondary ? 25 : 48;
+        $headerPosition = (string)get_option('frn_pdf_header_position_' . $scopeKey, 'center');
+        $headerTop = match ($headerPosition) {
+            'top' => '0px',
+            'bottom' => '-122px',
+            default => '-61px',
+        };
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:16px 18px 50px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:7.7pt}
-            .header{position:relative;height:108px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
-            .header-photo{position:absolute;left:0;top:-92px;width:100%;height:auto}
-            .header-photo.pescado{top:-86px}
-            .header-shade{position:absolute;left:0;top:0;width:100%;height:108px;background:rgba(0,0,0,.30)}
+            .header{position:relative;height:128px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
+            .header-photo{position:absolute;left:0;top:' . $headerTop . ';width:100%;height:auto}
+            .header-shade{position:absolute;left:0;top:0;width:100%;height:128px;background:rgba(0,0,0,.30)}
             .header-logo{position:absolute;left:16px;top:8px;width:128px;height:auto}
-            .header-title{position:absolute;left:20px;top:56px;color:#fff;font-family:DejaVu Serif,serif;font-size:21pt;line-height:1}
-            .header-subtitle{position:absolute;left:21px;top:88px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:7.5pt}
+            .header-title{position:absolute;left:20px;top:68px;color:#fff;font-family:DejaVu Serif,serif;font-size:21pt;line-height:1}
+            .header-subtitle{position:absolute;left:21px;top:102px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:7.5pt}
             .header-scope{position:absolute;right:20px;top:13px;color:#e1bd70;font-size:11.5pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
             .header-date-dynamic{position:absolute;right:20px;top:34px;color:#fff;font-size:8pt;font-weight:600;text-align:right;white-space:nowrap}
             table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}
@@ -918,60 +1026,16 @@ final class FRN_Frontend_App
 
     private function group_display_name(string $group, string $locale): string
     {
-        $key = strtoupper(trim(remove_accents($group)));
-        $maps = [
-            'es_es' => [
-                'BIFE ANCHO / TAPA DE BIFE ANCHO'=>'LOMO ALTO / TAPA DE LOMO ALTO',
-                'BIFE ANGOSTO'=>'LOMO BAJO / ENTRECOT',
-                'LOMO'=>'SOLOMILLO',
-                'CUADRIL (TAPA Y CORAZON)'=>'CADERA (PICAÑA Y CENTRO)',
-                'ASADO / COSTILLA'=>'COSTILLAR / COSTILLA',
-                'CORTES CON HUESO BLUESMOKE'=>'CORTES CON HUESO BLUESMOKE',
-                'VACIO'=>'FALDA / VACÍO',
-                'OTROS CORTES'=>'OTROS CORTES',
-            ],
-            'pt_pt' => [
-                'BIFE ANCHO / TAPA DE BIFE ANCHO'=>'LOMBO ALTO / CAPA DO LOMBO ALTO',
-                'BIFE ANGOSTO'=>'VAZIA',
-                'LOMO'=>'LOMBO',
-                'CUADRIL (TAPA Y CORAZON)'=>'ALCATRA (PICANHA E CORAÇÃO)',
-                'ASADO / COSTILLA'=>'COSTELA / ENTRECOSTO',
-                'CORTES CON HUESO BLUESMOKE'=>'CORTES COM OSSO BLUESMOKE',
-                'VACIO'=>'FRALDINHA',
-                'OTROS CORTES'=>'OUTROS CORTES',
-                'ALETA / MANTO / CHOCO (ROTACION RAPIDA)'=>'ASA / MANTO / CHOCO (ROTAÇÃO RÁPIDA)',
-                'PULPO ENTERO CON VISCERAS'=>'POLVO INTEIRO COM VÍSCERAS',
-                'PULPO ENTERO LIMPIO'=>'POLVO INTEIRO LIMPO',
-                'PULPO CRUDO SIN CABEZA'=>'POLVO CRU SEM CABEÇA',
-                'PULPO COCIDO'=>'POLVO COZIDO',
-                'GAMBON'=>'CAMARÃO / GAMBÃO',
-                'VIEIRA'=>'VIEIRA',
-                'VANNAMEI'=>'VANNAMEI',
-            ],
-            'en' => [
-                'BIFE ANCHO / TAPA DE BIFE ANCHO'=>'RIBEYE / RIBEYE CAP',
-                'BIFE ANGOSTO'=>'STRIPLOIN',
-                'LOMO'=>'TENDERLOIN',
-                'CUADRIL (TAPA Y CORAZON)'=>'RUMP (RUMP CAP & HEART)',
-                'ASADO / COSTILLA'=>'RIBS / SHORT RIBS',
-                'CORTES CON HUESO BLUESMOKE'=>'BLUESMOKE BONE-IN CUTS',
-                'VACIO'=>'FLANK / THIN FLANK',
-                'OTROS CORTES'=>'OTHER CUTS',
-                'ALETA / MANTO / CHOCO (ROTACION RAPIDA)'=>'WINGS / MANTLE / CUTTLEFISH (FAST MOVERS)',
-                'PULPO ENTERO CON VISCERAS'=>'WHOLE OCTOPUS WITH VISCERA',
-                'PULPO ENTERO LIMPIO'=>'WHOLE CLEANED OCTOPUS',
-                'PULPO CRUDO SIN CABEZA'=>'RAW OCTOPUS WITHOUT HEAD',
-                'PULPO COCIDO'=>'COOKED OCTOPUS',
-                'GAMBON'=>'KING PRAWN',
-                'VIEIRA'=>'SCALLOP',
-                'VANNAMEI'=>'VANNAMEI SHRIMP',
-            ],
-        ];
-
-        if ($locale === 'es_ar' || $locale === 'es_es' && !isset($maps['es_es'][$key])) {
-            return $group;
+        $category = '';
+        foreach (['carne','pescado-marisco'] as $candidate) {
+            if ($this->catalog->group_meta($candidate, $group)) {
+                $category = $candidate;
+                break;
+            }
         }
-        return (string)($maps[$locale][$key] ?? $group);
+        return $category !== ''
+            ? $this->catalog->group_label($category, $group, $locale)
+            : $group;
     }
 
     private function offer_badge_data_uri(): string
@@ -1088,6 +1152,12 @@ final class FRN_Frontend_App
         }
         if (isset($_GET['branding_saved'])) {
             $messages[] = ['success', 'Diseño PDF guardado y validado.'];
+        }
+        if (isset($_GET['translations_saved'])) {
+            $messages[] = ['success', 'Traducciones y asignaciones de categoría guardadas.'];
+        }
+        if (isset($_GET['groups_saved'])) {
+            $messages[] = ['success', 'Maestro de categorías guardado.'];
         }
         if (!empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
