@@ -37,7 +37,7 @@ jobs:
           grep -q "frn_front_tariff_pdf" frn-stock-prices/templates/partials/app-tariff-editor.php
           grep -q "commercial_group" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "primary_lang" frn-stock-prices/includes/class-frn-tariff-repository.php
-          grep -q "Categorías / orden desde Resumen" frn-stock-prices/templates/partials/app-import.php
+          grep -q "Categorías / orden comercial" frn-stock-prices/templates/partials/app-import.php
           grep -q "setPaper('A4', 'landscape')" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "header-photo" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "SIN CATEGORÍA" frn-stock-prices/includes/class-frn-frontend-app.php
