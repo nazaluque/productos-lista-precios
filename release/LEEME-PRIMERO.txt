@@ -1,55 +1,92 @@
-FRN · PAQUETE v1.1.15 · IMPORTACIÓN CLARA + PDF APAISADO
-==========================================================
+FRN · PAQUETE v1.1.16 · EXCEL SEMANAL DEFINITIVO + TRADUCCIONES
+===================================================================
 
 SOLO PARA frnatlantico.es
 NO TOCAR frnatlantico.com
 
-CAMBIOS SOBRE 1.1.14
---------------------
-1. Flujo de importación:
-   Seleccionar → Analizar → Publicar.
-   Analizar NO modifica la base.
+FORMATO SEMANAL
+---------------
+La versión 1.1.16 está preparada para el formato de una sola hoja usado en:
+stock naza.xlsx
 
-2. Después de analizar:
-   - se muestra el nombre del Excel analizado;
-   - desaparece el mensaje confuso de “ningún archivo seleccionado”;
-   - la pantalla indica que todavía NO se publicó.
+Columnas reconocidas:
+- Nombre del producto
+- Marca
+- Referencia interna
+- Precio de venta
+- Coste
+- Categoria de producto
+- Pronosticado
+- Unidades
 
-3. Protección de datos:
-   - Stock, Precio, Coste y Categorías/orden siguen siendo independientes.
-   - Solo se modifica lo marcado.
-
-4. Unidades:
-   - La previsualización separa kg de unidades.
-   - No mezcla ambos valores en un único total.
-
-5. Categorías:
-   - Las referencias fuera de las hojas Resumen aparecen como SIN CATEGORÍA.
-   - En el PDF reciben una banda neutra propia.
-
-6. PDF:
-   - A4 apaisado.
-   - Cabecera fotográfica corregida.
-   - La foto se inserta como imagen real para Dompdf; no como background data URI.
-   - La fotografía se recorta dentro de la cabecera y no se estira.
-   - El ajuste estético fino de encuadre podrá hacerse después de revisar un PDF real.
-
-PRUEBA CON I 28-09-2026.xlsx
-----------------------------
-Marcar:
+IMPORTACIÓN POR DEFECTO
+-----------------------
 [✓] Stock
-[✓] Categorías / orden desde Resumen
-[ ] Precio
-[ ] Coste promedio
+[✓] Precio
+[✓] Coste promedio
+[ ] Categorías / orden comercial
 
-El análisis debe detectar:
-- 67 referencias;
-- 32 Carne;
-- 35 Pescado / Marisco;
-- 8 categorías Carne;
-- 8 categorías Pescado / Marisco;
-- P00100 y P00110 sin categoría del Resumen.
+Las categorías comerciales y las traducciones quedan guardadas en la plataforma.
+No se sobrescriben semanalmente salvo que se marque expresamente Categorías / orden.
 
-Después de publicar, los precios existentes deben permanecer intactos.
+PROTECCIONES
+------------
+- Stock negativo: se avisa y se publica como 0 / no disponible.
+- Precio 0: se avisa y el PDF muestra “Consultar precio”.
+- Precio de venta inferior al coste: se avisa, pero no bloquea la importación.
+- Las traducciones revisadas manualmente no se pisan en futuras importaciones.
 
-Versión de este paquete: 1.1.15
+TRADUCCIONES
+------------
+Nueva pestaña TRADUCCIONES.
+
+Permite editar por producto:
+- Grupo comercial
+- Español España
+- Português Portugal
+- English
+- Revisada Sí/No
+
+El nombre original de Odoo no se modifica desde esta pantalla.
+
+Filtros:
+- búsqueda por código/producto/grupo;
+- Carne / Pescado-Marisco;
+- Solo pendientes.
+
+NOMENCLATURA CARNE
+------------------
+Se corrigen automáticamente las traducciones no revisadas:
+- TAPA DE CUADRIL -> PICAÑA
+- CORAZON DE CUADRIL -> CADERA / CROCA
+
+Las traducciones ya marcadas como revisadas se respetan.
+
+PRODUCTOS NUEVOS
+----------------
+Si aparece un código nuevo:
+- se importa stock/precio/coste;
+- recibe una sugerencia inicial de grupo comercial;
+- queda disponible en Traducciones para revisión manual.
+
+INSTALACIÓN
+-----------
+1. WordPress > Plugins > Añadir plugin > Subir plugin.
+2. Instalar 01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.16.zip.
+3. Sustituir la versión anterior.
+4. Entrar en /stock/ y confirmar v1.1.16.
+5. La primera carga ejecuta automáticamente la migración.
+
+PRUEBA RECOMENDADA
+------------------
+Subir stock naza.xlsx con:
+[✓] Stock
+[✓] Precio
+[✓] Coste promedio
+[ ] Categorías / orden comercial
+
+Primero pulsar ANALIZAR.
+Revisar alertas.
+Después PUBLICAR.
+
+Versión de este paquete: 1.1.16
