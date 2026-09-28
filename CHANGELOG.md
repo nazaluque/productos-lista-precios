@@ -1,5 +1,21 @@
 # FRN Stock & Prices
 
+## 1.1.14 — Importación selectiva, categorías e idiomas
+
+- La importación semanal pasa a ser selectiva: Stock, Precio, Coste y Categorías/orden son interruptores independientes.
+- Un Excel de stock ya no puede poner precios a cero: los campos no seleccionados permanecen intactos.
+- Una columna ausente o una celda vacía de precio/coste conserva el valor existente; un 0 numérico explícito sí puede limpiar el dato cuando ese campo está seleccionado.
+- Las hojas Resumen Carne y Resumen Pescado se leen como estructura comercial por código de producto.
+- Guarda grupo comercial, color, orden de grupo y orden de producto en el maestro.
+- La previsualización muestra campos detectados, campos que se actualizarán y referencias sin categoría de Resumen.
+- Añade nombres por mercado: original/Argentina, España, Português Portugal e English.
+- Añade presets de mercado para España, Portugal e Internacional.
+- Las tarifas guardan su pareja de idiomas y pueden modificarse antes de exportar.
+- PDF cambia a A4 apaisado, agrupado por categoría comercial con bandas de color.
+- La cabecera apaisada usa background-size: cover para ocupar el ancho sin deformar la fotografía.
+- CSV incluye categoría comercial y los idiomas elegidos.
+- Conserva OFERTA, marca de agua, stock/precio/coste opcionales, próximos ingresos y footer FRN.
+
 ## 1.1.13 — Precio de venta semanal sincronizado
 
 - Corrige la importación semanal unificada: la columna “Precio de venta” del Excel actualiza siempre el precio comercial del maestro.
