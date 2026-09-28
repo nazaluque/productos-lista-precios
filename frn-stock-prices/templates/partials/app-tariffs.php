@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) { exit; }
     <article class="frn-app-card">
         <div class="frn-card-heading">
             <div><small>Paso 02</small><h2>Crear tarifa PDF</h2></div>
-            <p>Se genera desde el maestro vigente. Carne y Pescado / Marisco salen siempre por separado.</p>
+            <p>Se genera desde el maestro vigente, en A4 apaisado, con categorías comerciales y los idiomas del mercado seleccionado.</p>
         </div>
         <?php if (!empty($latestImport)) : ?>
             <div class="frn-source-chip"><span>Base semanal activa</span><strong><?php echo esc_html($latestImport['source_file']); ?></strong><small><?php echo esc_html(mysql2date('d/m/Y H:i',$latestImport['imported_at'])); ?> · <?php echo (int)$latestImport['active_count']; ?> referencias</small></div>
@@ -27,6 +27,14 @@ if (!defined('ABSPATH')) { exit; }
                     <option value="distribuidor">Distribuidor · Precio + stock exacto</option>
                     <option value="disponibilidad">Disponibilidad · Sin precio + Disponible</option>
                     <option value="personalizado">Personalizado</option>
+                </select>
+            </label>
+
+            <label>Mercado / idiomas
+                <select name="market">
+                    <option value="es">España · original + español España</option>
+                    <option value="pt">Portugal · original + português</option>
+                    <option value="en">Internacional · original + English</option>
                 </select>
             </label>
 
