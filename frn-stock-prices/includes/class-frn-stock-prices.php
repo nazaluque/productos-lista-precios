@@ -39,7 +39,7 @@ final class FRN_Stock_Prices
         $roles = [
             'frn_administrator' => [
                 'label' => 'FRN Administrador',
-                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_view_cost','frn_export_tariffs','frn_manage_users'],
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_users'],
             ],
             'frn_stock' => [
                 'label' => 'FRN Stock',
@@ -47,7 +47,7 @@ final class FRN_Stock_Prices
             ],
             'frn_director_comercial' => [
                 'label' => 'FRN Director Comercial',
-                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_prices','frn_view_cost','frn_export_tariffs'],
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs'],
             ],
             'frn_comercial' => [
                 'label' => 'FRN Comercial',
@@ -74,7 +74,7 @@ final class FRN_Stock_Prices
 
         $admin = get_role('administrator');
         if ($admin) {
-            foreach (['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_view_cost','frn_export_tariffs','frn_manage_users'] as $cap) {
+            foreach (['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_users'] as $cap) {
                 $admin->add_cap($cap);
             }
         }
