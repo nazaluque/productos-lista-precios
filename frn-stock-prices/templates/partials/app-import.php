@@ -42,18 +42,18 @@ $hasPreview = is_array($preview);
                 <strong>1. Marca únicamente lo que quieres actualizar</strong>
                 <?php if ($canEditStock) : ?>
                     <label><input type="checkbox" name="import_fields[stock]" value="1" checked> Stock</label>
-                    <label><input type="checkbox" name="import_fields[groups]" value="1" checked> Categorías / orden desde Resumen</label>
+                    <label><input type="checkbox" name="import_fields[groups]" value="1"> Categorías / orden comercial</label>
                 <?php endif; ?>
                 <?php if ($canEditPrices) : ?>
-                    <label><input type="checkbox" name="import_fields[price]" value="1"> Precio</label>
-                    <label><input type="checkbox" name="import_fields[cost]" value="1"> Coste promedio</label>
+                    <label><input type="checkbox" name="import_fields[price]" value="1" checked> Precio</label>
+                    <label><input type="checkbox" name="import_fields[cost]" value="1" checked> Coste promedio</label>
                 <?php endif; ?>
-                <small>Protección: un campo no marcado nunca se modifica. Una columna ausente o una celda vacía no borra un precio o coste existente.</small>
+                <small>Formato semanal FRN: Stock + Precio + Coste activados por defecto. Categorías y traducciones se conservan en la plataforma y solo se cambian si marcas esa opción.</small>
             </div>
 
             <label class="frn-dropzone">
                 <span>2. Selecciona el Excel</span>
-                <small>XLSX / XLS · admite Resumen Carne, Resumen Pescado y una hoja maestra de datos.</small>
+                <small>XLSX / XLS · formato semanal recomendado: una hoja con Referencia interna, Precio de venta, Coste, Categoría, Pronosticado y Unidades.</small>
                 <input id="frn-stock-files" type="file" name="stock_files[]" accept=".xlsx,.xls" multiple required>
             </label>
             <div id="frn-file-status" class="frn-file-status" aria-live="polite">
