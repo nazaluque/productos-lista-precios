@@ -8,10 +8,11 @@ $renderMasterRows = static function(array $rows, string $group) use ($canEditSto
     }
     ?>
     <div class="frn-app-table-wrap">
-        <table class="frn-app-table frn-master-table">
+        <table class="frn-app-table frn-master-table frn-master-multilang">
             <thead>
                 <tr>
-                    <th>Usar</th><th>Oferta</th><th>Categoría</th><th>Código</th><th>Marca</th><th>Producto</th>
+                    <th>Usar</th><th>Oferta</th><th>Familia</th><th>Grupo comercial</th><th>Código</th><th>Marca</th><th>Original</th>
+                    <th>España</th><th>Português</th><th>English</th>
                     <th>Stock</th><th>Unidad</th><th>Precio origen</th><th>Precio comercial</th>
                     <?php if ($canViewCost) : ?><th>Coste promedio</th><?php endif; ?>
                 </tr>
@@ -29,6 +30,7 @@ $renderMasterRows = static function(array $rows, string $group) use ($canEditSto
                     <td><input class="frn-use-checkbox" data-group="<?php echo esc_attr($group); ?>" type="checkbox" name="products[<?php echo $id; ?>][visible]" value="1" <?php checked((int)$product['visible'],1); ?>></td>
                     <td><input class="frn-offer-checkbox" data-group="<?php echo esc_attr($group); ?>" type="checkbox" name="products[<?php echo $id; ?>][featured]" value="1" <?php checked((int)$product['featured'],1); ?>></td>
                     <td><?php echo esc_html($product['category'] === 'carne' ? 'Carne' : 'Pescado / Marisco'); ?></td>
+                    <td><span class="frn-group-chip" style="border-color:<?php echo esc_attr((string)($product['group_color']??'#59636E')); ?>"><?php echo esc_html((string)($product['commercial_group'] ?: 'Sin categoría')); ?></span></td>
                     <td>
                         <?php if ($canEditStock) : ?>
                             <input type="text" name="products[<?php echo $id; ?>][code]" value="<?php echo esc_attr($product['product_code']); ?>">
@@ -44,6 +46,9 @@ $renderMasterRows = static function(array $rows, string $group) use ($canEditSto
                             <input class="frn-wide" type="text" name="products[<?php echo $id; ?>][name]" value="<?php echo esc_attr($product['product_name']); ?>">
                         <?php else : echo esc_html($product['product_name']); endif; ?>
                     </td>
+                    <td><?php echo esc_html((string)($product['name_es_es'] ?: $product['product_name'])); ?></td>
+                    <td><?php echo esc_html((string)($product['name_pt_pt'] ?: 'Pendiente')); ?></td>
+                    <td><?php echo esc_html((string)($product['name_en'] ?: 'Pendiente')); ?></td>
                     <td>
                         <?php if ($canEditStock) : ?>
                             <input type="number" min="0" step="0.001" name="products[<?php echo $id; ?>][stock]" value="<?php echo esc_attr($stock); ?>">
@@ -82,7 +87,7 @@ $renderMasterRows = static function(array $rows, string $group) use ($canEditSto
 <section class="frn-app-card">
     <div class="frn-card-heading">
         <div><small>Maestro FRN</small><h2>Productos de la semana</h2></div>
-        <p>El stock vigente viene de Odoo. El precio comercial se conserva entre semanas y puede ser ajustado por los perfiles autorizados. El coste promedio solo se muestra a usuarios con permiso específico.</p>
+        <p>El maestro conserva stock y precios por separado y añade categoría comercial e idiomas. Las traducciones quedan vinculadas al producto y no se pierden al importar una nueva semana.</p>
     </div>
 
     <form method="post" action="<?php echo esc_url($postUrl); ?>">
