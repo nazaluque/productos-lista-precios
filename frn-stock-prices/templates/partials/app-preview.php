@@ -16,13 +16,23 @@ $stockTotals = [
     'carne' => ['kg'=>0.0,'units'=>0.0],
     'pescado-marisco' => ['kg'=>0.0,'units'=>0.0],
 ];
+$negativeStock = 0;
+$zeroPrice = 0;
+$belowCost = 0;
 foreach ($previewRows as $row) {
     if (empty($row['stock_present'])) { continue; }
     $category = (string)($row['category'] ?? '');
     if (!isset($stockTotals[$category])) { continue; }
     $unit = strtolower(remove_accents(trim((string)($row['unit'] ?? ''))));
     $bucket = str_contains($unit, 'unidad') || in_array($unit, ['ud','uds'], true) ? 'units' : 'kg';
-    $stockTotals[$category][$bucket] += (float)($row['stock'] ?? 0);
+    $stockValue = (float)($row['stock'] ?? 0);
+    $stockTotals[$category][$bucket] += $stockValue;
+    if (!empty($row['stock_present']) && $stockValue < 0) { $negativeStock++; }
+
+    $priceValue = !empty($row['price_present']) ? (float)($row['price'] ?? 0) : null;
+    $costValue = !empty($row['cost_present']) ? (float)($row['cost'] ?? 0) : null;
+    if ($priceValue !== null && $priceValue == 0.0) { $zeroPrice++; }
+    if ($priceValue !== null && $costValue !== null && $priceValue > 0 && $priceValue < $costValue) { $belowCost++; }
 }
 ?>
 <section class="frn-app-card frn-preview-card">
@@ -52,6 +62,15 @@ foreach ($previewRows as $row) {
             <span>Carne: <?php echo esc_html(number_format_i18n($stockTotals['carne']['kg'],3)); ?> kg · <?php echo esc_html(number_format_i18n($stockTotals['carne']['units'],0)); ?> unidades</span>
             <span>Pescado/Marisco: <?php echo esc_html(number_format_i18n($stockTotals['pescado-marisco']['kg'],3)); ?> kg · <?php echo esc_html(number_format_i18n($stockTotals['pescado-marisco']['units'],0)); ?> unidades</span>
             <small>No se mezclan kg y unidades en un único total.</small>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($negativeStock || $zeroPrice || $belowCost) : ?>
+        <div class="frn-import-warnings">
+            <strong>Controles comerciales</strong>
+            <?php if ($negativeStock) : ?><span>⚠ <?php echo (int)$negativeStock; ?> referencia(s) con stock negativo · se publicarán como 0 / no disponible.</span><?php endif; ?>
+            <?php if ($zeroPrice) : ?><span>⚠ <?php echo (int)$zeroPrice; ?> referencia(s) con precio 0 · el PDF mostrará “Consultar precio”.</span><?php endif; ?>
+            <?php if ($belowCost) : ?><span>⚠ <?php echo (int)$belowCost; ?> referencia(s) con precio de venta inferior al coste.</span><?php endif; ?>
         </div>
     <?php endif; ?>
 
