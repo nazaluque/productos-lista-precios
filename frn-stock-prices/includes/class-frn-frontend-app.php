@@ -383,9 +383,19 @@ final class FRN_Frontend_App
         }
 
         $preset = sanitize_key((string) ($_POST['preset'] ?? 'general'));
+        $market = sanitize_key((string) ($_POST['market'] ?? 'es'));
+        if (!in_array($market, ['es','pt','en'], true)) { $market = 'es'; }
         $priceListId = absint($_POST['price_list_id'] ?? 0);
         $date = sanitize_text_field((string) ($_POST['tariff_date'] ?? current_time('Y-m-d')));
         $label = $scope === 'carne' ? 'Carne' : 'Pescado y marisco';
+
+        if ($scope === 'carne') {
+            $primaryLang = 'es_ar';
+            $secondaryLang = $market === 'pt' ? 'pt_pt' : ($market === 'en' ? 'en' : 'es_es');
+        } else {
+            $primaryLang = 'es_es';
+            $secondaryLang = $market === 'pt' ? 'pt_pt' : ($market === 'en' ? 'en' : '');
+        }
 
         $priceList = $priceListId > 0 ? $this->priceLists->get($priceListId) : null;
         $priceSuffix = $priceList ? ' · ' . $priceList['name'] : '';
@@ -397,7 +407,9 @@ final class FRN_Frontend_App
                 $date,
                 $scope,
                 $preset,
-                $priceListId
+                $priceListId,
+                $primaryLang,
+                $secondaryLang
             );
         } catch (Throwable $e) {
             $this->redirect(['tab' => 'tarifas', 'error' => rawurlencode($e->getMessage())]);
@@ -492,7 +504,7 @@ final class FRN_Frontend_App
         $options->set('defaultFont', 'DejaVu Sans');
 
         $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->setPaper('A4', 'landscape');
         $dompdf->loadHtml($this->pdf_html($tariff, $lines), 'UTF-8');
         $dompdf->render();
 
@@ -507,8 +519,8 @@ final class FRN_Frontend_App
                 : 0.42;
             $watermarkWidth = 300.0;
             $watermarkHeight = $watermarkWidth * $watermarkRatio;
-            $watermarkX = (595.28 - $watermarkWidth) / 2;
-            $watermarkY = (841.89 - $watermarkHeight) / 2;
+            $watermarkX = (841.89 - $watermarkWidth) / 2;
+            $watermarkY = (595.28 - $watermarkHeight) / 2;
 
             $canvas->page_script(
                 static function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($watermarkPath, $watermarkX, $watermarkY, $watermarkWidth, $watermarkHeight): void {
@@ -523,8 +535,8 @@ final class FRN_Frontend_App
         $pageFont = $fontMetrics->getFont('DejaVu Sans', 'normal');
         if ($pageFont) {
             $canvas->page_text(
-                505,
-                818,
+                748,
+                572,
                 'Página {PAGE_NUM} de {PAGE_COUNT}',
                 $pageFont,
                 7,
