@@ -1,92 +1,84 @@
-FRN · PAQUETE v1.1.16 · EXCEL SEMANAL DEFINITIVO + TRADUCCIONES
-===================================================================
+FRN · PAQUETE v1.1.17 · CATEGORÍAS CANÓNICAS + HEADER
+=====================================================
 
 SOLO PARA frnatlantico.es
 NO TOCAR frnatlantico.com
 
-FORMATO SEMANAL
----------------
-La versión 1.1.16 está preparada para el formato de una sola hoja usado en:
-stock naza.xlsx
+OBJETIVO DE ESTA VERSIÓN
+------------------------
+Eliminar definitivamente categorías duplicadas y productos comerciales sin categoría.
 
-Columnas reconocidas:
-- Nombre del producto
-- Marca
-- Referencia interna
-- Precio de venta
-- Coste
-- Categoria de producto
-- Pronosticado
-- Unidades
-
-IMPORTACIÓN POR DEFECTO
------------------------
-[✓] Stock
-[✓] Precio
-[✓] Coste promedio
-[ ] Categorías / orden comercial
-
-Las categorías comerciales y las traducciones quedan guardadas en la plataforma.
-No se sobrescriben semanalmente salvo que se marque expresamente Categorías / orden.
-
-PROTECCIONES
-------------
-- Stock negativo: se avisa y se publica como 0 / no disponible.
-- Precio 0: se avisa y el PDF muestra “Consultar precio”.
-- Precio de venta inferior al coste: se avisa, pero no bloquea la importación.
-- Las traducciones revisadas manualmente no se pisan en futuras importaciones.
-
-TRADUCCIONES
-------------
-Nueva pestaña TRADUCCIONES.
-
-Permite editar por producto:
-- Grupo comercial
+MAESTRO DE CATEGORÍAS
+---------------------
+Nueva estructura persistente:
+- Familia: Carne / Pescado-Marisco
+- Nombre base
 - Español España
 - Português Portugal
 - English
-- Revisada Sí/No
+- Color
+- Orden
 
-El nombre original de Odoo no se modifica desde esta pantalla.
+Cada categoría existe una sola vez.
 
-Filtros:
-- búsqueda por código/producto/grupo;
-- Carne / Pescado-Marisco;
-- Solo pendientes.
-
-NOMENCLATURA CARNE
-------------------
-Se corrigen automáticamente las traducciones no revisadas:
-- TAPA DE CUADRIL -> PICAÑA
-- CORAZON DE CUADRIL -> CADERA / CROCA
-
-Las traducciones ya marcadas como revisadas se respetan.
+LIMPIEZA INICIAL
+----------------
+Al actualizar desde 1.1.16:
+- todas las referencias VIEIRA se consolidan en VIEIRA;
+- CLUSTER DE CANGREJO pasa a CANGREJO;
+- BOGAVANTE pasa a BOGAVANTE;
+- categorías existentes válidas conservan su clasificación y reciben orden/color canónico;
+- productos huérfanos reciben una asignación inicial conocida.
 
 PRODUCTOS NUEVOS
 ----------------
-Si aparece un código nuevo:
-- se importa stock/precio/coste;
-- recibe una sugerencia inicial de grupo comercial;
-- queda disponible en Traducciones para revisión manual.
+En ANALIZAR:
+- si el código ya tiene categoría válida, se conserva;
+- si es nuevo o está huérfano, aparece un selector obligatorio;
+- el sistema puede dejar una sugerencia preseleccionada;
+- no se puede publicar sin una categoría válida.
 
-INSTALACIÓN
------------
-1. WordPress > Plugins > Añadir plugin > Subir plugin.
-2. Instalar 01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.16.zip.
-3. Sustituir la versión anterior.
-4. Entrar en /stock/ y confirmar v1.1.16.
-5. La primera carga ejecuta automáticamente la migración.
+TRADUCCIONES
+------------
+La pestaña Traducciones ahora tiene dos bloques:
+
+1. PRODUCTOS
+- categoría mediante desplegable;
+- Español España;
+- Português;
+- English;
+- Revisada.
+
+2. CATEGORÍAS
+- nombre base;
+- traducciones;
+- color;
+- orden;
+- creación de nueva categoría.
+
+No es necesario sacar una nueva versión para mover un producto de categoría o corregir un término.
+
+HEADER PDF
+----------
+- A4 apaisado.
+- Cabecera: 128 px, aprox. 34 mm.
+- Es unos 5 mm más alta que la 1.1.16.
+- La foto mantiene proporción.
+- Diseño PDF permite elegir encuadre:
+  Superior / Centro / Inferior.
 
 PRUEBA RECOMENDADA
 ------------------
-Subir stock naza.xlsx con:
-[✓] Stock
-[✓] Precio
-[✓] Coste promedio
-[ ] Categorías / orden comercial
+1. Instalar v1.1.17.
+2. Entrar en Traducciones y comprobar:
+   VIEIRA agrupada una sola vez.
+   P00110 -> CANGREJO.
+3. Crear tarifa Pescado España y comprobar que:
+   VIEIRA aparece en un único bloque.
+   CANGREJO tiene su bloque.
+   No aparece SIN CATEGORÍA para esas referencias.
+4. Entrar en Diseño PDF:
+   probar encuadre de Pescado en Centro o Superior.
+5. Generar PDF y revisar cabecera de 34 mm.
 
-Primero pulsar ANALIZAR.
-Revisar alertas.
-Después PUBLICAR.
-
-Versión de este paquete: 1.1.16
+Versión de este paquete: 1.1.17
