@@ -165,6 +165,8 @@ final class FRN_Frontend_App
         if ($updates['cost']) { $labels[] = 'coste'; }
         if ($updates['groups']) { $labels[] = 'categorías/orden'; }
 
+        update_option('frn_sp_last_import_fields', implode(', ', $labels), false);
+
         $this->redirect([
             'tab'=>'importar',
             'stock_published'=>$counts['carne'] + $counts['pescado-marisco'],
@@ -605,7 +607,7 @@ final class FRN_Frontend_App
             $price = (float) ($line['display_price'] ?? 0);
             $csvRow = [
                 (int) $line['incoming'] === 1 ? 'Próximos ingresos' : 'Productos',
-                (string)($line['commercial_group'] ?? ''),
+                trim((string)($line['commercial_group'] ?? '')) !== '' ? (string)$line['commercial_group'] : 'SIN CATEGORÍA',
                 $line['product_code'],
                 $this->line_name_for_locale($line, $primaryLang),
             ];
@@ -703,15 +705,14 @@ final class FRN_Frontend_App
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
         $date = mysql2date('d/m/Y', $tariff['tariff_date'] . ' 00:00:00');
         $productWidth = $hasSecondary ? 25 : 48;
-        $headerStyle = $headerImage
-            ? ' style="background-image:url(\'' . esc_attr($headerImage) . '\')"'
-            : '';
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:16px 18px 50px}
             body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:7.7pt}
-            .header{position:relative;height:108px;border-bottom:3px solid #b28a42;background-color:#07131a;background-repeat:no-repeat;background-size:cover;background-position:center center;overflow:hidden}
-            .header-shade{position:absolute;left:0;top:0;width:100%;height:108px;background:rgba(0,0,0,.23)}
+            .header{position:relative;height:108px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
+            .header-photo{position:absolute;left:0;top:-92px;width:100%;height:auto}
+            .header-photo.pescado{top:-86px}
+            .header-shade{position:absolute;left:0;top:0;width:100%;height:108px;background:rgba(0,0,0,.30)}
             .header-logo{position:absolute;left:16px;top:8px;width:128px;height:auto}
             .header-title{position:absolute;left:20px;top:56px;color:#fff;font-family:DejaVu Serif,serif;font-size:21pt;line-height:1}
             .header-subtitle{position:absolute;left:21px;top:88px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:7.5pt}
@@ -741,7 +742,8 @@ final class FRN_Frontend_App
             .footer-brand{font-size:9pt;font-weight:bold;letter-spacing:1.5px}
             .footer-contact{margin-top:2px;font-size:6.8pt;font-weight:500;color:#303943}
         </style></head><body>
-        <div class="header"' . $headerStyle . '>
+        <div class="header">
+            ' . ($headerImage ? '<img class="header-photo ' . esc_attr($scopeKey) . '" src="' . esc_attr($headerImage) . '" alt="">' : '') . '
             <div class="header-shade"></div>
             <img class="header-logo" src="' . esc_attr($logo) . '" alt="FRN">
             <div class="header-scope">' . esc_html($scopeKey === 'carne' ? 'CARNE' : 'PESCADO Y MARISCO') . '</div>
@@ -781,18 +783,24 @@ final class FRN_Frontend_App
             if ((int) ($line['visible'] ?? 0) !== 1) { continue; }
 
             $group = trim((string) ($line['commercial_group'] ?? ''));
-            if ((int)($line['incoming'] ?? 0) !== 1 && $group !== '' && $group !== $lastGroup) {
-                $color = sanitize_hex_color((string)($line['group_color'] ?? '')) ?: '#59636E';
-                $groupTitle = $this->group_display_name($group, $primaryLang);
-                if ($hasSecondary) {
-                    $secondaryGroup = $this->group_display_name($group, $secondaryLang);
-                    if ($secondaryGroup !== '' && strcasecmp($secondaryGroup, $groupTitle) !== 0) {
-                        $groupTitle .= ' · ' . $secondaryGroup;
+            $groupKey = $group !== '' ? $group : '__ungrouped__';
+            if ((int)($line['incoming'] ?? 0) !== 1 && $groupKey !== $lastGroup) {
+                if ($group === '') {
+                    $color = '#59636E';
+                    $groupTitle = 'SIN CATEGORÍA';
+                } else {
+                    $color = sanitize_hex_color((string)($line['group_color'] ?? '')) ?: '#59636E';
+                    $groupTitle = $this->group_display_name($group, $primaryLang);
+                    if ($hasSecondary) {
+                        $secondaryGroup = $this->group_display_name($group, $secondaryLang);
+                        if ($secondaryGroup !== '' && strcasecmp($secondaryGroup, $groupTitle) !== 0) {
+                            $groupTitle .= ' · ' . $secondaryGroup;
+                        }
                     }
                 }
                 $html .= '<tr class="group-title"><td colspan="' . $columnCount . '" style="background:' .
                     esc_attr($color) . '">' . esc_html($groupTitle) . '</td></tr>';
-                $lastGroup = $group;
+                $lastGroup = $groupKey;
             }
 
             $class = $index % 2 === 0 ? 'row-light' : 'row-dark';
@@ -1025,7 +1033,8 @@ final class FRN_Frontend_App
         if (isset($_GET['stock_published'])) {
             $messages[] = [
                 'success',
-                'Stock semanal actualizado: ' . (int) $_GET['stock_published'] . ' referencias leídas.',
+                'Importación publicada: ' . (int) $_GET['stock_published'] . ' referencias. Campos actualizados: ' .
+                (!empty($_GET['updated_fields']) ? sanitize_text_field(wp_unslash($_GET['updated_fields'])) : 'según selección') . '.',
             ];
         }
         if (isset($_GET['prices_published'])) {
