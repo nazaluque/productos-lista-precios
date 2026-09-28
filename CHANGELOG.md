@@ -1,5 +1,17 @@
 # FRN Stock & Prices
 
+## 1.1.15 — Flujo de importación claro y cabecera PDF corregida
+
+- Separa visualmente el flujo en Seleccionar → Analizar → Publicar.
+- Después de analizar ya no vuelve a mostrar “Ningún archivo seleccionado”; muestra el nombre del Excel analizado y deja claro que todavía no se publicó.
+- La confirmación de publicación indica exactamente qué campos se actualizaron.
+- La previsualización separa kg y unidades para evitar totales engañosos cuando el Excel mezcla ambas unidades.
+- Las referencias que existen en la hoja maestra pero no aparecen en ninguna categoría del Resumen se etiquetan como SIN CATEGORÍA.
+- En PDF/CSV, los productos sin grupo reciben una sección neutra propia y ya no parecen pertenecer a la categoría anterior.
+- Corrige la causa de la cabecera sin fotografía: Dompdf no estaba incorporando el data URI usado como background-image.
+- La fotografía pasa a renderizarse como una imagen real dentro del header, con recorte por overflow y sin estirarla.
+- Mantiene A4 apaisado, categorías de color, idiomas, OFERTA, marca de agua, stock/precio/coste opcionales y próximos ingresos.
+
 ## 1.1.14 — Importación selectiva, categorías e idiomas
 
 - La importación semanal pasa a ser selectiva: Stock, Precio, Coste y Categorías/orden son interruptores independientes.
