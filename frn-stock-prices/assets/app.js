@@ -132,3 +132,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+
+/* FRN 1.1.16 · translations filters */
+(() => {
+  const search = document.querySelector('#frn-translation-search');
+  const category = document.querySelector('#frn-translation-category');
+  const pending = document.querySelector('#frn-translation-pending');
+  const rows = Array.from(document.querySelectorAll('[data-translation-row]'));
+  if (!rows.length) return;
+
+  const normalize = (v) => (v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const refresh = () => {
+    const q = normalize(search?.value || '');
+    const cat = category?.value || '';
+    const onlyPending = !!pending?.checked;
+    rows.forEach((row) => {
+      const okSearch = !q || normalize(row.dataset.search).includes(q);
+      const okCategory = !cat || row.dataset.category === cat;
+      const okPending = !onlyPending || row.dataset.pending === '1';
+      row.style.display = okSearch && okCategory && okPending ? '' : 'none';
+    });
+  };
+  search?.addEventListener('input', refresh);
+  category?.addEventListener('change', refresh);
+  pending?.addEventListener('change', refresh);
+})();
