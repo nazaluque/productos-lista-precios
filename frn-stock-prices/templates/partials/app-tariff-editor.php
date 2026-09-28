@@ -112,10 +112,28 @@ $renderTariffLines = static function(array $rows, string $group) use ($canViewCo
                     <option value="hidden" <?php selected($tariff['stock_mode'],'hidden'); ?>>Oculto</option>
                 </select>
             </label>
+            <label>Nombre principal
+                <select name="settings[primary_lang]">
+                    <option value="es_ar" <?php selected(($tariff['primary_lang']??''),'es_ar'); ?>>Argentina / original</option>
+                    <option value="es_es" <?php selected(($tariff['primary_lang']??''),'es_es'); ?>>España</option>
+                    <option value="pt_pt" <?php selected(($tariff['primary_lang']??''),'pt_pt'); ?>>Português</option>
+                    <option value="en" <?php selected(($tariff['primary_lang']??''),'en'); ?>>English</option>
+                </select>
+            </label>
+            <label>Nombre secundario
+                <select name="settings[secondary_lang]">
+                    <option value="" <?php selected(($tariff['secondary_lang']??''),''); ?>>Ninguno</option>
+                    <option value="es_ar" <?php selected(($tariff['secondary_lang']??''),'es_ar'); ?>>Argentina / original</option>
+                    <option value="es_es" <?php selected(($tariff['secondary_lang']??''),'es_es'); ?>>España</option>
+                    <option value="pt_pt" <?php selected(($tariff['secondary_lang']??''),'pt_pt'); ?>>Português</option>
+                    <option value="en" <?php selected(($tariff['secondary_lang']??''),'en'); ?>>English</option>
+                </select>
+            </label>
         </div>
 
         <div class="frn-preset-help">
-            <strong>General:</strong> precio + “Disponible” · <strong>Distribuidor:</strong> precio + stock exacto · <strong>Disponibilidad:</strong> sin precio + “Disponible”.
+            <strong>General:</strong> precio + “Disponible” · <strong>Distribuidor:</strong> precio + stock exacto · <strong>Disponibilidad:</strong> sin precio + “Disponible”.<br>
+            El PDF sale en A4 apaisado, agrupado por categoría comercial y con uno o dos idiomas según esta selección.
             <?php if ($canViewCost) : ?><br>El coste promedio solo se incluirá si activas expresamente “Mostrar coste promedio”.<?php endif; ?>
         </div>
 
