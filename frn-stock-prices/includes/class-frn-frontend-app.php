@@ -54,6 +54,7 @@ final class FRN_Frontend_App
             'previewToken' => $previewToken,
             'preview' => is_array($preview) ? $preview : null,
             'products' => $this->catalog->all_combined(false),
+            'translationProducts' => current_user_can('frn_edit_translations') ? $this->catalog->all_combined(true) : [],
             'latestImport' => $this->catalog->latest_import_meta(),
             'priceLists' => $this->priceLists->all(),
             'tariffs' => $this->tariffs->all_tariffs(),
