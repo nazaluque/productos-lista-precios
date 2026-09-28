@@ -10,14 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!files.length) {
       fileStatus.classList.remove('is-ready');
-      if (strong) strong.textContent = 'Ningún archivo seleccionado';
-      if (span) span.textContent = 'Selecciona el Excel para poder previsualizarlo.';
+      if (strong) strong.textContent = 'Selecciona un Excel para comenzar';
+      if (span) span.textContent = 'El archivo no se publicará hasta que revises la previsualización.';
       return;
     }
 
     fileStatus.classList.add('is-ready');
     if (strong) strong.textContent = files.length === 1 ? files[0].name : files.length + ' archivos seleccionados';
-    if (span) span.textContent = 'Archivo cargado en el navegador · listo para previsualizar';
+    if (span) span.textContent = 'Archivo seleccionado · listo para analizar';
   };
 
   if (fileInput) {
