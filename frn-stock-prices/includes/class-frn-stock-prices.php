@@ -108,6 +108,28 @@ final class FRN_Stock_Prices
                       AND UPPER(product_name) LIKE '%CORAZON DE CUADRIL%'");
             }
 
+            if ($installed === '' || version_compare($installed, '1.1.17', '<')) {
+                $catalog = new FRN_Catalog_Repository();
+                foreach ($catalog->all_combined(true) as $product) {
+                    $category = (string)($product['category'] ?? '');
+                    $currentGroup = trim((string)($product['commercial_group'] ?? ''));
+                    $validGroup = $currentGroup !== '' ? $catalog->group_meta($category, $currentGroup) : null;
+
+                    if ($validGroup) {
+                        $catalog->assign_group((int)$product['id'], $category, (string)$validGroup['name_base']);
+                        continue;
+                    }
+
+                    $suggested = FRN_Catalog_Repository::suggested_group_name(
+                        (string)($product['product_name'] ?? ''),
+                        $category
+                    );
+                    if ($catalog->group_meta($category, $suggested)) {
+                        $catalog->assign_group((int)$product['id'], $category, $suggested);
+                    }
+                }
+            }
+
             update_option('frn_sp_catalog_protection_enabled', true, false);
             update_option('frn_sp_version', FRN_SP_VERSION, false);
 
