@@ -650,7 +650,13 @@ final class FRN_Frontend_App
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
         $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
-        $columnCount = 3 + ($showStock ? 1 : 0) + ($showPrice ? 1 : 0) + ($showCost ? 1 : 0);
+        $primaryLang = (string) ($tariff['primary_lang'] ?? ($scopeKey === 'carne' ? 'es_ar' : 'es_es'));
+        $secondaryLang = (string) ($tariff['secondary_lang'] ?? '');
+        if ($secondaryLang === $primaryLang) { $secondaryLang = ''; }
+        $hasSecondary = $secondaryLang !== '';
+
+        $columnCount = 3 + ($hasSecondary ? 1 : 0)
+            + ($showCost ? 1 : 0) + ($showStock ? 1 : 0) + ($showPrice ? 1 : 0);
 
         $regular = array_values(array_filter(
             $lines,
@@ -667,7 +673,6 @@ final class FRN_Frontend_App
 
         $rowsHtml = $this->pdf_rows($regular, $tariff);
 
-        // Always show the section so the commercial template is stable week to week.
         $rowsHtml .= '<tr class="incoming-title"><td colspan="' . $columnCount . '">PRÓXIMOS INGRESOS</td></tr>';
         if ($incoming) {
             $rowsHtml .= $this->pdf_rows($incoming, $tariff);
@@ -675,58 +680,59 @@ final class FRN_Frontend_App
             $rowsHtml .= '<tr class="incoming-empty"><td colspan="' . $columnCount . '">Actualmente no hay próximos ingresos informados.</td></tr>';
         }
 
-        $headers = '<th class="code">Código</th><th class="product">Producto</th><th class="brand">Marca</th>';
-        if ($showCost) {
-            $headers .= '<th class="cost-head">Coste promedio</th>';
+        $headers = '<th class="code">Código</th>'
+            . '<th class="product">' . esc_html($this->language_label($primaryLang)) . '</th>';
+        if ($hasSecondary) {
+            $headers .= '<th class="product">' . esc_html($this->language_label($secondaryLang)) . '</th>';
         }
-        if ($showStock) {
-            $headers .= '<th class="stock">Stock</th>';
-        }
-        if ($showPrice) {
-            $headers .= '<th class="price-head">Precio</th>';
-        }
+        $headers .= '<th class="brand">Marca</th>';
+
+        if ($showCost) { $headers .= '<th class="num-head">Coste promedio</th>'; }
+        if ($showStock) { $headers .= '<th class="num-head">Stock</th>'; }
+        if ($showPrice) { $headers .= '<th class="num-head">Precio</th>'; }
 
         $contact = implode(' · ', array_filter([$address, $phone, $email, $web]));
         $date = mysql2date('d/m/Y', $tariff['tariff_date'] . ' 00:00:00');
-        $productWidth = 75 - ($showCost ? 13 : 0) - ($showStock ? 13 : 0) - ($showPrice ? 14 : 0);
+        $productWidth = $hasSecondary ? 25 : 48;
+        $headerStyle = $headerImage
+            ? ' style="background-image:url(\'' . esc_attr($headerImage) . '\')"'
+            : '';
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
-            @page{margin:22px 22px 58px}
-            body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8.2pt}
-            .header{position:relative;height:138px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
-            .header-photo{position:absolute;left:0;top:0;width:100%;height:auto}
-            .header-shade{position:absolute;left:0;top:0;width:100%;height:138px;background:rgba(0,0,0,.16)}
-            .header-logo{position:absolute;left:16px;top:8px;width:126px;height:auto}
-            .header-title{position:absolute;left:20px;top:70px;color:#fff;font-family:DejaVu Serif,serif;font-size:22pt;line-height:1}
-            .header-subtitle{position:absolute;left:21px;top:106px;color:#fff;font-family:DejaVu Serif,serif;font-size:8pt}
-            .header-scope{position:absolute;right:20px;top:14px;color:#e1bd70;font-size:12pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
-            .header-date-dynamic{position:absolute;right:20px;top:36px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:8.5pt;font-weight:600;text-align:right;white-space:nowrap}
-            table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:13px}
-            th{background:#1d2733;color:#fff;padding:6px 6px;text-align:left;font-size:6.8pt;text-transform:uppercase;letter-spacing:.15px}
-            th.code{width:11%}
+            @page{margin:16px 18px 50px}
+            body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:7.7pt}
+            .header{position:relative;height:108px;border-bottom:3px solid #b28a42;background-color:#07131a;background-repeat:no-repeat;background-size:cover;background-position:center center;overflow:hidden}
+            .header-shade{position:absolute;left:0;top:0;width:100%;height:108px;background:rgba(0,0,0,.23)}
+            .header-logo{position:absolute;left:16px;top:8px;width:128px;height:auto}
+            .header-title{position:absolute;left:20px;top:56px;color:#fff;font-family:DejaVu Serif,serif;font-size:21pt;line-height:1}
+            .header-subtitle{position:absolute;left:21px;top:88px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:7.5pt}
+            .header-scope{position:absolute;right:20px;top:13px;color:#e1bd70;font-size:11.5pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
+            .header-date-dynamic{position:absolute;right:20px;top:34px;color:#fff;font-size:8pt;font-weight:600;text-align:right;white-space:nowrap}
+            table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}
+            th{background:#172535;color:#fff;padding:5px 5px;text-align:left;font-size:6.2pt;text-transform:uppercase;letter-spacing:.12px}
+            th.code{width:8%}
             th.product{width:' . $productWidth . '%}
-            th.brand{width:14%}
-            th.cost-head{width:13%;text-align:right}
-            th.stock{width:13%;text-align:right}
-            th.price-head{width:14.5%;text-align:right}
-            td{padding:5px 6px;border-bottom:.45px solid #d5d9dc;vertical-align:middle;line-height:1.18;font-size:8pt}
+            th.brand{width:11%}
+            th.num-head{width:10%;text-align:right}
+            td{padding:4px 5px;border-bottom:.4px solid #d5d9dc;vertical-align:middle;line-height:1.14;font-size:7.1pt}
             tr.product-row.row-light td{background:#ffffff}
             tr.product-row.row-dark td{background:#edf0f2}
-            td.code-cell{font-family:DejaVu Sans,Arial,sans-serif;white-space:nowrap;letter-spacing:0;font-weight:normal}
-            td.num{text-align:right;white-space:nowrap;letter-spacing:0}
-            td.price{font-weight:bold;white-space:nowrap;font-size:8.3pt}
-            td.product-cell{font-family:DejaVu Sans,Arial,sans-serif;font-weight:700;letter-spacing:0;line-height:1.22;word-wrap:break-word;overflow:visible}
+            td.code-cell{white-space:nowrap}
+            td.num{text-align:right;white-space:nowrap}
+            td.price{font-weight:bold;white-space:nowrap}
+            td.product-cell{font-weight:700;word-wrap:break-word}
+            td.translation-cell{font-weight:600;word-wrap:break-word}
             td.brand-cell{word-wrap:break-word}
-            .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:7px}
-            .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:8px}
-            .offer-badge{display:inline-block;width:50px;height:12px;vertical-align:middle;margin-right:3px}
-            .terms{margin-top:10px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
-            .footer{position:fixed;left:0;right:0;bottom:-43px;height:43px;border-top:1px solid #b28a42;color:#172535;text-align:center;line-height:1.18;padding-top:5px}
-            .footer-brand{font-family:DejaVu Sans,Arial,sans-serif;font-size:10pt;font-weight:bold;letter-spacing:1.7px}
-            .footer-contact{margin-top:2px;font-size:7.5pt;font-weight:500;color:#303943}
+            .group-title td{color:#fff!important;font-weight:700;font-size:7.3pt;letter-spacing:.35px;padding:5px 7px;border-bottom:0}
+            .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:6px}
+            .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:7px}
+            .offer-badge{display:inline-block;width:47px;height:11px;vertical-align:middle;margin-left:3px}
+            .terms{margin-top:8px;color:#666;font-size:6pt;font-style:italic;text-align:center}
+            .footer{position:fixed;left:0;right:0;bottom:-36px;height:34px;border-top:1px solid #b28a42;color:#172535;text-align:center;line-height:1.16;padding-top:4px}
+            .footer-brand{font-size:9pt;font-weight:bold;letter-spacing:1.5px}
+            .footer-contact{margin-top:2px;font-size:6.8pt;font-weight:500;color:#303943}
         </style></head><body>
-        <div class="header">
-            ' . ($headerImage ? '<img class="header-photo" src="' . esc_attr($headerImage) . '" alt="">' : '') . '
+        <div class="header"' . $headerStyle . '>
             <div class="header-shade"></div>
             <img class="header-logo" src="' . esc_attr($logo) . '" alt="FRN">
             <div class="header-scope">' . esc_html($scopeKey === 'carne' ? 'CARNE' : 'PESCADO Y MARISCO') . '</div>
@@ -752,51 +758,79 @@ final class FRN_Frontend_App
         $showStock = (int) ($tariff['show_stock'] ?? 0) === 1;
         $showPrice = (int) ($tariff['show_price'] ?? 0) === 1;
         $showCost = current_user_can('frn_view_cost') && (int) ($tariff['show_cost'] ?? 0) === 1;
+        $primaryLang = (string) ($tariff['primary_lang'] ?? 'es_es');
+        $secondaryLang = (string) ($tariff['secondary_lang'] ?? '');
+        if ($secondaryLang === $primaryLang) { $secondaryLang = ''; }
+        $hasSecondary = $secondaryLang !== '';
+        $columnCount = 3 + ($hasSecondary ? 1 : 0)
+            + ($showCost ? 1 : 0) + ($showStock ? 1 : 0) + ($showPrice ? 1 : 0);
+
         $index = 0;
+        $lastGroup = null;
 
         foreach ($lines as $line) {
             if ((int) ($line['visible'] ?? 0) !== 1) { continue; }
 
+            $group = trim((string) ($line['commercial_group'] ?? ''));
+            if ((int)($line['incoming'] ?? 0) !== 1 && $group !== '' && $group !== $lastGroup) {
+                $color = sanitize_hex_color((string)($line['group_color'] ?? '')) ?: '#59636E';
+                $groupTitle = $this->group_display_name($group, $primaryLang);
+                if ($hasSecondary) {
+                    $secondaryGroup = $this->group_display_name($group, $secondaryLang);
+                    if ($secondaryGroup !== '' && strcasecmp($secondaryGroup, $groupTitle) !== 0) {
+                        $groupTitle .= ' · ' . $secondaryGroup;
+                    }
+                }
+                $html .= '<tr class="group-title"><td colspan="' . $columnCount . '" style="background:' .
+                    esc_attr($color) . '">' . esc_html($groupTitle) . '</td></tr>';
+                $lastGroup = $group;
+            }
+
             $class = $index % 2 === 0 ? 'row-light' : 'row-dark';
             $index++;
 
-            $offer = (int) $line['featured'] === 1
+            $offer = (int) ($line['featured'] ?? 0) === 1
                 ? ' <img class="offer-badge" src="' . esc_attr($this->offer_badge_data_uri()) . '" alt="OFERTA">'
                 : '';
 
+            $primaryName = $this->line_name_for_locale($line, $primaryLang);
+            $secondaryName = $hasSecondary ? $this->line_name_for_locale($line, $secondaryLang) : '';
+
             $html .= '<tr class="product-row ' . $class . '">'
                 . '<td class="code-cell">' . esc_html(wp_check_invalid_utf8((string) $line['product_code'], true)) . '</td>'
-                . '<td class="product-cell">' . esc_html(wp_check_invalid_utf8((string) $line['product_name'], true)) . $offer . '</td>'
-                . '<td class="brand-cell">' . esc_html(wp_check_invalid_utf8((string) $line['brand'], true)) . '</td>';
+                . '<td class="product-cell">' . esc_html($primaryName) . $offer . '</td>';
+
+            if ($hasSecondary) {
+                $html .= '<td class="translation-cell">' . esc_html($secondaryName) . '</td>';
+            }
+
+            $html .= '<td class="brand-cell">' . esc_html(wp_check_invalid_utf8((string) $line['brand'], true)) . '</td>';
 
             if ($showCost) {
                 $costValue = (float) ($line['display_cost'] ?? 0);
                 $cost = ((int) ($line['show_cost'] ?? 0) === 1 && $costValue > 0)
                     ? number_format($costValue, 2, ',', '.') . ' €/kg'
                     : '';
-
                 $html .= '<td class="num">' . esc_html($cost) . '</td>';
             }
 
             if ($showStock) {
-                $stock = (int) $line['show_stock']
+                $stock = (int) ($line['show_stock'] ?? 0)
                     ? $this->stock_text(
-                        (float) $line['display_stock'],
-                        (string) $tariff['stock_mode'],
-                        (int) $line['incoming'] === 1,
+                        (float) ($line['display_stock'] ?? 0),
+                        (string) ($tariff['stock_mode'] ?? 'available'),
+                        (int) ($line['incoming'] ?? 0) === 1,
                         (string) ($line['unit'] ?? '')
                     )
                     : '';
-
                 $html .= '<td class="num">' . esc_html($stock) . '</td>';
             }
 
             if ($showPrice) {
                 $priceValue = (float) ($line['display_price'] ?? 0);
-                $price = ((int) $line['show_price'] === 1 && $priceValue > 0)
+                $price = ((int) ($line['show_price'] ?? 0) === 1 && $priceValue > 0)
                     ? number_format($priceValue, 2, ',', '.') . ' €/kg'
                     : 'Consultar precio';
-
                 $html .= '<td class="num price">' . esc_html($price) . '</td>';
             }
 
@@ -804,6 +838,90 @@ final class FRN_Frontend_App
         }
 
         return $html;
+    }
+
+    private function language_label(string $locale): string
+    {
+        return match ($locale) {
+            'es_ar' => 'Argentina / original',
+            'es_es' => 'España',
+            'pt_pt' => 'Português',
+            'en' => 'English',
+            default => 'Producto',
+        };
+    }
+
+    private function line_name_for_locale(array $line, string $locale): string
+    {
+        $field = match ($locale) {
+            'es_ar' => 'name_es_ar',
+            'es_es' => 'name_es_es',
+            'pt_pt' => 'name_pt_pt',
+            'en' => 'name_en',
+            default => 'product_name',
+        };
+
+        $value = trim((string) ($line[$field] ?? ''));
+        if ($value === '') {
+            $value = trim((string) ($line['product_name'] ?? ''));
+        }
+        return wp_check_invalid_utf8($value, true);
+    }
+
+    private function group_display_name(string $group, string $locale): string
+    {
+        $key = strtoupper(trim(remove_accents($group)));
+        $maps = [
+            'es_es' => [
+                'BIFE ANCHO / TAPA DE BIFE ANCHO'=>'LOMO ALTO / TAPA DE LOMO ALTO',
+                'BIFE ANGOSTO'=>'LOMO BAJO / ENTRECOT',
+                'LOMO'=>'SOLOMILLO',
+                'CUADRIL (TAPA Y CORAZON)'=>'CADERA (PICAÑA Y CENTRO)',
+                'ASADO / COSTILLA'=>'COSTILLAR / COSTILLA',
+                'CORTES CON HUESO BLUESMOKE'=>'CORTES CON HUESO BLUESMOKE',
+                'VACIO'=>'FALDA / VACÍO',
+                'OTROS CORTES'=>'OTROS CORTES',
+            ],
+            'pt_pt' => [
+                'BIFE ANCHO / TAPA DE BIFE ANCHO'=>'LOMBO ALTO / CAPA DO LOMBO ALTO',
+                'BIFE ANGOSTO'=>'VAZIA',
+                'LOMO'=>'LOMBO',
+                'CUADRIL (TAPA Y CORAZON)'=>'ALCATRA (PICANHA E CORAÇÃO)',
+                'ASADO / COSTILLA'=>'COSTELA / ENTRECOSTO',
+                'CORTES CON HUESO BLUESMOKE'=>'CORTES COM OSSO BLUESMOKE',
+                'VACIO'=>'FRALDINHA',
+                'OTROS CORTES'=>'OUTROS CORTES',
+                'PULPO ENTERO CON VISCERAS'=>'POLVO INTEIRO COM VÍSCERAS',
+                'PULPO ENTERO LIMPIO'=>'POLVO INTEIRO LIMPO',
+                'PULPO CRUDO SIN CABEZA'=>'POLVO CRU SEM CABEÇA',
+                'PULPO COCIDO'=>'POLVO COZIDO',
+                'GAMBON'=>'CAMARÃO / GAMBÃO',
+                'VIEIRA'=>'VIEIRA',
+                'VANNAMEI'=>'VANNAMEI',
+            ],
+            'en' => [
+                'BIFE ANCHO / TAPA DE BIFE ANCHO'=>'RIBEYE / RIBEYE CAP',
+                'BIFE ANGOSTO'=>'STRIPLOIN',
+                'LOMO'=>'TENDERLOIN',
+                'CUADRIL (TAPA Y CORAZON)'=>'RUMP (RUMP CAP & HEART)',
+                'ASADO / COSTILLA'=>'RIBS / SHORT RIBS',
+                'CORTES CON HUESO BLUESMOKE'=>'BLUESMOKE BONE-IN CUTS',
+                'VACIO'=>'FLANK / THIN FLANK',
+                'OTROS CORTES'=>'OTHER CUTS',
+                'PULPO ENTERO CON VISCERAS'=>'WHOLE OCTOPUS WITH VISCERA',
+                'PULPO ENTERO LIMPIO'=>'WHOLE CLEANED OCTOPUS',
+                'PULPO CRUDO SIN CABEZA'=>'RAW OCTOPUS WITHOUT HEAD',
+                'PULPO COCIDO'=>'COOKED OCTOPUS',
+                'GAMBON'=>'KING PRAWN',
+                'VIEIRA'=>'SCALLOP',
+                'VANNAMEI'=>'VANNAMEI SHRIMP',
+            ],
+        ];
+
+        if ($locale === 'es_ar' || $locale === 'es_es' && !isset($maps['es_es'][$key])) {
+            return $group;
+        }
+        return (string)($maps[$locale][$key] ?? $group);
     }
 
     private function offer_badge_data_uri(): string
