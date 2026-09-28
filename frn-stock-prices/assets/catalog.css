@@ -535,3 +535,43 @@
 @media(max-width:620px){
   .frn-import-audit{grid-template-columns:1fr}
 }
+
+
+/* FRN Stock & Prices 1.1.15 · flujo de importación claro */
+.frn-import-steps{
+  display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px
+}
+.frn-import-steps span{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 11px;
+  border:1px solid rgba(255,255,255,.08);background:#07090a;color:#77746d;
+  font-size:9px;text-transform:uppercase;letter-spacing:.07em
+}
+.frn-import-steps b{
+  display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border:1px solid currentColor;border-radius:50%;font-size:9px
+}
+.frn-import-steps span.is-active{border-color:var(--frn-gold);color:var(--frn-gold-light)}
+.frn-import-steps span.is-done{border-color:rgba(97,184,120,.45);color:#9fc7a7}
+.frn-analysis-ready{
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding:18px;border:1px solid rgba(97,184,120,.45);background:rgba(50,120,70,.08)
+}
+.frn-analysis-ready>div{display:grid;gap:5px}
+.frn-analysis-ready small{color:#9fc7a7;text-transform:uppercase;letter-spacing:.1em;font-size:8px}
+.frn-analysis-ready strong{font:400 20px Georgia,serif;color:var(--frn-ivory)}
+.frn-analysis-ready span{color:#aaa69e;font-size:10px}
+.frn-secondary-link{
+  display:inline-flex;align-items:center;min-height:40px;padding:0 13px;
+  border:1px solid rgba(180,138,69,.45);color:var(--frn-gold-light)!important;
+  font-size:9px;font-weight:800;text-transform:uppercase;white-space:nowrap
+}
+.frn-stock-audit{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;
+  margin:0 0 18px;padding:14px 16px;border-left:3px solid #2f6659;
+  background:#080a0b;color:#aaa69e
+}
+.frn-stock-audit strong{color:var(--frn-ivory)}
+.frn-stock-audit small{width:100%;color:#77746d}
+@media(max-width:760px){
+  .frn-analysis-ready{align-items:flex-start;flex-direction:column}
+}
