@@ -36,10 +36,23 @@ $labels = [
                         <?php echo esc_html($item['help']); ?>
                         <input type="file" name="<?php echo esc_attr($item['field']); ?>" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
                     </label>
+                    <?php if (in_array($key, ['carne','pescado'], true)) :
+                        $position = (string)get_option('frn_pdf_header_position_' . $key, 'center');
+                    ?>
+                        <label>
+                            Encuadre vertical de la fotografía
+                            <select name="header_position_<?php echo esc_attr($key); ?>">
+                                <option value="top" <?php selected($position,'top'); ?>>Mostrar parte superior</option>
+                                <option value="center" <?php selected($position,'center'); ?>>Centrar fotografía</option>
+                                <option value="bottom" <?php selected($position,'bottom'); ?>>Mostrar parte inferior</option>
+                            </select>
+                        </label>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
 
+        <p class="frn-save-note">La cabecera PDF tiene ahora unos 34 mm de alto. La fotografía mantiene su proporción: el selector de encuadre decide qué zona se ve sin estirarla.</p>
         <p class="frn-save-note">No hace falta volver a subir una imagen que ya aparece como “Cargada y validada”. Solo selecciona el archivo que quieras sustituir.</p>
         <button type="submit">Guardar y validar diseño PDF</button>
     </form>
