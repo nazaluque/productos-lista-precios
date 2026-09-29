@@ -1,5 +1,16 @@
 # FRN Stock & Prices
 
+## 1.1.18 — Corrección de renderizado tipográfico PDF
+
+- Versión de mantenimiento visual; no modifica catálogo, precios, ofertas, traducciones ni categorías.
+- Confirma DejaVu Sans/Serif embebidas sin subsetting y mantiene UTF-8 completo.
+- Refuerza el tamaño mínimo de texto de tabla y encabezados para evitar artefactos a bajos niveles de zoom.
+- Elimina letter-spacing fino de encabezados y reduce el de bandas de categoría.
+- Refuerza códigos y marcas para mejorar rasterización en visores PDF.
+- Reduce la marca de agua de 300 a 250 pt y su opacidad de 5,5% a 1,8% para minimizar interferencia de transparencia sobre texto.
+- Mantiene cabecera, fotografías, categorías, idiomas, precios, OFERTA y disposición A4 apaisada.
+- No contiene ninguna migración de datos nueva: las tarifas ya guardadas se pueden volver a exportar directamente.
+
 ## 1.1.17 — Maestro de categorías + asignación obligatoria + header más alto
 
 - Añade un maestro canónico de categorías comerciales por familia.
