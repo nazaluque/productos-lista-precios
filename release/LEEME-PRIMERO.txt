@@ -1,56 +1,53 @@
-FRN · PAQUETE COMPLETO v0.5
-===========================
+FRN · PAQUETE v1.1.18 · CORRECCIÓN DE RENDER PDF
+================================================
 
-Este paquete contiene exactamente dos plugins instalables y un Excel maestro.
-No instales el archivo FRN-PACK-COMPLETO-v0.5.zip directamente en WordPress:
-primero ábrelo y utiliza los archivos numerados de su interior.
+SOLO PARA frnatlantico.es
+NO TOCAR frnatlantico.com
 
-PASO 1 · ACTUALIZAR STOCK Y PRECIOS
------------------------------------
-En WordPress ve a Plugins > Añadir plugin > Subir plugin.
-Instala 01-INSTALAR-FRN-STOCK-PRECIOS-v0.5.0.zip.
-Si WordPress pregunta si deseas reemplazar la versión actual, confirma.
-Activa el plugin.
+IMPORTANTE
+----------
+Esta versión NO modifica:
+- precios;
+- ofertas;
+- stock;
+- categorías;
+- traducciones;
+- tarifas guardadas.
 
-PASO 2 · INSTALAR LA NUEVA PORTADA
-----------------------------------
-En Plugins > Añadir plugin > Subir plugin instala
-02-INSTALAR-FRN-HOME-v1.0.0.zip y actívalo.
+No es necesario volver a cargar el Excel ni repetir el trabajo comercial.
+Instala el plugin y vuelve a descargar la MISMA tarifa guardada.
 
-Este segundo plugin cambia solamente el Home. Incluye la foto compuesta,
-el menú Inicio / Productos, stock y precios / Pescado-Marisco / Carne,
-el teléfono y los botones de WhatsApp.
+PROBLEMA CORREGIDO
+------------------
+Algunos visores mostraban pequeños artefactos o letras aparentemente
+“borradas” en texto de 6-7 pt, especialmente con la marca de agua
+transparente superpuesta.
 
-PASO 3 · IMPORTAR LOS PRODUCTOS
--------------------------------
-En el menú izquierdo abre FRN Stock.
+El PDF original contiene el texto completo y las fuentes están embebidas.
+La 1.1.18 refuerza la salida gráfica para que sea más estable entre visores.
 
-1. Sube 03-IMPORTAR-FRN-CATALOGO-v0.4.xlsx.
-2. Pulsa Previsualizar las dos categorías.
-3. Comprueba 34 filas de Carne y 46 de Pescado / Marisco.
-4. Pulsa Publicar Carne y Pescado / Marisco.
+CAMBIOS
+-------
+- Texto de tabla: 7,1 pt -> 7,6 pt.
+- Encabezados: 6,2 pt -> 7 pt.
+- Código con peso 600.
+- Menos letter-spacing.
+- Marca de agua: 300 pt -> 250 pt.
+- Opacidad marca de agua: 5,5% -> 1,8%.
+- Mantiene DejaVu Sans/Serif embebidas y sin font subsetting.
 
-Resultado esperado: 80 referencias visibles. Los productos sin precio se
-muestran como «Consultar precio» y los que no tienen stock como «Consultar stock».
+PRUEBA
+------
+1. Instalar v1.1.18 sustituyendo v1.1.17.
+2. NO importar Excel.
+3. NO crear una tarifa nueva.
+4. Abrir la tarifa que ya corregiste.
+5. Descargar otra vez el PDF.
+6. Revisar especialmente:
+   - CÓDIGO;
+   - ESPAÑA;
+   - nombres con Ñ/acentos;
+   - códigos C00028/C00500/C00700;
+   - texto sobre la zona de marca de agua.
 
-EDICIÓN FÁCIL
--------------
-En FRN Stock puedes cambiar código, marca, producto, kilos y precio.
-La columna Visible tiene un selector Sí/No. Elige No solo si quieres ocultar
-esa referencia. Después pulsa el botón Guardar cambios de la categoría.
-
-PASO 4 · VER Y COMPROBAR
-------------------------
-Abre estas direcciones:
-- https://frnatlantico.es/
-- https://frnatlantico.es/stock/
-- https://frnatlantico.es/stock/pescado-marisco/
-- https://frnatlantico.es/stock/carne/
-
-Si sigues viendo la portada anterior, limpia la caché de WordPress/hosting y
-abre la web en una ventana privada. No necesitas tocar el tema ni crear páginas.
-
-ACTUALIZACIÓN SEMANAL
----------------------
-Cada lunes usa el mismo Excel maestro actualizado y realiza una sola importación.
-Siempre previsualiza las dos categorías antes de publicar.
+Versión de este paquete: 1.1.18
