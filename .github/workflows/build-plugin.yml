@@ -27,9 +27,9 @@ jobs:
           tools: composer:v2
       - name: Validate PHP syntax
         run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Validate FRN 1.1.17 contract
+      - name: Validate FRN 1.1.18 contract
         run: |
-          grep -q "Version: 1.1.17" frn-stock-prices/frn-stock-prices.php
+          grep -q "Version: 1.1.18" frn-stock-prices/frn-stock-prices.php
           grep -q "frn_product_history" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "frn_front_preview_stock" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "frn_front_user_save" frn-stock-prices/includes/class-frn-frontend-app.php
@@ -52,19 +52,21 @@ jobs:
           grep -q "Maestro cerrado" frn-stock-prices/templates/partials/app-translations.php
           grep -q "frn_pdf_header_position_" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "height:128px" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "font-size:7.6pt" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "set_opacity(0.018)" frn-stock-prices/includes/class-frn-frontend-app.php
       - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
       - name: Create clear installable pack
         run: |
           mkdir -p build
-          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.17.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
-          zip -r build/02-INSTALAR-FRN-HOME-v1.1.17.zip frn-home
+          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v1.1.18.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
+          zip -r build/02-INSTALAR-FRN-HOME-v1.1.18.zip frn-home
           cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
           cd build
-          zip -r ../FRN-PLUGINS-v1.1.17.zip .
+          zip -r ../FRN-PLUGINS-v1.1.18.zip .
       - uses: actions/upload-artifact@v4
         with:
-          name: FRN-PLUGINS-v1.1.17
-          path: FRN-PLUGINS-v1.1.17.zip
+          name: FRN-PLUGINS-v1.1.18
+          path: FRN-PLUGINS-v1.1.18.zip
           if-no-files-found: error
