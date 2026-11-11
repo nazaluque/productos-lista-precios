@@ -39,6 +39,9 @@ final class FRN_Frontend_App
         add_action('admin_post_frn_front_save_groups', [$this, 'save_groups']);
         add_action('admin_post_frn_front_customer_save', [$this, 'customer_save']);
         add_action('admin_post_frn_front_order_save', [$this, 'order_save']);
+        add_action('admin_post_frn_front_order_pdf', [$this, 'order_pdf']);
+        add_action('admin_post_frn_front_order_send', [$this, 'order_send']);
+        add_action('admin_post_frn_front_order_email_settings', [$this, 'order_email_settings_save']);
     }
 
     public function render(): void
@@ -85,6 +88,12 @@ final class FRN_Frontend_App
             'canManageOrders' => current_user_can('frn_manage_orders'),
             'canManageCustomers' => current_user_can('frn_manage_customers'),
             'canSendOrders' => current_user_can('frn_send_orders'),
+            'orderEmailSettings' => [
+                'from_name'=>(string)get_option('frn_order_from_name','FRN Atlántico'),
+                'from_email'=>(string)get_option('frn_order_from_email',''),
+                'reply_to'=>(string)get_option('frn_order_reply_to',''),
+                'internal_recipients'=>(string)get_option('frn_order_internal_recipients',''),
+            ],
         ];
 
         extract($data, EXTR_SKIP);
@@ -1136,6 +1145,201 @@ final class FRN_Frontend_App
         };
     }
 
+    public function order_pdf(): void
+    {
+        $id = absint($_GET['order_id'] ?? 0);
+        $this->guard_get('frn_front_order_pdf_' . $id, 'frn_manage_orders');
+
+        $order = $this->orders->get_order($id);
+        $items = $this->orders->get_items($id);
+        if (!$order) { wp_die('Documento no encontrado.', 404); }
+
+        $bytes = $this->order_pdf_bytes($order, $items);
+        $filename = sanitize_file_name('FRN-' . (string)$order['document_number'] . '.pdf');
+
+        nocache_headers();
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($bytes));
+        echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        exit;
+    }
+
+    public function order_send(): void
+    {
+        $id = absint($_POST['order_id'] ?? 0);
+        $this->guard_post('frn_front_order_send_' . $id, 'frn_send_orders');
+
+        $order = $this->orders->get_order($id);
+        $items = $this->orders->get_items($id);
+        if (!$order) {
+            $this->redirect(['tab'=>'pedidos','error'=>rawurlencode('Documento no encontrado.')]);
+        }
+
+        $rawRecipients = sanitize_text_field((string)($_POST['recipients'] ?? ''));
+        $recipientParts = preg_split('/[;,\s]+/', $rawRecipients) ?: [];
+        $recipients = [];
+        foreach ($recipientParts as $candidate) {
+            $email = sanitize_email($candidate);
+            if ($email !== '' && is_email($email)) { $recipients[] = $email; }
+        }
+        $recipients = array_values(array_unique($recipients));
+        if (!$recipients) {
+            $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode('Indica al menos un correo destinatario válido.')]);
+        }
+
+        $defaultSubject = ((string)$order['document_type'] === 'proforma' ? 'Proforma ' : 'Pedido ')
+            . (string)$order['document_number'] . ' · ' . (string)$order['customer_company'];
+        $subject = sanitize_text_field((string)($_POST['subject'] ?? $defaultSubject));
+        if ($subject === '') { $subject = $defaultSubject; }
+
+        $body = sanitize_textarea_field((string)($_POST['message'] ?? ''));
+        if ($body === '') {
+            $body = "Se adjunta " .
+                ((string)$order['document_type'] === 'proforma' ? 'la proforma comercial' : 'el pedido comercial') .
+                " " . (string)$order['document_number'] . ".\n\n" .
+                "Cliente: " . (string)$order['customer_company'] . "\n" .
+                "FRN Atlántico";
+        }
+
+        try {
+            $bytes = $this->order_pdf_bytes($order, $items);
+        } catch (Throwable $e) {
+            $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode($e->getMessage())]);
+        }
+
+        $tmp = wp_tempnam('frn-order-' . $id . '.pdf');
+        if (!$tmp || file_put_contents($tmp, $bytes) === false) {
+            $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode('No se pudo preparar el PDF temporal para el envío.')]);
+        }
+
+        $headers = ['Content-Type: text/plain; charset=UTF-8'];
+        $fromName = sanitize_text_field((string)get_option('frn_order_from_name','FRN Atlántico'));
+        $fromEmail = sanitize_email((string)get_option('frn_order_from_email',''));
+        $replyTo = sanitize_email((string)get_option('frn_order_reply_to',''));
+
+        if ($fromEmail !== '' && is_email($fromEmail)) {
+            $headers[] = 'From: ' . ($fromName !== '' ? $fromName : 'FRN Atlántico') . ' <' . $fromEmail . '>';
+        }
+        if ($replyTo !== '' && is_email($replyTo)) {
+            $headers[] = 'Reply-To: ' . $replyTo;
+        }
+
+        $sent = wp_mail(
+            $recipients,
+            $subject,
+            $body,
+            $headers,
+            [$tmp]
+        );
+        @unlink($tmp);
+
+        if (!$sent) {
+            $this->orders->log($id, 'email_error', 'wp_mail no confirmó el envío a: ' . implode(', ', $recipients));
+            $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode('WordPress no pudo confirmar el envío del correo. El documento sigue guardado.')]);
+        }
+
+        $this->orders->update_status($id, 'enviado');
+        $this->orders->log($id, 'enviado', 'Correo enviado a: ' . implode(', ', $recipients));
+        $this->redirect(['tab'=>'pedido','id'=>$id,'order_sent'=>1]);
+    }
+
+    public function order_email_settings_save(): void
+    {
+        $this->guard_post('frn_front_order_email_settings', 'frn_manage_users');
+
+        $fromName = sanitize_text_field((string)($_POST['from_name'] ?? 'FRN Atlántico'));
+        $fromEmail = sanitize_email((string)($_POST['from_email'] ?? ''));
+        $replyTo = sanitize_email((string)($_POST['reply_to'] ?? ''));
+        $recipients = sanitize_text_field((string)($_POST['internal_recipients'] ?? ''));
+
+        update_option('frn_order_from_name', $fromName, false);
+        update_option('frn_order_from_email', $fromEmail, false);
+        update_option('frn_order_reply_to', $replyTo, false);
+        update_option('frn_order_internal_recipients', $recipients, false);
+
+        $this->redirect(['tab'=>'pedidos','order_email_settings_saved'=>1]);
+    }
+
+    private function order_pdf_bytes(array $order, array $items): string
+    {
+        $autoload = FRN_SP_PATH . 'vendor/autoload.php';
+        if (!file_exists($autoload)) {
+            throw new RuntimeException('Falta la librería PDF en el paquete instalado.');
+        }
+        require_once $autoload;
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isFontSubsettingEnabled', false);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->loadHtml($this->order_pdf_html($order, $items), 'UTF-8');
+        $dompdf->render();
+        return $dompdf->output();
+    }
+
+    private function order_pdf_html(array $order, array $items): string
+    {
+        $logo = $this->pdf_branding_data_uri('logo');
+        $type = (string)$order['document_type'] === 'proforma' ? 'PROFORMA' : 'PEDIDO';
+        $company = esc_html((string)get_option('frn_tariff_company','FRN Atlántico'));
+        $address = esc_html((string)get_option('frn_tariff_address',''));
+        $phone = esc_html((string)get_option('frn_tariff_phone',''));
+        $email = esc_html((string)get_option('frn_tariff_email',''));
+        $web = esc_html((string)get_option('frn_tariff_web','www.frnatlantico.com'));
+
+        $rows = '';
+        foreach ($items as $item) {
+            $qty = (float)$item['quantity'];
+            $kg = (float)$item['total_kg'];
+            $presentation = [];
+            if ((float)$item['pallets'] > 0) { $presentation[] = number_format((float)$item['pallets'], 2, ',', '.') . ' pallets'; }
+            if ((float)$item['boxes'] > 0) { $presentation[] = number_format((float)$item['boxes'], 2, ',', '.') . ' cajas'; }
+            if (!$presentation) { $presentation[] = number_format($qty, 3, ',', '.') . ' ' . esc_html((string)$item['sale_unit']); }
+
+            $rows .= '<tr>'
+                . '<td>' . esc_html((string)$item['product_code']) . '</td>'
+                . '<td><strong>' . esc_html((string)$item['product_name']) . '</strong><br><span>' . esc_html((string)$item['brand']) . '</span></td>'
+                . '<td>' . implode(' · ', array_map('esc_html', $presentation)) . '</td>'
+                . '<td class="num">' . ($kg > 0 ? number_format($kg, 3, ',', '.') . ' kg' : '—') . '</td>'
+                . '<td class="num">' . number_format((float)$item['unit_price'], 2, ',', '.') . ' €</td>'
+                . '<td class="num total">' . number_format((float)$item['line_total'], 2, ',', '.') . ' €</td>'
+                . '</tr>';
+        }
+
+        $logoHtml = $logo !== '' ? '<img src="' . esc_attr($logo) . '" class="logo" alt="FRN">' : '<div class="wordmark">FRN ATLÁNTICO</div>';
+        $requested = !empty($order['requested_date']) ? mysql2date('d/m/Y', (string)$order['requested_date'] . ' 00:00:00') : '—';
+
+        return '<!doctype html><html><head><meta charset="UTF-8"><style>
+            @page{margin:28px 30px 38px}
+            body{font-family:DejaVu Sans,Arial,sans-serif;color:#16191c;font-size:10px}
+            .top{display:table;width:100%;border-bottom:3px solid #a9823f;padding-bottom:14px;margin-bottom:18px}
+            .top>div{display:table-cell;vertical-align:middle}
+            .logo{max-width:145px;max-height:54px}.wordmark{font-size:24px;font-weight:700;color:#a9823f}
+            .doc{text-align:right}.doc h1{margin:0;color:#111;font-size:25px;letter-spacing:1px}.doc strong{display:block;margin-top:5px;color:#a9823f;font-size:13px}
+            .meta{display:table;width:100%;margin-bottom:18px}.box{display:table-cell;width:50%;padding:12px;border:1px solid #d8d2c6;vertical-align:top}
+            .box h2{margin:0 0 8px;font-size:10px;color:#a9823f;text-transform:uppercase;letter-spacing:.8px}
+            .box p{margin:3px 0;line-height:1.45}.muted{color:#666}
+            table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#0d1115;color:#fff;padding:8px 6px;text-align:left;font-size:8px;text-transform:uppercase}
+            td{padding:8px 6px;border-bottom:1px solid #ddd7cd;vertical-align:top}td span{color:#777;font-size:8px}.num{text-align:right;white-space:nowrap}.total{font-weight:700}
+            .summary{margin-top:14px;text-align:right;font-size:14px}.summary strong{color:#a9823f;font-size:18px}
+            .notes{margin-top:18px;padding:12px;background:#f5f2ec;border-left:3px solid #a9823f;line-height:1.5}
+            .footer{position:fixed;bottom:-18px;left:0;right:0;border-top:1px solid #d8d2c6;padding-top:7px;color:#777;font-size:8px;text-align:center}
+        </style></head><body>'
+        . '<div class="top"><div>' . $logoHtml . '</div><div class="doc"><h1>' . $type . '</h1><strong>' . esc_html((string)$order['document_number']) . '</strong><span>Fecha: ' . esc_html(mysql2date('d/m/Y',(string)$order['created_at'])) . '</span></div></div>'
+        . '<div class="meta"><div class="box"><h2>Cliente</h2><p><strong>' . esc_html((string)$order['customer_company']) . '</strong></p><p>CIF/VAT: ' . esc_html((string)$order['customer_vat']) . '</p><p>Contacto: ' . esc_html((string)$order['customer_contact']) . '</p><p>Tel: ' . esc_html((string)$order['customer_phone']) . '</p><p>Email: ' . esc_html((string)$order['customer_email']) . '</p></div>'
+        . '<div class="box"><h2>Entrega</h2><p>' . esc_html((string)$order['delivery_address']) . '</p><p>Fecha solicitada: ' . esc_html($requested) . '</p><p class="muted">' . nl2br(esc_html((string)$order['delivery_notes'])) . '</p></div></div>'
+        . '<table><thead><tr><th>Código</th><th>Producto / Marca</th><th>Presentación</th><th class="num">Kg</th><th class="num">Precio</th><th class="num">Importe</th></tr></thead><tbody>' . $rows . '</tbody></table>'
+        . '<div class="summary">Total mercancía: <strong>' . number_format((float)$order['subtotal'],2,',','.') . ' €</strong></div>'
+        . ((string)$order['notes'] !== '' ? '<div class="notes"><strong>Observaciones</strong><br>' . nl2br(esc_html((string)$order['notes'])) . '</div>' : '')
+        . '<div class="footer">' . $company . ($address !== '' ? ' · ' . $address : '') . ($phone !== '' ? ' · ' . $phone : '') . ($email !== '' ? ' · ' . $email : '') . ($web !== '' ? ' · ' . $web : '') . '</div>'
+        . '</body></html>';
+    }
+
     public function customer_save(): void
     {
         $this->guard_post('frn_front_customer_save', 'frn_manage_customers');
@@ -1321,6 +1525,12 @@ final class FRN_Frontend_App
         }
         if (isset($_GET['order_saved'])) {
             $messages[] = ['success', 'Pedido / proforma guardado correctamente.'];
+        }
+        if (isset($_GET['order_sent'])) {
+            $messages[] = ['success', 'Correo enviado correctamente con el PDF adjunto.'];
+        }
+        if (isset($_GET['order_email_settings_saved'])) {
+            $messages[] = ['success', 'Configuración de correo de pedidos guardada.'];
         }
         if (!empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
