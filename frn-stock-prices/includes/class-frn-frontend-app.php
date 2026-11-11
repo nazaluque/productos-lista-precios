@@ -669,29 +669,7 @@ final class FRN_Frontend_App
         $dompdf->loadHtml($this->pdf_html($tariff, $lines), 'UTF-8');
         $dompdf->render();
 
-        // Watermark and page numbering are drawn by Dompdf's canvas, outside
-        // the HTML layout. This makes them deterministic on every page.
-        $canvas = $dompdf->getCanvas();
-        $watermarkPath = $this->pdf_branding_path('logo');
-        if ($watermarkPath !== '') {
-            $watermarkSize = @getimagesize($watermarkPath);
-            $watermarkRatio = ($watermarkSize && !empty($watermarkSize[0]))
-                ? ((float) $watermarkSize[1] / (float) $watermarkSize[0])
-                : 0.42;
-            $watermarkWidth = 250.0;
-            $watermarkHeight = $watermarkWidth * $watermarkRatio;
-            $watermarkX = (841.89 - $watermarkWidth) / 2;
-            $watermarkY = (595.28 - $watermarkHeight) / 2;
-
-            $canvas->page_script(
-                static function ($pageNumber, $pageCount, $canvas, $fontMetrics) use ($watermarkPath, $watermarkX, $watermarkY, $watermarkWidth, $watermarkHeight): void {
-                    $canvas->set_opacity(0.018);
-                    $canvas->image($watermarkPath, $watermarkX, $watermarkY, $watermarkWidth, $watermarkHeight);
-                    $canvas->set_opacity(1.0);
-                }
-            );
-        }
-
+                // Page numbers remain on the canvas; the watermark is part of the HTML layer below the text.
         $fontMetrics = $dompdf->getFontMetrics();
         $pageFont = $fontMetrics->getFont('DejaVu Sans', 'normal');
         if ($pageFont) {
@@ -873,8 +851,10 @@ final class FRN_Frontend_App
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
             @page{margin:16px 18px 50px}
-            body{font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8pt}
-            .header{position:relative;height:128px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
+            body{position:relative;font-family:DejaVu Sans,Arial,sans-serif;color:#161a1e;font-size:8pt}
+            .pdf-watermark{position:fixed;left:50%;top:180px;width:250px;margin-left:-125px;opacity:.018;z-index:0}
+            .pdf-watermark img{display:block;width:100%;height:auto}
+            .header{position:relative;z-index:1;height:128px;border-bottom:3px solid #b28a42;background-color:#07131a;overflow:hidden}
             .header-photo{position:absolute;left:0;top:' . $headerTop . ';width:100%;height:auto}
             .header-shade{position:absolute;left:0;top:0;width:100%;height:128px;background:rgba(0,0,0,.30)}
             .header-logo{position:absolute;left:16px;top:8px;width:128px;height:auto}
@@ -882,15 +862,15 @@ final class FRN_Frontend_App
             .header-subtitle{position:absolute;left:21px;top:102px;color:#fff;font-family:DejaVu Sans,Arial,sans-serif;font-size:7.5pt}
             .header-scope{position:absolute;right:20px;top:13px;color:#e1bd70;font-size:11.5pt;font-weight:bold;letter-spacing:.8px;text-transform:uppercase}
             .header-date-dynamic{position:absolute;right:20px;top:34px;color:#fff;font-size:8pt;font-weight:600;text-align:right;white-space:nowrap}
-            table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}
+            table{position:relative;z-index:1;width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}
             th{background:#172535;color:#fff;padding:5.4px 5px;text-align:left;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0}
             th.code{width:8%}
             th.product{width:' . $productWidth . '%}
             th.brand{width:11%}
             th.num-head{width:10%;text-align:right}
             td{padding:4.4px 5px;border-bottom:.4px solid #d5d9dc;vertical-align:middle;line-height:1.18;font-size:7.6pt}
-            tr.product-row.row-light td{background:#ffffff}
-            tr.product-row.row-dark td{background:#edf0f2}
+            tr.product-row.row-light td{background:rgba(255,255,255,.94)}
+            tr.product-row.row-dark td{background:rgba(237,240,242,.94)}
             td.code-cell{white-space:nowrap;font-weight:600}
             td.num{text-align:right;white-space:nowrap}
             td.price{font-weight:bold;white-space:nowrap}
@@ -901,11 +881,12 @@ final class FRN_Frontend_App
             .incoming-title td{background:#111820!important;color:#d9b563;font-weight:bold;letter-spacing:1px;padding:6px}
             .incoming-empty td{background:#f4f0e8;color:#777;font-style:italic;padding:7px}
             .offer-badge{display:inline-block;width:47px;height:11px;vertical-align:middle;margin-left:3px}
-            .terms{margin-top:8px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
-            .footer{position:fixed;left:0;right:0;bottom:-36px;height:34px;border-top:1px solid #b28a42;color:#172535;text-align:center;line-height:1.16;padding-top:4px}
+            .terms{position:relative;z-index:1;margin-top:8px;color:#666;font-size:6.5pt;font-style:italic;text-align:center}
+            .footer{position:fixed;left:0;right:0;bottom:-36px;z-index:1;height:34px;border-top:1px solid #b28a42;color:#172535;text-align:center;line-height:1.16;padding-top:4px}
             .footer-brand{font-size:9pt;font-weight:bold;letter-spacing:1.5px}
             .footer-contact{margin-top:2px;font-size:6.8pt;font-weight:500;color:#303943}
         </style></head><body>
+        <div class="pdf-watermark"><img src="' . esc_attr($logo) . '" alt=""></div>
         <div class="header">
             ' . ($headerImage ? '<img class="header-photo ' . esc_attr($scopeKey) . '" src="' . esc_attr($headerImage) . '" alt="">' : '') . '
             <div class="header-shade"></div>
