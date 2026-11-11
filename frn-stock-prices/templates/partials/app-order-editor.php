@@ -78,7 +78,8 @@ foreach ($products as $p) {
         <div><small>CIF / VAT</small><strong data-field="vat"><?php echo esc_html((string)($order['customer_vat'] ?? '—')); ?></strong></div>
         <div><small>Contacto</small><strong data-field="contact"><?php echo esc_html((string)($order['customer_contact'] ?? '—')); ?></strong></div>
         <div><small>Email</small><strong data-field="email"><?php echo esc_html((string)($order['customer_email'] ?? '—')); ?></strong></div>
-        <div class="frn-span-2"><small>Entrega</small><strong data-field="delivery"><?php echo esc_html((string)($order['delivery_address'] ?? '—')); ?></strong></div>
+        <div class="frn-span-2"><small>Dirección fiscal de la empresa</small><strong data-field="billing"><?php echo esc_html((string)($order['billing_address'] ?? '—')); ?></strong></div>
+        <div class="frn-span-2"><small>Dirección de entrega</small><strong data-field="delivery"><?php echo esc_html((string)($order['delivery_address'] ?? '—')); ?></strong></div>
       </div>
     </section>
 
