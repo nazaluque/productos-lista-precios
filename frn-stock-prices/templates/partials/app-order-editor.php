@@ -177,6 +177,48 @@ foreach ($products as $p) {
       </div>
     </div>
   </form>
+
+  <?php if ($isExisting) :
+    $pdfUrl = wp_nonce_url(
+      add_query_arg(['action'=>'frn_front_order_pdf','order_id'=>(int)$order['id']], admin_url('admin-post.php')),
+      'frn_front_order_pdf_' . (int)$order['id']
+    );
+    $defaultRecipients = $type === 'proforma'
+      ? (string)($order['customer_email'] ?? '')
+      : (string)($orderEmailSettings['internal_recipients'] ?? '');
+    $defaultSubject = ($type === 'proforma' ? 'Proforma ' : 'Pedido ')
+      . (string)$order['document_number'] . ' · ' . (string)$order['customer_company'];
+  ?>
+  <section class="frn-order-send-panel">
+    <div class="frn-card-heading">
+      <div><small>Documento listo</small><h2>PDF y envío</h2></div>
+      <p>Descarga el documento o envíalo por correo con el PDF adjunto. El envío queda registrado en el histórico.</p>
+    </div>
+
+    <div class="frn-order-send-actions">
+      <a class="frn-pdf-button" href="<?php echo esc_url($pdfUrl); ?>">Descargar PDF</a>
+
+      <?php if ($canSendOrders) : ?>
+      <form method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-order-email-form">
+        <input type="hidden" name="action" value="frn_front_order_send">
+        <input type="hidden" name="order_id" value="<?php echo (int)$order['id']; ?>">
+        <?php wp_nonce_field('frn_front_order_send_' . (int)$order['id']); ?>
+        <label>Destinatarios
+          <input type="text" name="recipients" required value="<?php echo esc_attr($defaultRecipients); ?>" placeholder="correo@empresa.com; otro@empresa.com">
+          <small>Separa varios correos con coma o punto y coma.</small>
+        </label>
+        <label>Asunto
+          <input type="text" name="subject" value="<?php echo esc_attr($defaultSubject); ?>">
+        </label>
+        <label>Mensaje
+          <textarea name="message" rows="5"><?php echo esc_textarea("Se adjunta " . ($type === 'proforma' ? 'la proforma comercial' : 'el pedido comercial') . " " . (string)$order['document_number'] . ".\n\nCliente: " . (string)$order['customer_company'] . "\n\nUn saludo,\nFRN Atlántico"); ?></textarea>
+        </label>
+        <button type="submit">Enviar PDF por email</button>
+      </form>
+      <?php endif; ?>
+    </div>
+  </section>
+  <?php endif; ?>
 </section>
 
 <script type="application/json" id="frn-order-customers-data"><?php echo wp_json_encode($customerPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
