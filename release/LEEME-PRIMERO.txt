@@ -1,53 +1,31 @@
-FRN · PAQUETE v1.1.18 · CORRECCIÓN DE RENDER PDF
-================================================
+FRN Stock & Prices · v1.3.2
+CORRECCIÓN DE PDF Y PORTUGUÉS
 
 SOLO PARA frnatlantico.es
-NO TOCAR frnatlantico.com
+NO INSTALAR EN frnatlantico.com
 
-IMPORTANTE
-----------
-Esta versión NO modifica:
-- precios;
-- ofertas;
-- stock;
-- categorías;
-- traducciones;
-- tarifas guardadas.
-
-No es necesario volver a cargar el Excel ni repetir el trabajo comercial.
-Instala el plugin y vuelve a descargar la MISMA tarifa guardada.
-
-PROBLEMA CORREGIDO
-------------------
-Algunos visores mostraban pequeños artefactos o letras aparentemente
-“borradas” en texto de 6-7 pt, especialmente con la marca de agua
-transparente superpuesta.
-
-El PDF original contiene el texto completo y las fuentes están embebidas.
-La 1.1.18 refuerza la salida gráfica para que sea más estable entre visores.
+CONTENIDO
+---------
+El archivo FRN-STOCK-PRECIOS-v1.3.2.zip contiene directamente la carpeta
+frn-stock-prices y se puede subir en WordPress > Plugins > Añadir plugin.
+No es un ZIP contenedor ni está dentro de otro ZIP.
 
 CAMBIOS
 -------
-- Texto de tabla: 7,1 pt -> 7,6 pt.
-- Encabezados: 6,2 pt -> 7 pt.
-- Código con peso 600.
-- Menos letter-spacing.
-- Marca de agua: 300 pt -> 250 pt.
-- Opacidad marca de agua: 5,5% -> 1,8%.
-- Mantiene DejaVu Sans/Serif embebidas y sin font subsetting.
+- La marca de agua se dibuja detrás del contenido. Ya no cubre los códigos,
+  encabezados ni las letras pequeñas del listado.
+- Se conserva el formato A4 apaisado, la cabecera, los idiomas, los precios,
+  las ofertas, el stock, las categorías y la paginación.
+- El catálogo, las traducciones, los precios y el stock guardados no se
+  reinician ni se vuelven a importar.
+- Para imprimir los nuevos nombres portugueses, generar una tarifa Portugal
+  desde el maestro vigente después de instalar esta versión. Las tarifas
+  históricas siguen disponibles sin cambios.
 
-PRUEBA
-------
-1. Instalar v1.1.18 sustituyendo v1.1.17.
-2. NO importar Excel.
-3. NO crear una tarifa nueva.
-4. Abrir la tarifa que ya corregiste.
-5. Descargar otra vez el PDF.
-6. Revisar especialmente:
-   - CÓDIGO;
-   - ESPAÑA;
-   - nombres con Ñ/acentos;
-   - códigos C00028/C00500/C00700;
-   - texto sobre la zona de marca de agua.
+PRUEBA RECOMENDADA
+------------------
+Abrir la tarifa portuguesa nueva y revisar los códigos C, la letra T, ESPAÑA,
+los acentos y la zona donde aparecía la marca de agua. Comparar con el PDF
+anterior en el mismo visor.
 
-Versión de este paquete: 1.1.18
+Versión del plugin: 1.3.2
