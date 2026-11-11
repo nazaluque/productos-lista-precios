@@ -209,6 +209,7 @@ final class FRN_Order_Repository
         $lines = self::items_table();
         $now = current_time('mysql');
 
+        $isNew = $orderId <= 0;
         $wpdb->query('START TRANSACTION');
         try {
             $subtotal = 0.0;
@@ -271,13 +272,29 @@ final class FRN_Order_Repository
                 if ($ok === false) { throw new RuntimeException($wpdb->last_error ?: 'No se pudo guardar una línea del pedido.'); }
             }
 
-            $this->log($orderId, $orderId > 0 ? 'guardado' : 'creado', 'Documento guardado.');
+            $this->log($orderId, $isNew ? 'creado' : 'guardado', $isNew ? 'Documento creado.' : 'Documento guardado.');
             $wpdb->query('COMMIT');
             return $orderId;
         } catch (Throwable $e) {
             $wpdb->query('ROLLBACK');
             throw $e;
         }
+    }
+
+    public function update_status(int $orderId, string $status): void
+    {
+        global $wpdb;
+        if ($orderId <= 0) { return; }
+        $allowed = ['borrador','listo','enviado','anulado'];
+        if (!in_array($status, $allowed, true)) { return; }
+
+        $wpdb->update(
+            self::orders_table(),
+            ['status'=>$status,'updated_at'=>current_time('mysql')],
+            ['id'=>$orderId],
+            ['%s','%s'],
+            ['%d']
+        );
     }
 
     public function log(int $orderId, string $event, string $text): void
