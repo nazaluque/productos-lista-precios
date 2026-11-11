@@ -10,6 +10,7 @@ final class FRN_Frontend_App
     private FRN_Tariff_Repository $tariffs;
     private FRN_Price_List_Repository $priceLists;
     private FRN_Excel_Importer $excel;
+    private FRN_Order_Repository $orders;
 
     public function __construct()
     {
@@ -17,6 +18,7 @@ final class FRN_Frontend_App
         $this->tariffs = new FRN_Tariff_Repository();
         $this->priceLists = new FRN_Price_List_Repository();
         $this->excel = new FRN_Excel_Importer();
+        $this->orders = new FRN_Order_Repository();
     }
 
     public function boot(): void
@@ -35,6 +37,8 @@ final class FRN_Frontend_App
         add_action('admin_post_frn_front_pdf_branding', [$this, 'save_pdf_branding']);
         add_action('admin_post_frn_front_save_translations', [$this, 'save_translations']);
         add_action('admin_post_frn_front_save_groups', [$this, 'save_groups']);
+        add_action('admin_post_frn_front_customer_save', [$this, 'customer_save']);
+        add_action('admin_post_frn_front_order_save', [$this, 'order_save']);
     }
 
     public function render(): void
@@ -42,13 +46,15 @@ final class FRN_Frontend_App
         $this->guard_capability();
 
         $tab = sanitize_key($_GET['tab'] ?? 'importar');
-        if (!in_array($tab, ['importar','tarifas','tarifa','traducciones','usuarios','diseno'], true)) {
+        if (!in_array($tab, ['importar','tarifas','tarifa','pedidos','pedido','clientes','traducciones','usuarios','diseno'], true)) {
             $tab = 'importar';
         }
 
         $previewToken = sanitize_key($_GET['preview'] ?? '');
         $preview = $previewToken ? get_transient(self::PREVIEW_PREFIX . $previewToken) : null;
-        $tariffId = absint($_GET['id'] ?? 0);
+        $tariffId = in_array($tab, ['tarifa'], true) ? absint($_GET['id'] ?? 0) : 0;
+        $orderId = $tab === 'pedido' ? absint($_GET['id'] ?? 0) : 0;
+        $customerId = $tab === 'clientes' ? absint($_GET['customer_id'] ?? 0) : 0;
 
         $data = [
             'tab' => $tab,
@@ -71,6 +77,14 @@ final class FRN_Frontend_App
             'canManageUsers' => current_user_can('frn_manage_users'),
             'frnUsers' => current_user_can('frn_manage_users') ? get_users(['role__in'=>['frn_administrator','frn_stock','frn_director_comercial','frn_comercial','frn_consulta'],'orderby'=>'display_name']) : [],
             'pdfBranding' => current_user_can('frn_manage_users') ? $this->pdf_branding_state() : [],
+            'customers' => current_user_can('frn_manage_orders') || current_user_can('frn_manage_customers') ? $this->orders->all_customers(true) : [],
+            'customer' => $customerId && current_user_can('frn_manage_customers') ? $this->orders->get_customer($customerId) : null,
+            'orders' => current_user_can('frn_manage_orders') ? $this->orders->all_orders() : [],
+            'order' => $orderId && current_user_can('frn_manage_orders') ? $this->orders->get_order($orderId) : null,
+            'orderItems' => $orderId && current_user_can('frn_manage_orders') ? $this->orders->get_items($orderId) : [],
+            'canManageOrders' => current_user_can('frn_manage_orders'),
+            'canManageCustomers' => current_user_can('frn_manage_customers'),
+            'canSendOrders' => current_user_can('frn_send_orders'),
         ];
 
         extract($data, EXTR_SKIP);
@@ -1122,6 +1136,148 @@ final class FRN_Frontend_App
         };
     }
 
+    public function customer_save(): void
+    {
+        $this->guard_post('frn_front_customer_save', 'frn_manage_customers');
+
+        $company = sanitize_text_field((string)($_POST['company_name'] ?? ''));
+        if ($company === '') {
+            $this->redirect(['tab'=>'clientes','error'=>rawurlencode('La empresa o razón social es obligatoria.')]);
+        }
+
+        $email = sanitize_email((string)($_POST['email'] ?? ''));
+        $id = absint($_POST['customer_id'] ?? 0);
+
+        $data = [
+            'company_name'=>$company,
+            'vat_number'=>sanitize_text_field((string)($_POST['vat_number'] ?? '')),
+            'contact_name'=>sanitize_text_field((string)($_POST['contact_name'] ?? '')),
+            'phone'=>sanitize_text_field((string)($_POST['phone'] ?? '')),
+            'email'=>$email,
+            'billing_address'=>sanitize_text_field((string)($_POST['billing_address'] ?? '')),
+            'billing_postcode'=>sanitize_text_field((string)($_POST['billing_postcode'] ?? '')),
+            'billing_city'=>sanitize_text_field((string)($_POST['billing_city'] ?? '')),
+            'billing_province'=>sanitize_text_field((string)($_POST['billing_province'] ?? '')),
+            'billing_country'=>sanitize_text_field((string)($_POST['billing_country'] ?? 'España')),
+            'delivery_address'=>sanitize_text_field((string)($_POST['delivery_address'] ?? '')),
+            'delivery_postcode'=>sanitize_text_field((string)($_POST['delivery_postcode'] ?? '')),
+            'delivery_city'=>sanitize_text_field((string)($_POST['delivery_city'] ?? '')),
+            'delivery_province'=>sanitize_text_field((string)($_POST['delivery_province'] ?? '')),
+            'delivery_country'=>sanitize_text_field((string)($_POST['delivery_country'] ?? 'España')),
+            'notes'=>sanitize_textarea_field((string)($_POST['notes'] ?? '')),
+            'active'=>1,
+        ];
+
+        try {
+            $savedId = $this->orders->save_customer($data, $id);
+        } catch (Throwable $e) {
+            $this->redirect(['tab'=>'clientes','error'=>rawurlencode($e->getMessage())]);
+        }
+
+        $this->redirect(['tab'=>'clientes','customer_saved'=>1,'customer_id'=>$savedId]);
+    }
+
+    public function order_save(): void
+    {
+        $this->guard_post('frn_front_order_save', 'frn_manage_orders');
+
+        $orderId = absint($_POST['order_id'] ?? 0);
+        $customerId = absint($_POST['customer_id'] ?? 0);
+        $customer = $this->orders->get_customer($customerId);
+
+        if (!$customer) {
+            $this->redirect(['tab'=>'pedido','error'=>rawurlencode('Selecciona un cliente válido.')]);
+        }
+
+        $type = sanitize_key((string)($_POST['document_type'] ?? 'pedido'));
+        if (!in_array($type, ['pedido','proforma'], true)) { $type = 'pedido'; }
+
+        $billing = implode(', ', array_filter([
+            (string)$customer['billing_address'],
+            (string)$customer['billing_postcode'],
+            (string)$customer['billing_city'],
+            (string)$customer['billing_province'],
+            (string)$customer['billing_country'],
+        ]));
+        $delivery = implode(', ', array_filter([
+            (string)$customer['delivery_address'],
+            (string)$customer['delivery_postcode'],
+            (string)$customer['delivery_city'],
+            (string)$customer['delivery_province'],
+            (string)$customer['delivery_country'],
+        ]));
+
+        $header = [
+            'document_type'=>$type,
+            'status'=>'borrador',
+            'customer_id'=>$customerId,
+            'customer_company'=>(string)$customer['company_name'],
+            'customer_vat'=>(string)$customer['vat_number'],
+            'customer_contact'=>(string)$customer['contact_name'],
+            'customer_phone'=>(string)$customer['phone'],
+            'customer_email'=>(string)$customer['email'],
+            'billing_address'=>$billing,
+            'delivery_address'=>$delivery,
+            'requested_date'=>sanitize_text_field((string)($_POST['requested_date'] ?? '')),
+            'delivery_notes'=>sanitize_textarea_field((string)($_POST['delivery_notes'] ?? '')),
+            'notes'=>sanitize_textarea_field((string)($_POST['notes'] ?? '')),
+        ];
+
+        $rawItems = is_array($_POST['items'] ?? null) ? wp_unslash($_POST['items']) : [];
+        $items = [];
+        foreach ($rawItems as $raw) {
+            if (!is_array($raw)) { continue; }
+            $productId = absint($raw['product_id'] ?? 0);
+            $product = $this->catalog->get_by_id($productId);
+            if (!$product) { continue; }
+
+            $price = max(0, $this->number($raw['unit_price'] ?? 0));
+            if ($price <= 0) { $price = max(0, (float)$product['price_kg']); }
+
+            $saleUnit = sanitize_key((string)($raw['sale_unit'] ?? 'kg'));
+            if (!in_array($saleUnit, ['kg','cajas','pallets','unidades'], true)) { $saleUnit = 'kg'; }
+
+            $quantity = max(0, $this->number($raw['quantity'] ?? 0));
+            $boxes = max(0, $this->number($raw['boxes'] ?? 0));
+            $pallets = max(0, $this->number($raw['pallets'] ?? 0));
+            $totalKg = max(0, $this->number($raw['total_kg'] ?? 0));
+
+            $basis = $totalKg > 0 ? $totalKg : $quantity;
+            $items[] = [
+                'product_id'=>$productId,
+                'product_code'=>(string)$product['product_code'],
+                'brand'=>(string)$product['brand'],
+                'product_name'=>(string)($product['name_es_es'] ?: $product['product_name']),
+                'source_unit'=>(string)$product['unit'],
+                'sale_unit'=>$saleUnit,
+                'quantity'=>$quantity,
+                'boxes'=>$boxes,
+                'pallets'=>$pallets,
+                'total_kg'=>$totalKg,
+                'unit_price'=>$price,
+                'line_total'=>round($basis * $price, 2),
+                'line_notes'=>sanitize_text_field((string)($raw['line_notes'] ?? '')),
+            ];
+        }
+
+        if (!$items) {
+            $this->redirect([
+                'tab'=>'pedido',
+                'id'=>$orderId ?: null,
+                'type'=>$type,
+                'error'=>rawurlencode('Añade al menos un producto al documento.'),
+            ]);
+        }
+
+        try {
+            $savedId = $this->orders->save_order($header, $items, $orderId);
+        } catch (Throwable $e) {
+            $this->redirect(['tab'=>'pedido','id'=>$orderId,'type'=>$type,'error'=>rawurlencode($e->getMessage())]);
+        }
+
+        $this->redirect(['tab'=>'pedido','id'=>$savedId,'order_saved'=>1]);
+    }
+
     private function messages(): array
     {
         $messages = [];
@@ -1159,6 +1315,12 @@ final class FRN_Frontend_App
         }
         if (isset($_GET['groups_saved'])) {
             $messages[] = ['success', 'Maestro de categorías guardado.'];
+        }
+        if (isset($_GET['customer_saved'])) {
+            $messages[] = ['success', 'Cliente guardado correctamente.'];
+        }
+        if (isset($_GET['order_saved'])) {
+            $messages[] = ['success', 'Pedido / proforma guardado correctamente.'];
         }
         if (!empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
