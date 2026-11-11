@@ -130,13 +130,17 @@ foreach ($products as $p) {
                 <option value="unidades">Unidades</option>
               </select>
             </label>
-            <label><span data-frn-quantity-label>Cantidad</span>
+            <label data-frn-quantity-wrap><span data-frn-quantity-label>Cantidad</span>
               <input type="number" min="0" step="0.001" data-line-field="quantity" value="0">
+            </label>
+            <label class="frn-half-pallet-toggle" data-frn-half-pallet-wrap hidden>
+              <span>Pallets completos</span>
+              <span><input type="checkbox" data-frn-half-pallet> Añadir medio pallet (+0,5)</span>
             </label>
             <label>Cajas
               <input type="number" min="0" step="0.001" data-line-field="boxes" value="0">
             </label>
-            <label>Pallets
+            <label hidden>Pallets
               <input type="number" min="0" step="0.001" data-line-field="pallets" value="0">
             </label>
             <label><span data-frn-weight-label>Kg totales</span>
@@ -190,7 +194,13 @@ foreach ($products as $p) {
       . (string)$order['document_number'];
     $shareFilename = sanitize_file_name('FRN-' . (string)$order['document_number'] . '.pdf');
   ?>
-  <section class="frn-order-send-panel">
+  <section class="frn-order-send-panel" <?php echo isset($_GET['order_sent']) ? 'data-frn-order-sent="1"' : ''; ?>>
+    <?php if (isset($_GET['order_sent'])) : ?>
+      <div class="frn-order-send-confirmation" role="status" tabindex="-1">
+        <strong>Correo enviado al equipo interno</strong>
+        <span>Pedido <?php echo esc_html((string)$order['document_number']); ?> · WordPress confirmó el envío con el PDF adjunto.</span>
+      </div>
+    <?php endif; ?>
     <div class="frn-card-heading">
       <div><small>Documento listo</small><h2>PDF y envío</h2></div>
       <p>Abre, descarga o comparte el PDF por WhatsApp. El correo se envía al equipo interno y queda registrado en el histórico.</p>
