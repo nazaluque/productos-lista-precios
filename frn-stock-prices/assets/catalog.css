@@ -763,7 +763,14 @@
 @media(max-width:720px){
  .frn-app-navigation{grid-template-columns:1fr;gap:8px}
  .frn-app-nav-group{padding:8px}
- .frn-app-nav-group .frn-app-tabs{display:flex;overflow-x:auto;gap:7px;scroll-snap-type:x proximity}
- .frn-app-nav-group .frn-app-tabs a{flex:0 0 auto;white-space:nowrap;scroll-snap-align:start}
+ .frn-app-nav-group .frn-app-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:7px}
+ .frn-app-nav-group .frn-app-tabs a{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:center;padding:10px 6px}
  .frn-order-pdf-actions{grid-template-columns:1fr}
 }
+
+.frn-half-pallet-toggle>span:last-child{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 12px;border:1px solid rgba(180,138,69,.35);background:#050606;color:#f2eee5;font-size:12px;cursor:pointer}
+.frn-half-pallet-toggle input[type=checkbox]{width:20px;height:20px;min-height:20px;margin:0;accent-color:var(--frn-gold)}
+.frn-order-send-confirmation{display:grid;gap:5px;margin:0 0 18px;padding:16px 18px;border:1px solid #27976d;background:#0c241b;color:#dcfff0}
+.frn-order-send-confirmation strong{font-size:15px}
+.frn-order-send-confirmation span{font-size:12px}
+.frn-order-line-grid [hidden]{display:none!important}
