@@ -1,5 +1,15 @@
 # FRN Stock & Prices
 
+## 1.3.0 — Flujo interno de pedidos
+
+- Separa la navegación de Catálogo y Pedidos / Clientes.
+- Configura el envío interno a las direcciones predeterminadas de FRN y permite elegir destinatarios, añadir uno y recordarlo.
+- Usa el asunto automático “Nuevo pedido” con su número; los correos y proformas se dirigen al equipo interno.
+- Añade abrir y descargar el PDF y compartir el archivo desde el móvil mediante la hoja nativa de compartir.
+- Permite guardar cajas, unidades o pallets sin conocer los kilos y marca sus importes como pendientes hasta completar el peso.
+- Muestra el importe parcial cuando una o más líneas aún no tienen peso.
+- Permite cantidades de medio pallet.
+
 ## 1.2.0 — Pedidos, proformas y clientes
 
 - Añade Clientes dentro del mismo cockpit privado /stock/.
