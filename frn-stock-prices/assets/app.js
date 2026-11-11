@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (quantity) quantity.step = selectedUnit === 'pallets' ? '1' : '0.001';
       if (halfWrap) halfWrap.hidden = selectedUnit !== 'pallets';
       if (selectedUnit === 'pallets' && quantity && pallets) {
-        const palletValue = Number(pallets.value || quantity.value || 0);
+        const savedPallets = Number(pallets.value || 0);\n        const palletValue = savedPallets > 0 ? savedPallets : Number(quantity.value || 0);
         quantity.value = String(Math.floor(palletValue));
         if (halfToggle) halfToggle.checked = palletValue % 1 >= 0.5;
         pallets.value = String(Math.floor(palletValue) + (halfToggle?.checked ? 0.5 : 0));
