@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: FRN Stock & Prices
- * Description: Aplicación interna frontend de stock, precios y tarifas semanales para FRN Atlántico.
+ * Description: Aplicación interna de stock, precios, tarifas, clientes, pedidos y proformas para FRN Atlántico.
  * Version: 1.2.0
  * Author: FRN Atlántico
  * Requires at least: 6.4
