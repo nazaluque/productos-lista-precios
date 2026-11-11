@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 
 
-/* FRN 1.2.0 · pedidos / proformas */
+/* FRN 1.3.0 · flujo interno de pedidos */
 (() => {
   const copyButton = document.querySelector('[data-frn-copy-address]');
   if (copyButton) {
@@ -227,10 +227,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const refreshGrandTotal = () => {
     let sum = 0;
+    let pendingWeightCount = 0;
     linesWrap.querySelectorAll('[data-order-line]').forEach((line) => {
       sum += Number(line.dataset.lineTotal || 0);
+      if (line.dataset.needsWeight === '1') pendingWeightCount += 1;
     });
     if (totalEl) totalEl.textContent = money(sum);
+    const pending = form.querySelector('[data-frn-order-pending]');
+    if (pending) {
+      pending.hidden = pendingWeightCount === 0;
+      pending.textContent = pendingWeightCount ? 'Importe parcial · faltan los kg de ' + pendingWeightCount + ' línea(s)' : '';
+    }
   };
 
   const refreshLine = (line) => {
@@ -239,8 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const priceInput = line.querySelector('[data-line-field="unit_price"]');
     const quantity = Number(line.querySelector('[data-line-field="quantity"]')?.value || 0);
     const totalKg = Number(line.querySelector('[data-line-field="total_kg"]')?.value || 0);
+    const saleUnit = line.querySelector('[data-line-field="sale_unit"]')?.value || 'kg';
     const price = Number(priceInput?.value || 0);
-    const basis = totalKg > 0 ? totalKg : quantity;
+    const basis = saleUnit === 'kg' ? quantity : totalKg;
     const lineTotal = basis * price;
 
     const code = line.querySelector('[data-product-code]');
@@ -252,8 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (brand) brand.textContent = product.brand ? product.brand + ' · ' : '';
     if (stock) stock.textContent = productId ? 'Stock ref. ' + Number(product.stock || 0).toLocaleString('es-ES') + ' ' + (product.unit || '') : '';
     line.dataset.lineTotal = String(lineTotal);
+    line.dataset.needsWeight = saleUnit !== 'kg' && totalKg <= 0 ? '1' : '0';
     const lineTotalEl = line.querySelector('[data-line-total]');
-    if (lineTotalEl) lineTotalEl.textContent = money(lineTotal);
+    if (lineTotalEl) lineTotalEl.textContent = line.dataset.needsWeight === '1' ? 'Pendiente de kg' : money(lineTotal);
+    const weightLabel = line.querySelector('[data-frn-weight-label]');
+    if (weightLabel) weightLabel.textContent = saleUnit === 'kg' ? 'Kg totales' : 'Kg totales (si los conoces)';
     refreshGrandTotal();
   };
 
@@ -271,8 +282,40 @@ document.addEventListener('DOMContentLoaded', () => {
           if (price && Number(price.value || 0) === 0) price.value = Number(product.price || 0).toFixed(2);
           if (product.unit && /unidad/i.test(product.unit) && saleUnit) saleUnit.value = 'unidades';
           if (quantity && Number(quantity.value || 0) === 0) quantity.value = '1';
-          if (totalKg && /kg/i.test(product.unit || '') && Number(totalKg.value || 0) === 0) totalKg.value = quantity?.value || '1';
+          if (totalKg && saleUnit?.value === 'kg') totalKg.value = quantity?.value || '1';
         }
+        if (field.dataset.lineField === 'sale_unit') {
+          const quantity = line.querySelector('[data-line-field="quantity"]');
+          const quantityLabel = line.querySelector('[data-frn-quantity-label]');
+          const boxes = line.querySelector('[data-line-field="boxes"]');
+          const pallets = line.querySelector('[data-line-field="pallets"]');
+          const selectedUnit = field.value;
+          if (quantityLabel) quantityLabel.textContent = selectedUnit === 'cajas' ? 'Cantidad (cajas)' : selectedUnit === 'pallets' ? 'Cantidad (pallets)' : selectedUnit === 'unidades' ? 'Cantidad (unidades)' : 'Cantidad (kg)';
+          if (quantity) quantity.step = selectedUnit === 'pallets' ? '0.5' : '0.001';
+          const weightLabel = line.querySelector('[data-frn-weight-label]');
+          const weightInput = line.querySelector('[data-line-field="total_kg"]');
+          const weightField = weightInput?.closest('label');
+          if (weightLabel) weightLabel.textContent = selectedUnit === 'kg' ? 'Kg totales' : 'Kg totales (si los conoces)';
+          if (weightField) weightField.hidden = selectedUnit === 'kg';
+          if (weightInput) weightInput.value = selectedUnit === 'kg' ? (quantity?.value || '0') : '0';
+          if (selectedUnit === 'cajas' && boxes && quantity) boxes.value = quantity.value;
+          if (selectedUnit === 'pallets' && pallets && quantity) pallets.value = quantity.value;
+        }
+        refreshLine(line);
+      });
+      field.addEventListener('input', () => {
+        const selectedUnit = line.querySelector('[data-line-field="sale_unit"]')?.value;
+        const quantity = line.querySelector('[data-line-field="quantity"]');
+        const boxes = line.querySelector('[data-line-field="boxes"]');
+        const pallets = line.querySelector('[data-line-field="pallets"]');
+        if (field.dataset.lineField === 'quantity' && selectedUnit === 'kg') {
+          const totalKg = line.querySelector('[data-line-field="total_kg"]');
+          if (totalKg) totalKg.value = field.value;
+        }
+        if (field.dataset.lineField === 'quantity' && selectedUnit === 'cajas' && boxes) boxes.value = field.value;
+        if (field.dataset.lineField === 'quantity' && selectedUnit === 'pallets' && pallets) pallets.value = field.value;
+        if (field.dataset.lineField === 'boxes' && selectedUnit === 'cajas' && quantity) quantity.value = field.value;
+        if (field.dataset.lineField === 'pallets' && selectedUnit === 'pallets' && quantity) quantity.value = field.value;
         refreshLine(line);
       });
     });
@@ -293,6 +336,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const field = inserted.querySelector('[data-line-field="' + key + '"]');
       if (field && value !== null && value !== undefined) field.value = value;
     });
+    const unitField = inserted.querySelector('[data-line-field="sale_unit"]');
+    if (unitField) {
+      const selectedUnit = unitField.value;
+      const quantityLabel = inserted.querySelector('[data-frn-quantity-label]');
+      if (quantityLabel) quantityLabel.textContent = selectedUnit === 'cajas' ? 'Cantidad (cajas)' : selectedUnit === 'pallets' ? 'Cantidad (pallets)' : selectedUnit === 'unidades' ? 'Cantidad (unidades)' : 'Cantidad (kg)';
+      const quantity = inserted.querySelector('[data-line-field="quantity"]');
+      if (quantity) quantity.step = selectedUnit === 'pallets' ? '0.5' : '0.001';
+      const weightField = inserted.querySelector('[data-line-field="total_kg"]')?.closest('label');
+      if (weightField) weightField.hidden = selectedUnit === 'kg';
+    }
     refreshLine(inserted);
     return inserted;
   };
@@ -315,4 +368,35 @@ document.addEventListener('DOMContentLoaded', () => {
     addLine();
   }
   refreshCustomer();
+
+  document.querySelectorAll('[data-frn-share-pdf]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Preparando PDF…';
+      try {
+        const response = await fetch(button.dataset.pdfUrl, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error('No se pudo descargar el PDF.');
+        const blob = await response.blob();
+        const file = new File([blob], button.dataset.pdfName || 'FRN-pedido.pdf', { type: 'application/pdf' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Pedido FRN' });
+        } else {
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = file.name;
+          link.click();
+          URL.revokeObjectURL(objectUrl);
+          const text = encodeURIComponent('Te comparto el pedido FRN en PDF. Adjúntalo desde Descargas en WhatsApp.');
+          window.open('https://wa.me/?text=' + text, '_blank', 'noopener');
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') window.alert(error.message || 'No se pudo compartir el PDF. Descárgalo y adjúntalo en WhatsApp.');
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+  });
 })();
