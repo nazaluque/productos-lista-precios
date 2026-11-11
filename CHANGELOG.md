@@ -1,5 +1,9 @@
 # FRN Stock & Prices
 
+## 1.3.1 — Direcciones fiscales y de entrega
+
+- Muestra siempre por separado la dirección fiscal de la empresa y la dirección de entrega en el resumen del pedido y en el PDF. Si ambas direcciones coinciden, se imprimen ambas con sus rótulos.
+
 ## 1.3.0 — Flujo interno de pedidos
 
 - Separa la navegación de Catálogo y Pedidos / Clientes.

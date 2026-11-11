@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
       vat:data.vat_number || '—',
       contact:data.contact_name || '—',
       email:data.email || '—',
+      billing:data.billing_address || '—',
       delivery:data.delivery_address || '—',
     };
     Object.entries(fields).forEach(([key,value]) => {
