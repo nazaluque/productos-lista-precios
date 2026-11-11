@@ -29,6 +29,7 @@ final class FRN_Stock_Prices
         FRN_Catalog_Repository::create_table();
         FRN_Price_List_Repository::create_tables();
         FRN_Tariff_Repository::create_tables();
+        FRN_Order_Repository::create_tables();
 
         self::instance()->register_routes();
         flush_rewrite_rules();
@@ -39,7 +40,7 @@ final class FRN_Stock_Prices
         $roles = [
             'frn_administrator' => [
                 'label' => 'FRN Administrador',
-                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_users'],
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_orders','frn_send_orders','frn_manage_customers','frn_manage_users'],
             ],
             'frn_stock' => [
                 'label' => 'FRN Stock',
@@ -47,11 +48,11 @@ final class FRN_Stock_Prices
             ],
             'frn_director_comercial' => [
                 'label' => 'FRN Director Comercial',
-                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs'],
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_orders','frn_send_orders','frn_manage_customers'],
             ],
             'frn_comercial' => [
                 'label' => 'FRN Comercial',
-                'caps' => ['frn_access_tool','frn_manage_stock','frn_export_tariffs'],
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_export_tariffs','frn_manage_orders','frn_manage_customers'],
             ],
             'frn_consulta' => [
                 'label' => 'FRN Consulta',
@@ -74,7 +75,7 @@ final class FRN_Stock_Prices
 
         $admin = get_role('administrator');
         if ($admin) {
-            foreach (['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_users'] as $cap) {
+            foreach (['frn_access_tool','frn_manage_stock','frn_edit_stock','frn_edit_prices','frn_edit_translations','frn_view_cost','frn_export_tariffs','frn_manage_orders','frn_send_orders','frn_manage_customers','frn_manage_users'] as $cap) {
                 $admin->add_cap($cap);
             }
         }
@@ -88,6 +89,7 @@ final class FRN_Stock_Prices
             FRN_Catalog_Repository::create_table();
             FRN_Price_List_Repository::create_tables();
             FRN_Tariff_Repository::create_tables();
+            FRN_Order_Repository::create_tables();
             self::ensure_roles();
 
             if ($installed === '' || version_compare($installed, '0.9.0', '<')) {
