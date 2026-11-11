@@ -52,7 +52,7 @@ final class FRN_Stock_Prices
             ],
             'frn_comercial' => [
                 'label' => 'FRN Comercial',
-                'caps' => ['frn_access_tool','frn_manage_stock','frn_export_tariffs','frn_manage_orders','frn_manage_customers'],
+                'caps' => ['frn_access_tool','frn_manage_stock','frn_export_tariffs','frn_manage_orders','frn_send_orders','frn_manage_customers'],
             ],
             'frn_consulta' => [
                 'label' => 'FRN Consulta',
