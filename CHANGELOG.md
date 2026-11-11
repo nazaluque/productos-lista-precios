@@ -1,5 +1,20 @@
 # FRN Stock & Prices
 
+## 1.2.0 — Pedidos, proformas y clientes
+
+- Añade Clientes dentro del mismo cockpit privado /stock/.
+- Añade Pedidos / Proformas sin crear un segundo catálogo ni otro login.
+- Los documentos leen el maestro FRN actual y guardan snapshots históricos por línea.
+- Selector de producto reutiliza código, marca, nombre, unidad, stock y precio comercial vigentes.
+- Permite vender por kg, cajas, pallets o unidades y registrar kilos totales.
+- Precio de venta se precarga desde el maestro y puede ajustarse por operación.
+- Añade numeración PED-AAAA-###### y PRO-AAAA-######.
+- Añade histórico de documentos y estados.
+- Añade PDF A4 FRN con logo configurado en Diseño PDF.
+- Añade envío por email con PDF adjunto, remitente/reply-to configurables y destinatarios internos por defecto.
+- Interfaz de pedidos diseñada mobile-first.
+- No modifica el flujo semanal de stock, precios, costes, categorías, traducciones ni tarifas existentes.
+
 ## 1.1.18 — Corrección de renderizado tipográfico PDF
 
 - Versión de mantenimiento visual; no modifica catálogo, precios, ofertas, traducciones ni categorías.
