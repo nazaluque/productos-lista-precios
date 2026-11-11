@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (quantity && Number(quantity.value || 0) === 0) quantity.value = '1';
           if (totalKg && saleUnit?.value === 'kg') totalKg.value = quantity?.value || '1';
         }
-        if (field.dataset.lineField === 'sale_unit') {        if (field.dataset.lineField === 'sale_unit') {
+        if (field.dataset.lineField === 'sale_unit') {
           const quantity = line.querySelector('[data-line-field="quantity"]');
           const quantityLabel = line.querySelector('[data-frn-quantity-label]');
           const quantityWrap = line.querySelector('[data-frn-quantity-wrap]');
