@@ -409,6 +409,16 @@ final class FRN_Catalog_Repository
         ) ?: [];
     }
 
+    public function get_by_id(int $id): ?array
+    {
+        global $wpdb;
+        if ($id <= 0) { return null; }
+        return $wpdb->get_row(
+            $wpdb->prepare('SELECT * FROM ' . self::table() . ' WHERE id = %d', $id),
+            ARRAY_A
+        ) ?: null;
+    }
+
     /**
      * Selective weekly import for FRN 1.1.14.
      * Only fields explicitly enabled in $updates are allowed to mutate.
