@@ -4,14 +4,14 @@ if (!defined('ABSPATH')) { exit; }
 <section class="frn-app-card frn-orders-home">
   <div class="frn-card-heading">
     <div><small>Operaciones comerciales</small><h2>Pedidos / Proformas</h2></div>
-    <p>Crea el documento desde el mismo maestro FRN. Los productos y precios se leen del catálogo actual; el pedido guarda una fotografía histórica de lo vendido.</p>
+    <p>Carga el pedido desde el catálogo FRN y envíalo a administración o logística. El correo y el PDF son para uso interno.</p>
   </div>
   <div class="frn-order-launch">
     <a class="frn-order-launch-card" href="<?php echo esc_url(add_query_arg(['tab'=>'pedido','type'=>'pedido'],home_url('/stock/'))); ?>">
       <small>Operación cerrada</small><strong>+ Nuevo pedido</strong><span>Para administración, logística o carga del pedido.</span>
     </a>
     <a class="frn-order-launch-card" href="<?php echo esc_url(add_query_arg(['tab'=>'pedido','type'=>'proforma'],home_url('/stock/'))); ?>">
-      <small>Oferta al cliente</small><strong>+ Nueva proforma</strong><span>Presupuesto comercial preparado para enviar al cliente.</span>
+      <small>Propuesta interna</small><strong>+ Nueva proforma</strong><span>Prepara una proforma para revisar con el equipo FRN.</span>
     </a>
   </div>
 </section>
@@ -32,9 +32,10 @@ if (!defined('ABSPATH')) { exit; }
         <div>
           <strong><?php echo esc_html((string)$row['customer_company']); ?></strong>
           <span><?php echo esc_html(mysql2date('d/m/Y H:i',(string)$row['created_at'])); ?></span>
+          <?php if (!empty($row['pending_weight_count'])) : ?><span class="frn-order-pending-note">Faltan kg en <?php echo (int)$row['pending_weight_count']; ?> línea(s)</span><?php endif; ?>
         </div>
         <div class="frn-order-status"><?php echo esc_html(strtoupper((string)$row['status'])); ?></div>
-        <div class="frn-order-total"><?php echo esc_html(number_format_i18n((float)$row['subtotal'],2)); ?> €</div>
+        <div class="frn-order-total"><?php echo !empty($row['pending_weight_count']) ? 'Parcial: ' : ''; ?><?php echo esc_html(number_format_i18n((float)$row['subtotal'],2)); ?> €</div>
       </a>
     <?php endforeach; ?>
   </div>
@@ -53,16 +54,16 @@ if (!defined('ABSPATH')) { exit; }
       <input type="text" name="from_name" value="<?php echo esc_attr((string)$orderEmailSettings['from_name']); ?>" placeholder="FRN Atlántico">
     </label>
     <label>Email remitente
-      <input type="email" name="from_email" value="<?php echo esc_attr((string)$orderEmailSettings['from_email']); ?>" placeholder="comercial@frnatlantico.com">
+      <input type="email" name="from_email" value="<?php echo esc_attr((string)$orderEmailSettings['from_email']); ?>" placeholder="nl@frnatlantico.es">
     </label>
     <label>Responder a
-      <input type="email" name="reply_to" value="<?php echo esc_attr((string)$orderEmailSettings['reply_to']); ?>" placeholder="tu-email@frnatlantico.com">
+      <input type="email" name="reply_to" value="<?php echo esc_attr((string)$orderEmailSettings['reply_to']); ?>" placeholder="nl@frnatlantico.es">
     </label>
     <label>Destinatarios internos por defecto
-      <input type="text" name="internal_recipients" value="<?php echo esc_attr((string)$orderEmailSettings['internal_recipients']); ?>" placeholder="pedidos@...; administracion@...">
+      <input type="text" name="internal_recipients" value="<?php echo esc_attr((string)$orderEmailSettings['internal_recipients']); ?>" placeholder="gc@frnatlantico.com; rg@frnatlantico.com; nl@frnatlantico.com">
     </label>
     <div class="frn-span-2 frn-form-actions"><button type="submit">Guardar configuración de correo</button></div>
   </form>
-  <p class="frn-save-note">Para entregabilidad real, el servidor debe enviar autenticado por SMTP con el dominio FRN. Esta pantalla no guarda contraseñas SMTP.</p>
+  <p class="frn-save-note">El pedido sale como FRN Atlántico desde la cuenta .es configurada. Esta pantalla no guarda contraseñas SMTP.</p>
 </section>
 <?php endif; ?>
