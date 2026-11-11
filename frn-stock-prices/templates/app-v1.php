@@ -37,6 +37,12 @@ $postUrl = admin_url('admin-post.php');
     <nav class="frn-app-tabs" aria-label="Herramienta">
         <a class="<?php echo $tab === 'importar' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','importar',home_url('/stock/'))); ?>">1. Datos semanales</a>
         <a class="<?php echo in_array($tab,['tarifas','tarifa'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','tarifas',home_url('/stock/'))); ?>">2. Crear PDF</a>
+        <?php if ($canManageOrders) : ?>
+            <a class="<?php echo in_array($tab,['pedidos','pedido'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','pedidos',home_url('/stock/'))); ?>">3. Pedidos / Proformas</a>
+        <?php endif; ?>
+        <?php if ($canManageCustomers) : ?>
+            <a class="<?php echo $tab === 'clientes' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','clientes',home_url('/stock/'))); ?>">Clientes</a>
+        <?php endif; ?>
         <?php if ($canEditTranslations) : ?>
             <a class="<?php echo $tab === 'traducciones' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','traducciones',home_url('/stock/'))); ?>">Traducciones</a>
         <?php endif; ?>
@@ -57,6 +63,12 @@ $postUrl = admin_url('admin-post.php');
         require FRN_SP_PATH . 'templates/partials/app-tariffs.php';
     } elseif ($tab === 'tarifa' && $tariff) {
         require FRN_SP_PATH . 'templates/partials/app-tariff-editor.php';
+    } elseif ($tab === 'pedidos' && $canManageOrders) {
+        require FRN_SP_PATH . 'templates/partials/app-orders.php';
+    } elseif ($tab === 'pedido' && $canManageOrders) {
+        require FRN_SP_PATH . 'templates/partials/app-order-editor.php';
+    } elseif ($tab === 'clientes' && $canManageCustomers) {
+        require FRN_SP_PATH . 'templates/partials/app-customers.php';
     } elseif ($tab === 'traducciones' && $canEditTranslations) {
         require FRN_SP_PATH . 'templates/partials/app-translations.php';
     } elseif ($tab === 'diseno' && $canManageUsers) {
