@@ -1336,6 +1336,8 @@ final class FRN_Frontend_App
         }
 
         $logoHtml = $logo !== '' ? '<img src="' . esc_attr($logo) . '" class="logo" alt="FRN">' : '<div class="wordmark">FRN ATLÁNTICO</div>';
+        $billingAddress = trim((string)($order['billing_address'] ?? ''));
+        $deliveryAddress = trim((string)($order['delivery_address'] ?? ''));
         $requested = !empty($order['requested_date']) ? mysql2date('d/m/Y', (string)$order['requested_date'] . ' 00:00:00') : '—';
 
         return '<!doctype html><html><head><meta charset="UTF-8"><style>
@@ -1345,9 +1347,12 @@ final class FRN_Frontend_App
             .top>div{display:table-cell;vertical-align:middle}
             .logo{max-width:145px;max-height:54px}.wordmark{font-size:24px;font-weight:700;color:#a9823f}
             .doc{text-align:right}.doc h1{margin:0;color:#111;font-size:25px;letter-spacing:1px}.doc strong{display:block;margin-top:5px;color:#a9823f;font-size:13px}
-            .meta{display:table;width:100%;margin-bottom:18px}.box{display:table-cell;width:50%;padding:12px;border:1px solid #d8d2c6;vertical-align:top}
+            .meta{display:block;width:100%;margin-bottom:18px}
+            .box{display:block;width:auto;padding:12px;border:1px solid #d8d2c6;vertical-align:top;margin-bottom:8px;box-sizing:border-box}
+            .address-pair{display:table;width:100%;table-layout:fixed;border-spacing:8px 0;margin:0 -8px 12px}
+            .address-pair .box{display:table-cell;width:50%;vertical-align:top}
             .box h2{margin:0 0 8px;font-size:10px;color:#a9823f;text-transform:uppercase;letter-spacing:.8px}
-            .box p{margin:3px 0;line-height:1.45}.muted{color:#666}
+            .box p{margin:3px 0;line-height:1.45}.address-value{overflow-wrap:break-word;word-wrap:break-word}.muted{color:#666}
             table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#0d1115;color:#fff;padding:8px 6px;text-align:left;font-size:8px;text-transform:uppercase}
             td{padding:8px 6px;border-bottom:1px solid #ddd7cd;vertical-align:top}td span{color:#777;font-size:8px}.num{text-align:right;white-space:nowrap}.total{font-weight:700}
             .summary{margin-top:14px;text-align:right;font-size:14px}.summary strong{color:#a9823f;font-size:18px}
@@ -1356,7 +1361,8 @@ final class FRN_Frontend_App
         </style></head><body>'
         . '<div class="top"><div>' . $logoHtml . '</div><div class="doc"><h1>' . $type . '</h1><strong>' . esc_html((string)$order['document_number']) . '</strong><span>Fecha: ' . esc_html(mysql2date('d/m/Y',(string)$order['created_at'])) . '</span></div></div>'
         . '<div class="meta"><div class="box"><h2>Cliente</h2><p><strong>' . esc_html((string)$order['customer_company']) . '</strong></p><p>CIF/VAT: ' . esc_html((string)$order['customer_vat']) . '</p><p>Contacto: ' . esc_html((string)$order['customer_contact']) . '</p><p>Tel: ' . esc_html((string)$order['customer_phone']) . '</p><p>Email: ' . esc_html((string)$order['customer_email']) . '</p></div>'
-        . '<div class="box"><h2>Entrega</h2><p>' . esc_html((string)$order['delivery_address']) . '</p><p>Fecha solicitada: ' . esc_html($requested) . '</p><p class="muted">' . nl2br(esc_html((string)$order['delivery_notes'])) . '</p></div></div>'
+        . '<div class="address-pair"><div class="box"><h2>Dirección fiscal de la empresa</h2><p class="address-value">' . ($billingAddress !== '' ? esc_html($billingAddress) : 'No indicada') . '</p></div>'
+        . '<div class="box"><h2>Dirección de entrega</h2><p class="address-value">' . ($deliveryAddress !== '' ? esc_html($deliveryAddress) : 'No indicada') . '</p><p>Fecha solicitada: ' . esc_html($requested) . '</p><p class="muted">' . nl2br(esc_html((string)$order['delivery_notes'])) . '</p></div></div></div>'
         . '<table><thead><tr><th>Código</th><th>Producto / Marca</th><th>Presentación</th><th class="num">Kg</th><th class="num">Precio</th><th class="num">Importe</th></tr></thead><tbody>' . $rows . '</tbody></table>'
         . '<div class="summary">' . ($pendingWeightCount ? 'Total parcial · faltan los kg de ' . $pendingWeightCount . ' línea(s): ' : 'Total mercancía: ') . '<strong>' . number_format((float)$order['subtotal'],2,',','.') . ' €</strong></div>'
         . ((string)$order['notes'] !== '' ? '<div class="notes"><strong>Observaciones</strong><br>' . nl2br(esc_html((string)$order['notes'])) . '</div>' : '')
