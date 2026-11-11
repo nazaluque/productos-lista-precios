@@ -67,14 +67,13 @@ jobs:
       - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-      - name: Create direct installable stock plugin
+      - name: Stage a single installable plugin folder
         run: |
-          mkdir -p build
-          zip -r build/FRN-STOCK-PRECIOS-v1.3.2.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
-          zip -r build/FRN-HOME-v1.3.2.zip frn-home
-          cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
+          mkdir -p build/FRN-STOCK-PRECIOS-v1.3.2
+          cp -R frn-stock-prices build/FRN-STOCK-PRECIOS-v1.3.2/frn-stock-prices
+          cp release/LEEME-PRIMERO.txt build/FRN-STOCK-PRECIOS-v1.3.2/LEEME-PRIMERO.txt
       - uses: actions/upload-artifact@v4
         with:
           name: FRN-STOCK-PRECIOS-v1.3.2
-          path: build/FRN-STOCK-PRECIOS-v1.3.2.zip
+          path: build/FRN-STOCK-PRECIOS-v1.3.2
           if-no-files-found: error
