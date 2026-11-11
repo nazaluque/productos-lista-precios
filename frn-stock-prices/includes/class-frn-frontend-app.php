@@ -670,6 +670,7 @@ final class FRN_Frontend_App
         $dompdf->render();
 
                 // Page numbers remain on the canvas; the watermark is part of the HTML layer below the text.
+        $canvas = $dompdf->getCanvas();
         $fontMetrics = $dompdf->getFontMetrics();
         $pageFont = $fontMetrics->getFont('DejaVu Sans', 'normal');
         if ($pageFont) {
