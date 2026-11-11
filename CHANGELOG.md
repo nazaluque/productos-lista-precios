@@ -1,5 +1,13 @@
 # FRN Stock & Prices
 
+## 1.3.2 — PDF nítido y traducciones de carne para Portugal
+
+- Evita que la marca de agua se pinte encima de los textos y códigos del PDF: ahora se renderiza en la capa de fondo, antes del contenido.
+- Conserva precios, stock, ofertas y snapshots guardados; no requiere volver a importar Excel.
+- Incorpora las traducciones portuguesas aprobadas en el catálogo vivo de la .es; crea una tarifa Portugal desde el maestro actualizado para que las nuevas etiquetas queden en el PDF.
+- Entrega un ZIP directo del plugin listo para subir a WordPress, sin un ZIP contenedor.
+
+
 ## 1.3.1 — Direcciones fiscales y de entrega
 
 - Muestra siempre por separado la dirección fiscal de la empresa y la dirección de entrega en el resumen del pedido y en el PDF. Si ambas direcciones coinciden, se imprimen ambas con sus rótulos.
