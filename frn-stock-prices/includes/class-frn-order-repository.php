@@ -170,9 +170,11 @@ final class FRN_Order_Repository
     {
         global $wpdb;
         $limit = max(1, min(500, $limit));
+        $orders = self::orders_table();
+        $items = self::items_table();
         return $wpdb->get_results(
             $wpdb->prepare(
-                'SELECT * FROM ' . self::orders_table() . ' ORDER BY created_at DESC, id DESC LIMIT %d',
+                'SELECT o.*, (SELECT COUNT(*) FROM ' . $items . ' i WHERE i.order_id = o.id AND i.sale_unit <> "kg" AND i.total_kg <= 0) AS pending_weight_count FROM ' . $orders . ' o ORDER BY o.created_at DESC, o.id DESC LIMIT %d',
                 $limit
             ),
             ARRAY_A
