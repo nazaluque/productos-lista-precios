@@ -39,3 +39,30 @@ if (!defined('ABSPATH')) { exit; }
     <?php endforeach; ?>
   </div>
 </section>
+
+<?php if ($canManageUsers) : ?>
+<section class="frn-app-card">
+  <div class="frn-card-heading">
+    <div><small>Configuración</small><h2>Correo de pedidos</h2></div>
+    <p>Estos datos controlan el remitente visible, las respuestas y los destinatarios internos que aparecen por defecto.</p>
+  </div>
+  <form method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-form-grid frn-order-email-settings">
+    <input type="hidden" name="action" value="frn_front_order_email_settings">
+    <?php wp_nonce_field('frn_front_order_email_settings'); ?>
+    <label>Nombre remitente
+      <input type="text" name="from_name" value="<?php echo esc_attr((string)$orderEmailSettings['from_name']); ?>" placeholder="FRN Atlántico">
+    </label>
+    <label>Email remitente
+      <input type="email" name="from_email" value="<?php echo esc_attr((string)$orderEmailSettings['from_email']); ?>" placeholder="comercial@frnatlantico.com">
+    </label>
+    <label>Responder a
+      <input type="email" name="reply_to" value="<?php echo esc_attr((string)$orderEmailSettings['reply_to']); ?>" placeholder="tu-email@frnatlantico.com">
+    </label>
+    <label>Destinatarios internos por defecto
+      <input type="text" name="internal_recipients" value="<?php echo esc_attr((string)$orderEmailSettings['internal_recipients']); ?>" placeholder="pedidos@...; administracion@...">
+    </label>
+    <div class="frn-span-2 frn-form-actions"><button type="submit">Guardar configuración de correo</button></div>
+  </form>
+  <p class="frn-save-note">Para entregabilidad real, el servidor debe enviar autenticado por SMTP con el dominio FRN. Esta pantalla no guarda contraseñas SMTP.</p>
+</section>
+<?php endif; ?>
