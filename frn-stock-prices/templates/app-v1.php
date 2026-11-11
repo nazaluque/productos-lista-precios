@@ -2,7 +2,7 @@
 if (!defined('ABSPATH')) { exit; }
 
 $currentUser = wp_get_current_user();
-$whatsapp = preg_replace('/\D+/', '', (string) get_option('frn_sp_whatsapp_number', '34624354950'));
+$whatsapp = preg_replace('/\D+/', '', (string) get_option('frn_sp_whatsapp_number', ''));
 $logoutUrl = wp_logout_url(home_url('/'));
 $postUrl = admin_url('admin-post.php');
 ?><!doctype html>
@@ -34,23 +34,35 @@ $postUrl = admin_url('admin-post.php');
         <span>Importación selectiva: decide si cada Excel actualiza stock, precio, coste y/o categorías. Exporta Carne o Pescado / Marisco por mercado, categorías e idiomas.</span>
     </section>
 
-    <nav class="frn-app-tabs" aria-label="Herramienta">
-        <a class="<?php echo $tab === 'importar' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','importar',home_url('/stock/'))); ?>">1. Datos semanales</a>
-        <a class="<?php echo in_array($tab,['tarifas','tarifa'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','tarifas',home_url('/stock/'))); ?>">2. Crear PDF</a>
-        <?php if ($canManageOrders) : ?>
-            <a class="<?php echo in_array($tab,['pedidos','pedido'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','pedidos',home_url('/stock/'))); ?>">3. Pedidos / Proformas</a>
+    <div class="frn-app-navigation">
+        <section class="frn-app-nav-group" aria-label="Catálogo">
+            <small>Catálogo</small>
+            <nav class="frn-app-tabs" aria-label="Catálogo">
+                <a class="<?php echo $tab === 'importar' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','importar',home_url('/stock/'))); ?>">Datos semanales</a>
+                <a class="<?php echo in_array($tab,['tarifas','tarifa'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','tarifas',home_url('/stock/'))); ?>">Crear PDF</a>
+                <?php if ($canEditTranslations) : ?>
+                    <a class="<?php echo $tab === 'traducciones' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','traducciones',home_url('/stock/'))); ?>">Traducciones</a>
+                <?php endif; ?>
+                <?php if ($canManageUsers) : ?>
+                    <a class="<?php echo $tab === 'diseno' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','diseno',home_url('/stock/'))); ?>">Diseño PDF</a>
+                    <a class="<?php echo $tab === 'usuarios' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','usuarios',home_url('/stock/'))); ?>">Usuarios</a>
+                <?php endif; ?>
+            </nav>
+        </section>
+        <?php if ($canManageOrders || $canManageCustomers) : ?>
+        <section class="frn-app-nav-group frn-app-nav-orders" aria-label="Pedidos">
+            <small>Pedidos</small>
+            <nav class="frn-app-tabs" aria-label="Pedidos">
+                <?php if ($canManageOrders) : ?>
+                    <a class="<?php echo in_array($tab,['pedidos','pedido'],true) ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','pedidos',home_url('/stock/'))); ?>">Pedidos / Proformas</a>
+                <?php endif; ?>
+                <?php if ($canManageCustomers) : ?>
+                    <a class="<?php echo $tab === 'clientes' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','clientes',home_url('/stock/'))); ?>">Clientes</a>
+                <?php endif; ?>
+            </nav>
+        </section>
         <?php endif; ?>
-        <?php if ($canManageCustomers) : ?>
-            <a class="<?php echo $tab === 'clientes' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','clientes',home_url('/stock/'))); ?>">Clientes</a>
-        <?php endif; ?>
-        <?php if ($canEditTranslations) : ?>
-            <a class="<?php echo $tab === 'traducciones' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','traducciones',home_url('/stock/'))); ?>">Traducciones</a>
-        <?php endif; ?>
-        <?php if ($canManageUsers) : ?>
-            <a class="<?php echo $tab === 'diseno' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','diseno',home_url('/stock/'))); ?>">Diseño PDF</a>
-            <a class="<?php echo $tab === 'usuarios' ? 'is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('tab','usuarios',home_url('/stock/'))); ?>">Usuarios</a>
-        <?php endif; ?>
-    </nav>
+    </div>
 
     <?php foreach ($messages as [$kind,$message]) : ?>
         <div class="frn-app-message <?php echo esc_attr($kind); ?>"><?php echo esc_html($message); ?></div>
@@ -81,7 +93,7 @@ $postUrl = admin_url('admin-post.php');
 
 <footer class="frn-footer">
     <span>FRN Atlántico · Herramienta interna · v<?php echo esc_html(FRN_SP_VERSION); ?></span>
-    <a href="https://wa.me/<?php echo esc_attr($whatsapp); ?>" target="_blank" rel="noopener">WhatsApp comercial</a>
+    <?php if ($whatsapp !== '') : ?><a href="https://wa.me/<?php echo esc_attr($whatsapp); ?>" target="_blank" rel="noopener">WhatsApp comercial</a><?php endif; ?>
     <a href="<?php echo esc_url($logoutUrl); ?>">Cerrar sesión</a>
 </footer>
 <?php wp_footer(); ?>
