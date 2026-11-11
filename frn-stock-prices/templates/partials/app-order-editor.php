@@ -134,7 +134,6 @@ foreach ($products as $p) {
               <input type="number" min="0" step="0.001" data-line-field="quantity" value="0">
             </label>
             <label class="frn-half-pallet-toggle" data-frn-half-pallet-wrap hidden>
-              <span>Pallets completos</span>
               <span><input type="checkbox" data-frn-half-pallet> Añadir medio pallet (+0,5)</span>
             </label>
             <label>Cajas
