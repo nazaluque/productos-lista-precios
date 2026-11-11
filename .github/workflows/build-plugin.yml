@@ -9,7 +9,7 @@ on:
       - 'release/**'
       - '.github/workflows/build-plugin.yml'
   push:
-    branches: [main, feature/tarifas-semanales-v1, feature/pedidos-proformas-v1, feature/pedidos-internos-v1]
+    branches: [main, feature/tarifas-semanales-v1, feature/pedidos-proformas-v1, feature/pedidos-internos-v1, fix/pdf-rendering-v1.3.2-portugal]
     paths:
       - 'frn-stock-prices/**'
       - 'frn-home/**'
@@ -27,9 +27,9 @@ jobs:
           tools: composer:v2
       - name: Validate PHP syntax
         run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Validate FRN 1.3.1 contract
+      - name: Validate FRN 1.3.2 contract
         run: |
-          grep -q "Version: 1.3.1" frn-stock-prices/frn-stock-prices.php
+          grep -q "Version: 1.3.2" frn-stock-prices/frn-stock-prices.php
           grep -q "frn_product_history" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "frn_front_preview_stock" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "frn_front_user_save" frn-stock-prices/includes/class-frn-frontend-app.php
@@ -53,7 +53,8 @@ jobs:
           grep -q "frn_pdf_header_position_" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "height:128px" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "font-size:7.6pt" frn-stock-prices/includes/class-frn-frontend-app.php
-          grep -q "set_opacity(0.018)" frn-stock-prices/includes/class-frn-frontend-app.php
+          grep -q "pdf-watermark" frn-stock-prices/includes/class-frn-frontend-app.php
+          ! grep -q "canvas->image($watermarkPath" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "frn_customers" frn-stock-prices/includes/class-frn-order-repository.php
           grep -q "frn_orders" frn-stock-prices/includes/class-frn-order-repository.php
           grep -q "frn_front_order_save" frn-stock-prices/includes/class-frn-frontend-app.php
@@ -66,16 +67,14 @@ jobs:
       - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-      - name: Create clear installable pack
+      - name: Create direct installable stock plugin
         run: |
           mkdir -p build
-          zip -r build/01-INSTALAR-FRN-STOCK-PRECIOS-v1.3.1.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
-          zip -r build/02-INSTALAR-FRN-HOME-v1.3.1.zip frn-home
+          zip -r build/FRN-STOCK-PRECIOS-v1.3.2.zip frn-stock-prices -x '*/composer.lock' -x '*/composer.json'
+          zip -r build/FRN-HOME-v1.3.2.zip frn-home
           cp release/LEEME-PRIMERO.txt build/LEEME-PRIMERO.txt
-          cd build
-          zip -r ../FRN-PLUGINS-v1.3.1.zip .
       - uses: actions/upload-artifact@v4
         with:
-          name: FRN-PLUGINS-v1.3.1
-          path: FRN-PLUGINS-v1.3.1.zip
+          name: FRN-STOCK-PRECIOS-v1.3.2
+          path: build/FRN-STOCK-PRECIOS-v1.3.2.zip
           if-no-files-found: error
