@@ -1215,8 +1215,17 @@ final class FRN_Frontend_App
             $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode($e->getMessage())]);
         }
 
-        $tmp = wp_tempnam('frn-order-' . $id . '.pdf');
-        if (!$tmp || file_put_contents($tmp, $bytes) === false) {
+        $tmp = wp_tempnam('frn-order-' . $id);
+        if (!$tmp) {
+            $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode('No se pudo preparar el PDF temporal para el envío.')]);
+        }
+        // Outlook/Exchange may block attachments whose temporary filename ends in .tmp.
+        // Keep the random private temp path, but give the attachment a real .pdf suffix.
+        $pdfTmp = preg_replace('/\\.tmp$/i', '.pdf', $tmp);
+        if ($pdfTmp === $tmp) { $pdfTmp = $tmp . '.pdf'; }
+        if (!@rename($tmp, $pdfTmp) || file_put_contents($pdfTmp, $bytes) === false) {
+            @unlink($tmp);
+            @unlink($pdfTmp);
             $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode('No se pudo preparar el PDF temporal para el envío.')]);
         }
 
@@ -1237,9 +1246,9 @@ final class FRN_Frontend_App
             $subject,
             $body,
             $headers,
-            [$tmp]
+            [$pdfTmp]
         );
-        @unlink($tmp);
+        @unlink($pdfTmp);
 
         if (!$sent) {
             $this->orders->log($id, 'email_error', 'wp_mail no confirmó el envío a: ' . implode(', ', $recipients));
