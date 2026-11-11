@@ -130,7 +130,7 @@ foreach ($products as $p) {
                 <option value="unidades">Unidades</option>
               </select>
             </label>
-            <label>Cantidad
+            <label><span data-frn-quantity-label>Cantidad</span>
               <input type="number" min="0" step="0.001" data-line-field="quantity" value="0">
             </label>
             <label>Cajas
@@ -139,11 +139,11 @@ foreach ($products as $p) {
             <label>Pallets
               <input type="number" min="0" step="0.001" data-line-field="pallets" value="0">
             </label>
-            <label>Kg totales
+            <label><span data-frn-weight-label>Kg totales</span>
               <input type="number" min="0" step="0.001" data-line-field="total_kg" value="0">
             </label>
-            <label>Precio venta
-              <div class="frn-price-input"><input type="number" min="0" step="0.01" data-line-field="unit_price" value="0"><span>€</span></div>
+            <label>Precio por kg
+              <div class="frn-price-input"><input type="number" min="0" step="0.01" data-line-field="unit_price" value="0"><span>€/kg</span></div>
             </label>
           </div>
           <label class="frn-order-line-note">Observación de línea
@@ -170,7 +170,7 @@ foreach ($products as $p) {
     </section>
 
     <div class="frn-order-summary-bar">
-      <div><small><?php echo esc_html(strtoupper($title)); ?></small><strong data-frn-order-grand-total><?php echo esc_html(number_format_i18n((float)($order['subtotal'] ?? 0),2)); ?> €</strong></div>
+      <div><small><?php echo esc_html(strtoupper($title)); ?></small><strong data-frn-order-grand-total><?php echo esc_html(number_format_i18n((float)($order['subtotal'] ?? 0),2)); ?> €</strong><span data-frn-order-pending hidden></span></div>
       <div class="frn-order-actions">
         <a class="frn-secondary-button" href="<?php echo esc_url(add_query_arg('tab','pedidos',home_url('/stock/'))); ?>">Volver</a>
         <button type="submit">Guardar <?php echo esc_html(strtolower($title)); ?></button>
@@ -183,37 +183,49 @@ foreach ($products as $p) {
       add_query_arg(['action'=>'frn_front_order_pdf','order_id'=>(int)$order['id']], admin_url('admin-post.php')),
       'frn_front_order_pdf_' . (int)$order['id']
     );
-    $defaultRecipients = $type === 'proforma'
-      ? (string)($order['customer_email'] ?? '')
-      : (string)($orderEmailSettings['internal_recipients'] ?? '');
-    $defaultSubject = ($type === 'proforma' ? 'Proforma ' : 'Pedido ')
-      . (string)$order['document_number'] . ' · ' . (string)$order['customer_company'];
+    $recipientOptions = array_values(array_unique(array_filter(array_map('trim', preg_split('/[;,\s]+/', (string)($orderEmailSettings['internal_recipients'] ?? '')) ?: []))));
+    $extraRecipientOptions = array_values(array_unique(array_filter(array_map('trim', preg_split('/[;,\s]+/', (string)($orderEmailSettings['extra_recipients'] ?? '')) ?: []))));
+    $recipientOptions = array_values(array_unique(array_merge($recipientOptions, $extraRecipientOptions)));
+    $defaultSubject = ($type === 'proforma' ? 'Nueva proforma ' : 'Nuevo pedido ')
+      . (string)$order['document_number'];
+    $shareFilename = sanitize_file_name('FRN-' . (string)$order['document_number'] . '.pdf');
   ?>
   <section class="frn-order-send-panel">
     <div class="frn-card-heading">
       <div><small>Documento listo</small><h2>PDF y envío</h2></div>
-      <p>Descarga el documento o envíalo por correo con el PDF adjunto. El envío queda registrado en el histórico.</p>
+      <p>Abre, descarga o comparte el PDF por WhatsApp. El correo se envía al equipo interno y queda registrado en el histórico.</p>
     </div>
 
     <div class="frn-order-send-actions">
-      <a class="frn-pdf-button" href="<?php echo esc_url($pdfUrl); ?>">Descargar PDF</a>
+      <div class="frn-order-pdf-actions">
+        <a class="frn-pdf-button" target="_blank" rel="noopener" href="<?php echo esc_url(add_query_arg('inline','1',$pdfUrl)); ?>">Abrir PDF</a>
+        <a class="frn-pdf-button" href="<?php echo esc_url($pdfUrl); ?>">Descargar PDF</a>
+        <button type="button" class="frn-pdf-button frn-whatsapp-share" data-frn-share-pdf data-pdf-url="<?php echo esc_url($pdfUrl); ?>" data-pdf-name="<?php echo esc_attr($shareFilename); ?>">Compartir por WhatsApp</button>
+      </div>
 
       <?php if ($canSendOrders) : ?>
       <form method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-order-email-form">
         <input type="hidden" name="action" value="frn_front_order_send">
         <input type="hidden" name="order_id" value="<?php echo (int)$order['id']; ?>">
         <?php wp_nonce_field('frn_front_order_send_' . (int)$order['id']); ?>
-        <label>Destinatarios
-          <input type="text" name="recipients" required value="<?php echo esc_attr($defaultRecipients); ?>" placeholder="correo@empresa.com; otro@empresa.com">
-          <small>Separa varios correos con coma o punto y coma.</small>
-        </label>
+        <fieldset class="frn-order-recipient-list">
+          <legend>Enviar al equipo interno</legend>
+          <?php foreach ($recipientOptions as $recipient) : ?>
+            <label><input type="checkbox" name="recipients[]" value="<?php echo esc_attr($recipient); ?>" checked> <span><?php echo esc_html($recipient); ?></span></label>
+          <?php endforeach; ?>
+          <label class="frn-order-extra-recipient">Añadir otro destinatario interno
+            <input type="email" name="extra_recipient" placeholder="nombre@frnatlantico.com">
+          </label>
+          <label class="frn-order-remember-recipient"><input type="checkbox" name="remember_extra_recipient" value="1"> <span>Recordarlo para próximos pedidos</span></label>
+          <small>Puedes desmarcar cualquiera de los tres correos y enviar a uno o varios.</small>
+        </fieldset>
         <label>Asunto
           <input type="text" name="subject" value="<?php echo esc_attr($defaultSubject); ?>">
         </label>
         <label>Mensaje
-          <textarea name="message" rows="5"><?php echo esc_textarea("Se adjunta " . ($type === 'proforma' ? 'la proforma comercial' : 'el pedido comercial') . " " . (string)$order['document_number'] . ".\n\nCliente: " . (string)$order['customer_company'] . "\n\nUn saludo,\nFRN Atlántico"); ?></textarea>
+        <textarea name="message" rows="5"><?php echo esc_textarea("Se adjunta " . ($type === 'proforma' ? 'la proforma' : 'el nuevo pedido') . " " . (string)$order['document_number'] . " para gestión administrativa interna.\n\nUn saludo,\nFRN Atlántico"); ?></textarea>
         </label>
-        <button type="submit">Enviar PDF por email</button>
+        <button type="submit">Enviar al equipo por email</button>
       </form>
       <?php endif; ?>
     </div>
