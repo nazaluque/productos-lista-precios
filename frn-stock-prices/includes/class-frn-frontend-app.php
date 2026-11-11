@@ -90,9 +90,10 @@ final class FRN_Frontend_App
             'canSendOrders' => current_user_can('frn_send_orders'),
             'orderEmailSettings' => [
                 'from_name'=>(string)get_option('frn_order_from_name','FRN Atlántico'),
-                'from_email'=>(string)get_option('frn_order_from_email',''),
-                'reply_to'=>(string)get_option('frn_order_reply_to',''),
-                'internal_recipients'=>(string)get_option('frn_order_internal_recipients',''),
+                'from_email'=>(string)(get_option('frn_order_from_email','') ?: 'nl@frnatlantico.es'),
+                'reply_to'=>(string)(get_option('frn_order_reply_to','') ?: 'nl@frnatlantico.es'),
+                'internal_recipients'=>(string)(get_option('frn_order_internal_recipients','') ?: 'gc@frnatlantico.com; rg@frnatlantico.com; nl@frnatlantico.com'),
+                'extra_recipients'=>(string)get_option('frn_order_extra_recipients',''),
             ],
         ];
 
@@ -1159,7 +1160,8 @@ final class FRN_Frontend_App
 
         nocache_headers();
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        $disposition = !empty($_GET['inline']) ? 'inline' : 'attachment';
+        header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($bytes));
         echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         exit;
@@ -1176,8 +1178,13 @@ final class FRN_Frontend_App
             $this->redirect(['tab'=>'pedidos','error'=>rawurlencode('Documento no encontrado.')]);
         }
 
-        $rawRecipients = sanitize_text_field((string)($_POST['recipients'] ?? ''));
-        $recipientParts = preg_split('/[;,\s]+/', $rawRecipients) ?: [];
+        $rawRecipients = is_array($_POST['recipients'] ?? null) ? wp_unslash($_POST['recipients']) : [];
+        $recipientParts = [];
+        foreach ($rawRecipients as $rawRecipient) {
+            $recipientParts = array_merge($recipientParts, preg_split('/[;,\s]+/', sanitize_text_field((string)$rawRecipient)) ?: []);
+        }
+        $extraRecipient = sanitize_email((string)($_POST['extra_recipient'] ?? ''));
+        if ($extraRecipient !== '') { $recipientParts[] = $extraRecipient; }
         $recipients = [];
         foreach ($recipientParts as $candidate) {
             $email = sanitize_email($candidate);
@@ -1188,8 +1195,8 @@ final class FRN_Frontend_App
             $this->redirect(['tab'=>'pedido','id'=>$id,'error'=>rawurlencode('Indica al menos un correo destinatario válido.')]);
         }
 
-        $defaultSubject = ((string)$order['document_type'] === 'proforma' ? 'Proforma ' : 'Pedido ')
-            . (string)$order['document_number'] . ' · ' . (string)$order['customer_company'];
+        $defaultSubject = ((string)$order['document_type'] === 'proforma' ? 'Nueva proforma ' : 'Nuevo pedido ')
+            . (string)$order['document_number'];
         $subject = sanitize_text_field((string)($_POST['subject'] ?? $defaultSubject));
         if ($subject === '') { $subject = $defaultSubject; }
 
@@ -1215,8 +1222,8 @@ final class FRN_Frontend_App
 
         $headers = ['Content-Type: text/plain; charset=UTF-8'];
         $fromName = sanitize_text_field((string)get_option('frn_order_from_name','FRN Atlántico'));
-        $fromEmail = sanitize_email((string)get_option('frn_order_from_email',''));
-        $replyTo = sanitize_email((string)get_option('frn_order_reply_to',''));
+        $fromEmail = sanitize_email((string)(get_option('frn_order_from_email','') ?: 'nl@frnatlantico.es'));
+        $replyTo = sanitize_email((string)(get_option('frn_order_reply_to','') ?: 'nl@frnatlantico.es'));
 
         if ($fromEmail !== '' && is_email($fromEmail)) {
             $headers[] = 'From: ' . ($fromName !== '' ? $fromName : 'FRN Atlántico') . ' <' . $fromEmail . '>';
@@ -1241,6 +1248,11 @@ final class FRN_Frontend_App
 
         $this->orders->update_status($id, 'enviado');
         $this->orders->log($id, 'enviado', 'Correo enviado a: ' . implode(', ', $recipients));
+        if (!empty($_POST['remember_extra_recipient']) && $extraRecipient !== '' && is_email($extraRecipient)) {
+            $savedExtra = preg_split('/[;,\s]+/', (string)get_option('frn_order_extra_recipients','')) ?: [];
+            $savedExtra = array_values(array_unique(array_filter(array_map('sanitize_email', array_merge($savedExtra, [$extraRecipient])))));
+            update_option('frn_order_extra_recipients', implode('; ', $savedExtra), false);
+        }
         $this->redirect(['tab'=>'pedido','id'=>$id,'order_sent'=>1]);
     }
 
@@ -1293,6 +1305,7 @@ final class FRN_Frontend_App
         $web = esc_html((string)get_option('frn_tariff_web','www.frnatlantico.com'));
 
         $rows = '';
+        $pendingWeightCount = 0;
         foreach ($items as $item) {
             $qty = (float)$item['quantity'];
             $kg = (float)$item['total_kg'];
@@ -1301,13 +1314,15 @@ final class FRN_Frontend_App
             if ((float)$item['boxes'] > 0) { $presentation[] = number_format((float)$item['boxes'], 2, ',', '.') . ' cajas'; }
             if (!$presentation) { $presentation[] = number_format($qty, 3, ',', '.') . ' ' . esc_html((string)$item['sale_unit']); }
 
+            $needsWeight = (string)$item['sale_unit'] !== 'kg' && $kg <= 0;
+            if ($needsWeight) { $pendingWeightCount++; }
             $rows .= '<tr>'
                 . '<td>' . esc_html((string)$item['product_code']) . '</td>'
                 . '<td><strong>' . esc_html((string)$item['product_name']) . '</strong><br><span>' . esc_html((string)$item['brand']) . '</span></td>'
                 . '<td>' . implode(' · ', array_map('esc_html', $presentation)) . '</td>'
                 . '<td class="num">' . ($kg > 0 ? number_format($kg, 3, ',', '.') . ' kg' : '—') . '</td>'
                 . '<td class="num">' . number_format((float)$item['unit_price'], 2, ',', '.') . ' €</td>'
-                . '<td class="num total">' . number_format((float)$item['line_total'], 2, ',', '.') . ' €</td>'
+                . '<td class="num total">' . ($needsWeight ? 'Pendiente de kg' : number_format((float)$item['line_total'], 2, ',', '.') . ' €') . '</td>'
                 . '</tr>';
         }
 
@@ -1334,7 +1349,7 @@ final class FRN_Frontend_App
         . '<div class="meta"><div class="box"><h2>Cliente</h2><p><strong>' . esc_html((string)$order['customer_company']) . '</strong></p><p>CIF/VAT: ' . esc_html((string)$order['customer_vat']) . '</p><p>Contacto: ' . esc_html((string)$order['customer_contact']) . '</p><p>Tel: ' . esc_html((string)$order['customer_phone']) . '</p><p>Email: ' . esc_html((string)$order['customer_email']) . '</p></div>'
         . '<div class="box"><h2>Entrega</h2><p>' . esc_html((string)$order['delivery_address']) . '</p><p>Fecha solicitada: ' . esc_html($requested) . '</p><p class="muted">' . nl2br(esc_html((string)$order['delivery_notes'])) . '</p></div></div>'
         . '<table><thead><tr><th>Código</th><th>Producto / Marca</th><th>Presentación</th><th class="num">Kg</th><th class="num">Precio</th><th class="num">Importe</th></tr></thead><tbody>' . $rows . '</tbody></table>'
-        . '<div class="summary">Total mercancía: <strong>' . number_format((float)$order['subtotal'],2,',','.') . ' €</strong></div>'
+        . '<div class="summary">' . ($pendingWeightCount ? 'Total parcial · faltan los kg de ' . $pendingWeightCount . ' línea(s): ' : 'Total mercancía: ') . '<strong>' . number_format((float)$order['subtotal'],2,',','.') . ' €</strong></div>'
         . ((string)$order['notes'] !== '' ? '<div class="notes"><strong>Observaciones</strong><br>' . nl2br(esc_html((string)$order['notes'])) . '</div>' : '')
         . '<div class="footer">' . $company . ($address !== '' ? ' · ' . $address : '') . ($phone !== '' ? ' · ' . $phone : '') . ($email !== '' ? ' · ' . $email : '') . ($web !== '' ? ' · ' . $web : '') . '</div>'
         . '</body></html>';
@@ -1445,8 +1460,10 @@ final class FRN_Frontend_App
             $boxes = max(0, $this->number($raw['boxes'] ?? 0));
             $pallets = max(0, $this->number($raw['pallets'] ?? 0));
             $totalKg = max(0, $this->number($raw['total_kg'] ?? 0));
+            if ($saleUnit === 'kg') { $totalKg = $quantity; }
 
-            $basis = $totalKg > 0 ? $totalKg : $quantity;
+            // A box, pallet, or unit count has no calculable €/kg amount until its weight is known.
+            $basis = $totalKg > 0 ? $totalKg : 0;
             $items[] = [
                 'product_id'=>$productId,
                 'product_code'=>(string)$product['product_code'],
