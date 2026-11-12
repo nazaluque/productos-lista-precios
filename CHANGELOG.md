@@ -1,5 +1,14 @@
 # FRN Stock & Prices
 
+## 1.3.3 — Reparación del editor de pedidos
+
+- Corrige un error de sintaxis en `assets/app.js` introducido al ajustar la lógica de pallets.
+- El error contenía un `\\n` literal dentro de JavaScript y detenía por completo la ejecución del archivo.
+- Restaura la carga automática de datos del cliente al seleccionarlo.
+- Restaura el botón “Añadir producto” y la edición dinámica de líneas del pedido.
+- Conserva clientes, pedidos, productos, tarifas, precios, stock y datos existentes.
+- Añade validación `node --check` en GitHub Actions para evitar futuras regresiones de sintaxis JavaScript.
+
 ## 1.3.2 — PDF nítido y traducciones de carne para Portugal
 
 - Evita que la marca de agua se pinte encima de los textos y códigos del PDF: ahora se renderiza en la capa de fondo, antes del contenido.
