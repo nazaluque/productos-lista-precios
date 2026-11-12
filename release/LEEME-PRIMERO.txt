@@ -1,31 +1,50 @@
-FRN Stock & Prices · v1.3.2
-CORRECCIÓN DE PDF Y PORTUGUÉS
+FRN Stock & Prices · v1.3.3
+REPARACIÓN DEL EDITOR DE PEDIDOS
 
 SOLO PARA frnatlantico.es
 NO INSTALAR EN frnatlantico.com
 
-CONTENIDO
----------
-El archivo FRN-STOCK-PRECIOS-v1.3.2.zip contiene directamente la carpeta
-frn-stock-prices y se puede subir en WordPress > Plugins > Añadir plugin.
-No es un ZIP contenedor ni está dentro de otro ZIP.
-
-CAMBIOS
--------
-- La marca de agua se dibuja detrás del contenido. Ya no cubre los códigos,
-  encabezados ni las letras pequeñas del listado.
-- Se conserva el formato A4 apaisado, la cabecera, los idiomas, los precios,
-  las ofertas, el stock, las categorías y la paginación.
-- El catálogo, las traducciones, los precios y el stock guardados no se
-  reinician ni se vuelven a importar.
-- Para imprimir los nuevos nombres portugueses, generar una tarifa Portugal
-  desde el maestro vigente después de instalar esta versión. Las tarifas
-  históricas siguen disponibles sin cambios.
-
-PRUEBA RECOMENDADA
+PROBLEMA CORREGIDO
 ------------------
-Abrir la tarifa portuguesa nueva y revisar los códigos C, la letra T, ESPAÑA,
-los acentos y la zona donde aparecía la marca de agua. Comparar con el PDF
-anterior en el mismo visor.
+El editor de pedidos quedaba sin respuesta:
+- al seleccionar un cliente no se rellenaban sus datos;
+- “Añadir producto” no hacía nada;
+- las líneas de producto no se inicializaban.
 
-Versión del plugin: 1.3.2
+CAUSA
+-----
+assets/app.js contenía un error real de sintaxis:
+se había insertado un \n literal dentro de una sentencia JavaScript al
+modificar la lógica de pallets.
+
+Ese único error impedía ejecutar todo el bloque JavaScript de Pedidos.
+
+SEGURIDAD DE DATOS
+------------------
+Esta versión NO borra ni reinicia:
+- clientes;
+- pedidos;
+- productos;
+- precios;
+- stock;
+- tarifas;
+- traducciones;
+- categorías.
+
+INSTALACIÓN
+-----------
+1. WordPress > Plugins > Añadir plugin > Subir plugin.
+2. Instalar FRN-STOCK-PRECIOS-v1.3.3 sustituyendo la versión anterior.
+3. NO borrar datos ni reimportar Excel.
+4. Abrir /stock/?tab=pedido&type=pedido
+5. Seleccionar un cliente y comprobar que se completan sus datos.
+6. Pulsar “+ Añadir producto” y comprobar que aparece una nueva línea.
+
+VALIDACIÓN
+----------
+GitHub Actions incluye ahora:
+- PHP syntax check;
+- JavaScript syntax check con node --check;
+- contrato de versión.
+
+Versión del plugin: 1.3.3
