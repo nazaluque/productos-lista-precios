@@ -9,7 +9,7 @@ on:
       - 'release/**'
       - '.github/workflows/build-plugin.yml'
   push:
-    branches: [main, feature/tarifas-semanales-v1, feature/pedidos-proformas-v1, feature/pedidos-internos-v1, fix/pdf-rendering-v1.3.2-portugal]
+    branches: [main, feature/tarifas-semanales-v1, feature/pedidos-proformas-v1, feature/pedidos-internos-v1, fix/pdf-rendering-v1.3.3-portugal, fix/pedidos-js-v1.3.3]
     paths:
       - 'frn-stock-prices/**'
       - 'frn-home/**'
@@ -27,9 +27,9 @@ jobs:
           tools: composer:v2
       - name: Validate PHP syntax
         run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Validate FRN 1.3.2 contract
+      - name: Validate FRN 1.3.3 contract
         run: |
-          grep -q "Version: 1.3.2" frn-stock-prices/frn-stock-prices.php
+          grep -q "Version: 1.3.3" frn-stock-prices/frn-stock-prices.php
           grep -q "frn_product_history" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "frn_front_preview_stock" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "frn_front_user_save" frn-stock-prices/includes/class-frn-frontend-app.php
@@ -64,16 +64,18 @@ jobs:
           grep -q "gc@frnatlantico.com" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "Compartir por WhatsApp" frn-stock-prices/templates/partials/app-order-editor.php
           grep -q "Importe parcial" frn-stock-prices/assets/app.js
+      - name: Validate JavaScript syntax
+        run: node --check frn-stock-prices/assets/app.js
       - name: Install stock plugin dependencies
         working-directory: frn-stock-prices
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
       - name: Stage a single installable plugin folder
         run: |
-          mkdir -p build/FRN-STOCK-PRECIOS-v1.3.2
-          cp -R frn-stock-prices build/FRN-STOCK-PRECIOS-v1.3.2/frn-stock-prices
-          cp release/LEEME-PRIMERO.txt build/FRN-STOCK-PRECIOS-v1.3.2/LEEME-PRIMERO.txt
+          mkdir -p build/FRN-STOCK-PRECIOS-v1.3.3
+          cp -R frn-stock-prices build/FRN-STOCK-PRECIOS-v1.3.3/frn-stock-prices
+          cp release/LEEME-PRIMERO.txt build/FRN-STOCK-PRECIOS-v1.3.3/LEEME-PRIMERO.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: FRN-STOCK-PRECIOS-v1.3.2
-          path: build/FRN-STOCK-PRECIOS-v1.3.2
+          name: FRN-STOCK-PRECIOS-v1.3.3
+          path: build/FRN-STOCK-PRECIOS-v1.3.3
           if-no-files-found: error
