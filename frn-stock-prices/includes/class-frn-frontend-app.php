@@ -62,7 +62,7 @@ final class FRN_Frontend_App
         $importStage = $tab === 'importar' ? sanitize_key($_GET['import_stage'] ?? '') : '';
         $publishFailed = $importStage === 'publicar';
         $importError = in_array($importStage, ['analizar','publicar'], true)
-            ? sanitize_text_field(wp_unslash($_GET['error'] ?? ''))
+            ? sanitize_text_field(wp_unslash($_GET['import_error'] ?? ''))
             : '';
         $publishedImport = $tab === 'importar' && isset($_GET['stock_published']) ? [
             'count' => absint($_GET['stock_published']),
@@ -127,10 +127,10 @@ final class FRN_Frontend_App
         ];
 
         if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
-            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','import_error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
-            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','import_error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
         }
 
         try {
@@ -182,7 +182,7 @@ final class FRN_Frontend_App
             }
             $parsed['commercial_groups'] = $this->catalog->all_groups();
         } catch (Throwable $e) {
-            $this->redirect(['tab' => 'importar', 'import_stage' => 'analizar', 'error' => rawurlencode($e->getMessage())]);
+            $this->redirect(['tab' => 'importar', 'import_stage' => 'analizar', 'import_error' => rawurlencode($e->getMessage())]);
         }
 
         $parsed['preview_type'] = 'selective';
@@ -199,7 +199,7 @@ final class FRN_Frontend_App
 
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
         if (!$preview || !is_array($preview) || !in_array(($preview['preview_type'] ?? ''), ['stock','selective'], true)) {
-            $this->redirect(['tab' => 'importar', 'import_stage' => 'publicar', 'error' => rawurlencode('La previsualización ha caducado. Vuelve a seleccionar y analizar el Excel.')]);
+            $this->redirect(['tab' => 'importar', 'import_stage' => 'publicar', 'import_error' => rawurlencode('La previsualización ha caducado. Vuelve a seleccionar y analizar el Excel.')]);
         }
 
         $updates = array_merge(
@@ -208,10 +208,10 @@ final class FRN_Frontend_App
         );
 
         if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
-            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','import_error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
-            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','import_error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
         }
 
         $updates['reset_missing_stock'] = $updates['stock'] && !empty($_POST['reset_missing_stock']);
@@ -233,7 +233,7 @@ final class FRN_Frontend_App
                         'tab'=>'importar',
                         'import_stage'=>'publicar',
                         'preview'=>$token,
-                        'error'=>rawurlencode('Asigna una categoría comercial válida a ' . ($code ?: (string)($row['name'] ?? 'producto nuevo')) . ' antes de publicar.'),
+                        'import_error'=>rawurlencode('Asigna una categoría comercial válida a ' . ($code ?: (string)($row['name'] ?? 'producto nuevo')) . ' antes de publicar.'),
                     ]);
                 }
 
@@ -253,7 +253,7 @@ final class FRN_Frontend_App
         if ($invalid) {
             $this->redirect([
                 'tab'=>'importar','import_stage'=>'publicar','preview'=>$token,
-                'error'=>rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
+                'import_error'=>rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
             ]);
         }
 
@@ -272,7 +272,7 @@ final class FRN_Frontend_App
         } catch (Throwable $e) {
             $this->redirect([
                 'tab'=>'importar','import_stage'=>'publicar','preview'=>$token,
-                'error'=>rawurlencode($e->getMessage()),
+                'import_error'=>rawurlencode($e->getMessage()),
             ]);
         }
 
