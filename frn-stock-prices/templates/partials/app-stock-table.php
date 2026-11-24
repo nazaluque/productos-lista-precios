@@ -110,7 +110,7 @@ $renderMasterRows = static function(array $rows, string $group) use ($canEditSto
         <?php $renderMasterRows($incomingProducts, 'incoming'); ?>
 
         <?php if ($canEditStock || $canEditPrices) : ?>
-            <div class="frn-inline-action"><button type="submit">Guardar cambios</button></div>
+            <div class="frn-inline-action"><button type="submit">Guardar ediciones de la tabla</button></div>
         <?php endif; ?>
     </form>
 </section>

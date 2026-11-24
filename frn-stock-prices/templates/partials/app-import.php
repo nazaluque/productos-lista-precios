@@ -9,7 +9,24 @@ $incomingProducts = array_values(array_filter(
     $products,
     static fn(array $product): bool => (int) $product['incoming'] === 1
 ));
-$hasPreview = is_array($preview);
+$hasPreview = is_array($preview) && in_array(($preview['preview_type'] ?? ''), ['stock','selective'], true);
+$importUrl = add_query_arg('tab', 'importar', home_url('/stock/'));
+$readyToPublish = false;
+if ($hasPreview) {
+    $previewRows = array_merge(
+        $preview['catalogs']['carne'] ?? [],
+        $preview['catalogs']['pescado-marisco'] ?? []
+    );
+    $previewIncoming = array_values(array_filter($previewRows, static fn(array $row): bool => !empty($row['incoming'])));
+    $previewRegular = array_values(array_filter($previewRows, static fn(array $row): bool => empty($row['incoming'])));
+    $invalid = count(array_filter($previewRows, static fn(array $row): bool => empty($row['valid'])));
+    $updates = array_merge(['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false], $preview['updates'] ?? []);
+    $detected = array_merge(['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false], $preview['detected'] ?? []);
+    $readyToPublish = $invalid === 0 && $previewRows;
+    $fieldLabels = ['stock'=>'Stock','price'=>'Precio','cost'=>'Coste promedio','groups'=>'Categorías / orden'];
+    $selectedFields = implode(', ', array_intersect_key($fieldLabels, array_filter($updates)));
+}
+$importStep = $publishedImport ? 4 : ($readyToPublish ? 3 : (($hasPreview || $importError !== '') ? 2 : 1));
 ?>
 
 <section class="frn-app-card frn-import-card">
@@ -18,20 +35,49 @@ $hasPreview = is_array($preview);
         <p>Analizar no modifica la base. Primero eliges qué contiene el Excel, después revisas el resultado y solo al pulsar Publicar se aplican los cambios seleccionados.</p>
     </div>
 
-    <div class="frn-import-steps">
-        <span class="<?php echo $hasPreview ? 'is-done' : 'is-active'; ?>"><b>1</b> Seleccionar</span>
-        <span class="<?php echo $hasPreview ? 'is-active' : ''; ?>"><b>2</b> Analizar</span>
-        <span><b>3</b> Publicar</span>
+    <div class="frn-import-steps" aria-label="Pasos de importación" data-frn-import-step="<?php echo $importStep; ?>">
+        <?php foreach ([1=>'Seleccionar', 2=>'Analizar', 3=>'Publicar'] as $step => $label) : ?>
+            <span class="<?php echo $step < $importStep ? 'is-done' : ($step === $importStep ? 'is-active' : ''); ?>" <?php if ($step === $importStep) { echo 'aria-current="step"'; } ?>>
+                <b aria-hidden="true"><?php echo $step < $importStep ? '✓' : $step; ?></b> <?php echo esc_html($label); ?>
+                <small class="screen-reader-text" data-frn-step-status><?php echo $step < $importStep ? 'Completado' : ''; ?></small>
+            </span>
+        <?php endforeach; ?>
     </div>
 
-    <?php if ($hasPreview) : ?>
-        <div class="frn-analysis-ready">
-            <div>
-                <small>Archivo analizado · todavía NO se ha publicado</small>
-                <strong><?php echo esc_html((string)($preview['filename'] ?? 'Excel semanal')); ?></strong>
-                <span>Revisa el análisis que aparece justo debajo. Si está correcto, pulsa “Publicar cambios seleccionados”.</span>
-            </div>
-            <a class="frn-secondary-link" href="<?php echo esc_url(add_query_arg('tab','importar',home_url('/stock/'))); ?>">Descartar y elegir otro archivo</a>
+    <?php if ($importError !== '') : ?>
+        <div class="frn-import-result is-error" role="alert" tabindex="-1" data-frn-import-result>
+            <strong><?php echo $publishFailed ? 'No se completó la publicación' : 'No se pudo analizar el archivo'; ?></strong>
+            <p><?php echo esc_html($importError); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($publishedImport) : ?>
+        <div class="frn-import-result is-success" role="status" tabindex="-1" data-frn-import-result>
+            <strong>✓ Publicación completada</strong>
+            <p><?php echo (int)$publishedImport['count']; ?> referencias procesadas. Campos actualizados: <?php echo esc_html($publishedImport['fields']); ?>.</p>
+            <a class="frn-secondary-link" href="<?php echo esc_url($importUrl); ?>">Importar otro Excel</a>
+        </div>
+    <?php elseif ($hasPreview) : ?>
+        <div class="frn-import-result <?php echo $readyToPublish ? 'is-success' : 'is-error'; ?>" role="<?php echo $readyToPublish ? 'status' : 'alert'; ?>" tabindex="-1" data-frn-import-result>
+            <strong><?php echo $readyToPublish ? '✓ Análisis completado. Listo para revisar y publicar' : 'Análisis con errores'; ?></strong>
+            <p><?php echo esc_html((string)($preview['filename'] ?? 'Excel semanal')); ?> · <?php echo count($previewRows); ?> referencias leídas · <?php echo $invalid; ?> filas con errores.</p>
+            <?php if ($readyToPublish) : ?>
+                <p>Campos seleccionados y detectados: <?php echo esc_html($selectedFields); ?>. Revisa el detalle de abajo antes de publicar.</p>
+            <?php else : ?>
+                <p>Revisa las filas señaladas abajo, corrige el Excel y vuelve a analizarlo.</p>
+            <?php endif; ?>
+            <?php if ($readyToPublish) : ?>
+                <form id="frn-publish-import" method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-inline-action frn-import-publish">
+                    <input type="hidden" name="action" value="frn_front_publish_stock">
+                    <input type="hidden" name="preview" value="<?php echo esc_attr($previewToken); ?>">
+                    <?php wp_nonce_field('frn_front_publish_stock_' . $previewToken); ?>
+                    <?php if ($updates['stock']) : ?>
+                        <label><input type="checkbox" name="reset_missing_stock" value="1"> Poner a cero las referencias que no aparecen en el Excel</label>
+                    <?php endif; ?>
+                    <button type="submit" data-frn-busy="Publicando…">Publicar cambios seleccionados</button>
+                </form>
+            <?php endif; ?>
+            <a class="frn-secondary-link" href="<?php echo esc_url($importUrl); ?>">Descartar y elegir otro archivo</a>
         </div>
     <?php elseif ($canEditStock || $canEditPrices) : ?>
         <form method="post" enctype="multipart/form-data" action="<?php echo esc_url($postUrl); ?>" class="frn-upload-form frn-upload-form-single">
@@ -39,7 +85,7 @@ $hasPreview = is_array($preview);
             <?php wp_nonce_field('frn_front_preview_stock'); ?>
 
             <div class="frn-import-fields">
-                <strong>1. Marca únicamente lo que quieres actualizar</strong>
+                <strong>Marca únicamente lo que quieres actualizar</strong>
                 <?php if ($canEditStock) : ?>
                     <label><input type="checkbox" name="import_fields[stock]" value="1" checked> Stock</label>
                     <label><input type="checkbox" name="import_fields[groups]" value="1"> Categorías / orden comercial</label>
@@ -48,11 +94,11 @@ $hasPreview = is_array($preview);
                     <label><input type="checkbox" name="import_fields[price]" value="1" checked> Precio</label>
                     <label><input type="checkbox" name="import_fields[cost]" value="1" checked> Coste promedio</label>
                 <?php endif; ?>
-                <small>Formato semanal FRN: Stock + Precio + Coste activados por defecto. Categorías y traducciones se conservan en la plataforma y solo se cambian si marcas esa opción.</small>
+                <small>Si el Excel trae solo existencias, deja marcado únicamente Stock.</small>
             </div>
 
             <label class="frn-dropzone">
-                <span>2. Selecciona el Excel</span>
+                <span>Selecciona el Excel</span>
                 <small>XLSX / XLS · formato semanal recomendado: una hoja con Referencia interna, Precio de venta, Coste, Categoría, Pronosticado y Unidades.</small>
                 <input id="frn-stock-files" type="file" name="stock_files[]" accept=".xlsx,.xls" multiple required>
             </label>
@@ -60,7 +106,7 @@ $hasPreview = is_array($preview);
                 <strong>Selecciona un Excel para comenzar</strong>
                 <span>El archivo no se publicará hasta que revises la previsualización.</span>
             </div>
-            <button type="submit">Analizar archivo</button>
+            <button type="submit" data-frn-busy="Analizando…">Analizar archivo</button>
         </form>
     <?php else : ?>
         <div class="frn-empty">Tu perfil puede consultar y exportar, pero no modificar datos del maestro.</div>

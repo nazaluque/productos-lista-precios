@@ -146,11 +146,14 @@ final class FRN_Excel_Importer
         }
         unset($rows);
 
-        foreach (['stock','price','cost'] as $field) {
+        $missingLabels = [];
+        foreach (['stock'=>'Stock','price'=>'Precio','cost'=>'Coste promedio'] as $field => $label) {
             if ($updates[$field] && !$detected[$field]) {
-                $label = $field === 'stock' ? 'stock' : ($field === 'price' ? 'precio' : 'coste promedio');
-                throw new RuntimeException('Has marcado “' . $label . '”, pero el Excel no contiene una columna reconocible para ese dato.');
+                $missingLabels[] = $label;
             }
+        }
+        if ($missingLabels) {
+            throw new RuntimeException('Faltan columnas reconocibles para los campos marcados: ' . implode(', ', $missingLabels) . '. Corrige el Excel o desmarca esos campos y vuelve a analizarlo.');
         }
         if ($updates['groups'] && !$detected['groups']) {
             throw new RuntimeException('Has marcado “Categorías / orden”, pero no se encontraron hojas Resumen con categorías reconocibles.');

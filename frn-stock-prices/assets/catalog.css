@@ -546,20 +546,26 @@
   border:1px solid rgba(255,255,255,.08);background:#07090a;color:#77746d;
   font-size:9px;text-transform:uppercase;letter-spacing:.07em
 }
+.frn-import-steps [data-frn-step-status]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .frn-import-steps b{
   display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
   border:1px solid currentColor;border-radius:50%;font-size:9px
 }
 .frn-import-steps span.is-active{border-color:var(--frn-gold);color:var(--frn-gold-light)}
 .frn-import-steps span.is-done{border-color:rgba(97,184,120,.45);color:#9fc7a7}
-.frn-analysis-ready{
-  display:flex;align-items:center;justify-content:space-between;gap:24px;
-  padding:18px;border:1px solid rgba(97,184,120,.45);background:rgba(50,120,70,.08)
+.frn-import-result{
+  display:grid;justify-items:start;gap:10px;margin:0 0 15px;padding:18px;
+  border:1px solid;color:var(--frn-ivory);scroll-margin-top:48px
 }
-.frn-analysis-ready>div{display:grid;gap:5px}
-.frn-analysis-ready small{color:#9fc7a7;text-transform:uppercase;letter-spacing:.1em;font-size:8px}
-.frn-analysis-ready strong{font:400 20px Georgia,serif;color:var(--frn-ivory)}
-.frn-analysis-ready span{color:#aaa69e;font-size:10px}
+.frn-import-result.is-success{border-color:#447953;background:#132019}
+.frn-import-result.is-error{border-color:#af6362;background:#2b1819}
+.frn-import-result>strong{font:400 20px Georgia,serif}
+.frn-import-result p{margin:0;color:#ddd8cc;font-size:13px}
+.frn-inline-action.frn-import-publish{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:16px;margin:4px 0
+}
+.frn-import-publish label{display:flex;align-items:center;gap:8px;font-size:12px}
+.frn-import-card button:disabled{opacity:.65;cursor:wait}
 .frn-secondary-link{
   display:inline-flex;align-items:center;min-height:40px;padding:0 13px;
   border:1px solid rgba(180,138,69,.45);color:var(--frn-gold-light)!important;
@@ -573,7 +579,7 @@
 .frn-stock-audit strong{color:var(--frn-ivory)}
 .frn-stock-audit small{width:100%;color:#77746d}
 @media(max-width:760px){
-  .frn-analysis-ready{align-items:flex-start;flex-direction:column}
+  .frn-import-publish,.frn-import-publish button{width:100%}
 }
 
 

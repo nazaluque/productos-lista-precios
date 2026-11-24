@@ -5,12 +5,46 @@ document.addEventListener('DOMContentLoaded', () => {
     sentNotice.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  const importSteps = document.querySelector('[data-frn-import-step]');
+  const setImportStep = (active) => {
+    importSteps?.querySelectorAll(':scope > span').forEach((item, index) => {
+      const step = index + 1;
+      const done = step < active;
+      item.classList.toggle('is-done', done);
+      item.classList.toggle('is-active', step === active);
+      if (step === active) item.setAttribute('aria-current', 'step');
+      else item.removeAttribute('aria-current');
+      item.querySelector('b').textContent = done ? '✓' : String(step);
+      item.querySelector('[data-frn-step-status]').textContent = done ? 'Completado' : '';
+    });
+  };
+
+  const importResult = document.querySelector('[data-frn-import-result]');
+  if (importResult) importResult.focus();
+
+  document.querySelectorAll('.frn-import-card button[data-frn-busy]').forEach((button) => {
+    const label = button.textContent;
+    button.form.addEventListener('submit', (event) => {
+      if (button.disabled) {
+        event.preventDefault();
+        return;
+      }
+      button.textContent = button.dataset.frnBusy;
+      button.disabled = true;
+    });
+    window.addEventListener('pageshow', () => {
+      button.textContent = label;
+      button.disabled = false;
+    });
+  });
+
   const fileInput = document.querySelector('#frn-stock-files');
   const fileStatus = document.querySelector('#frn-file-status');
 
   const refreshFileStatus = () => {
     if (!fileInput || !fileStatus) return;
     const files = Array.from(fileInput.files || []);
+    setImportStep(files.length ? 2 : Number(importSteps.dataset.frnImportStep));
     const strong = fileStatus.querySelector('strong');
     const span = fileStatus.querySelector('span');
 
@@ -29,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (fileInput) {
     fileInput.addEventListener('change', refreshFileStatus);
     refreshFileStatus();
+    window.addEventListener('pageshow', refreshFileStatus);
   }
 
   const setChecked = (selector, checked) => {

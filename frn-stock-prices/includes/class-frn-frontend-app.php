@@ -59,6 +59,16 @@ final class FRN_Frontend_App
         $orderId = $tab === 'pedido' ? absint($_GET['id'] ?? 0) : 0;
         $customerId = $tab === 'clientes' ? absint($_GET['customer_id'] ?? 0) : 0;
 
+        $importStage = $tab === 'importar' ? sanitize_key($_GET['import_stage'] ?? '') : '';
+        $publishFailed = $importStage === 'publicar';
+        $importError = in_array($importStage, ['analizar','publicar'], true)
+            ? sanitize_text_field(wp_unslash($_GET['error'] ?? ''))
+            : '';
+        $publishedImport = $tab === 'importar' && isset($_GET['stock_published']) ? [
+            'count' => absint($_GET['stock_published']),
+            'fields' => sanitize_text_field(wp_unslash($_GET['updated_fields'] ?? 'según selección')),
+        ] : null;
+
         $data = [
             'tab' => $tab,
             'previewToken' => $previewToken,
@@ -71,7 +81,10 @@ final class FRN_Frontend_App
             'tariffs' => $this->tariffs->all_tariffs(),
             'tariff' => $tariffId ? $this->tariffs->get_tariff($tariffId) : null,
             'tariffLines' => $tariffId ? $this->tariffs->get_lines($tariffId) : [],
-            'messages' => $this->messages(),
+            'messages' => $this->messages($tab, $importError),
+            'importError' => $importError,
+            'publishFailed' => $publishFailed,
+            'publishedImport' => $publishedImport,
             'canEditStock' => current_user_can('frn_edit_stock'),
             'canEditPrices' => current_user_can('frn_edit_prices'),
             'canViewCost' => current_user_can('frn_view_cost'),
@@ -114,14 +127,30 @@ final class FRN_Frontend_App
         ];
 
         if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
         }
 
         try {
-            $parsed = $this->excel->parse_files($_FILES['stock_files'] ?? [], $updates);
+            $files = $_FILES['stock_files'] ?? [];
+            foreach ((array)($files['error'] ?? []) as $index => $uploadError) {
+                if ((int)$uploadError !== UPLOAD_ERR_OK) {
+                    $filename = sanitize_file_name((string)($files['name'][$index] ?? ''));
+                    throw new RuntimeException('No se pudo cargar ' . ($filename ?: 'el Excel') . '. Vuelve a seleccionarlo y comprueba el tamaño del archivo.');
+                }
+            }
+            $parsed = $this->excel->parse_files($files, $updates);
+            $rows = array_merge($parsed['catalogs']['carne'], $parsed['catalogs']['pescado-marisco']);
+            foreach (['stock'=>'Stock','price'=>'Precio','cost'=>'Coste promedio'] as $field => $label) {
+                if (!$updates[$field]) { continue; }
+                $withValues = count(array_filter($rows, static fn(array $row): bool => !empty($row[$field . '_present'])));
+                if (!$withValues) {
+                    throw new RuntimeException('La columna de ' . $label . ' está vacía en todas las referencias. Completa esa columna o desmarca el campo y vuelve a analizarlo.');
+                }
+                $parsed['field_counts'][$field] = $withValues;
+            }
 
             foreach (['carne','pescado-marisco'] as $category) {
                 foreach (($parsed['catalogs'][$category] ?? []) as $i => $row) {
@@ -153,7 +182,7 @@ final class FRN_Frontend_App
             }
             $parsed['commercial_groups'] = $this->catalog->all_groups();
         } catch (Throwable $e) {
-            $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
+            $this->redirect(['tab' => 'importar', 'import_stage' => 'analizar', 'error' => rawurlencode($e->getMessage())]);
         }
 
         $parsed['preview_type'] = 'selective';
@@ -170,7 +199,7 @@ final class FRN_Frontend_App
 
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
         if (!$preview || !is_array($preview) || !in_array(($preview['preview_type'] ?? ''), ['stock','selective'], true)) {
-            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización ha caducado.')]);
+            $this->redirect(['tab' => 'importar', 'import_stage' => 'publicar', 'error' => rawurlencode('La previsualización ha caducado. Vuelve a seleccionar y analizar el Excel.')]);
         }
 
         $updates = array_merge(
@@ -179,10 +208,10 @@ final class FRN_Frontend_App
         );
 
         if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
         }
 
         $updates['reset_missing_stock'] = $updates['stock'] && !empty($_POST['reset_missing_stock']);
@@ -202,6 +231,7 @@ final class FRN_Frontend_App
                 if (!$group) {
                     $this->redirect([
                         'tab'=>'importar',
+                        'import_stage'=>'publicar',
                         'preview'=>$token,
                         'error'=>rawurlencode('Asigna una categoría comercial válida a ' . ($code ?: (string)($row['name'] ?? 'producto nuevo')) . ' antes de publicar.'),
                     ]);
@@ -222,7 +252,7 @@ final class FRN_Frontend_App
         $invalid = array_filter($all, static fn(array $row): bool => empty($row['valid']));
         if ($invalid) {
             $this->redirect([
-                'tab'=>'importar','preview'=>$token,
+                'tab'=>'importar','import_stage'=>'publicar','preview'=>$token,
                 'error'=>rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
             ]);
         }
@@ -241,7 +271,7 @@ final class FRN_Frontend_App
             }
         } catch (Throwable $e) {
             $this->redirect([
-                'tab'=>'importar','preview'=>$token,
+                'tab'=>'importar','import_stage'=>'publicar','preview'=>$token,
                 'error'=>rawurlencode($e->getMessage()),
             ]);
         }
@@ -1512,17 +1542,10 @@ final class FRN_Frontend_App
         $this->redirect(['tab'=>'pedido','id'=>$savedId,'order_saved'=>1]);
     }
 
-    private function messages(): array
+    private function messages(string $tab, string $importError): array
     {
         $messages = [];
 
-        if (isset($_GET['stock_published'])) {
-            $messages[] = [
-                'success',
-                'Importación publicada: ' . (int) $_GET['stock_published'] . ' referencias. Campos actualizados: ' .
-                (!empty($_GET['updated_fields']) ? sanitize_text_field(wp_unslash($_GET['updated_fields'])) : 'según selección') . '.',
-            ];
-        }
         if (isset($_GET['prices_published'])) {
             $messages[] = [
                 'success',
@@ -1530,7 +1553,7 @@ final class FRN_Frontend_App
             ];
         }
         if (isset($_GET['saved'])) {
-            $messages[] = ['success', 'Cambios guardados.'];
+            $messages[] = ['success', $tab === 'importar' ? 'Ediciones de la tabla guardadas.' : 'Cambios guardados.'];
         }
         if (isset($_GET['created'])) {
             $messages[] = ['success', 'Tarifa creada. Ya puedes revisarla y descargar el PDF.'];
@@ -1562,7 +1585,7 @@ final class FRN_Frontend_App
         if (isset($_GET['order_email_settings_saved'])) {
             $messages[] = ['success', 'Configuración de correo de pedidos guardada.'];
         }
-        if (!empty($_GET['error'])) {
+        if ($importError === '' && !empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
         }
 
