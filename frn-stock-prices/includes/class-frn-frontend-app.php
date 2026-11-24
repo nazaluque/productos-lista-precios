@@ -686,8 +686,22 @@ final class FRN_Frontend_App
 
         $scope = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado-Marisco';
 
+        $languageNames = [
+            'es_ar' => 'Espanol-AR',
+            'es_es' => 'Espanol-ES',
+            'pt_pt' => 'Portugues',
+            'en' => 'Ingles',
+        ];
+        $defaultLanguage = $scopeKey === 'carne' ? 'es_ar' : 'es_es';
+        $primaryLanguage = (string) ($tariff['primary_lang'] ?? $defaultLanguage);
+        $secondaryLanguage = (string) ($tariff['secondary_lang'] ?? '');
+        $languageSuffix = $languageNames[$primaryLanguage] ?? $languageNames[$defaultLanguage];
+        if (isset($languageNames[$secondaryLanguage]) && $languageNames[$secondaryLanguage] !== $languageSuffix) {
+            $languageSuffix .= '-' . $languageNames[$secondaryLanguage];
+        }
+
         $dompdf->stream(
-            sanitize_file_name('FRN-Tarifa-' . $scope . '-' . $tariff['tariff_date'] . '.pdf'),
+            sanitize_file_name('FRN-Tarifa-' . $scope . '-' . $languageSuffix . '-' . $tariff['tariff_date'] . '.pdf'),
             ['Attachment' => true]
         );
         exit;
