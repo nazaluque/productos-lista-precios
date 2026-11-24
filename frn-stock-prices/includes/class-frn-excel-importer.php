@@ -352,7 +352,7 @@ final class FRN_Excel_Importer
             if (!$category) { continue; }
 
             $meaningful = $incoming
-                || ($updates['stock'] && $stockPresent && (($stock ?? 0) > 0))
+                || ($updates['stock'] && $stockPresent)
                 || ($updates['price'] && $pricePresent)
                 || ($updates['cost'] && $costPresent)
                 || $updates['groups'];

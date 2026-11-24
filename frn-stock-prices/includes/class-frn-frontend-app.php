@@ -157,7 +157,7 @@ final class FRN_Frontend_App
         }
 
         $parsed['preview_type'] = 'selective';
-        $token = wp_generate_password(20, false, false);
+        $token = sanitize_key(wp_generate_password(20, false, false));
         set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
 
         $this->redirect(['tab' => 'importar', 'preview' => $token]);
@@ -184,6 +184,8 @@ final class FRN_Frontend_App
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
             $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
         }
+
+        $updates['reset_missing_stock'] = $updates['stock'] && !empty($_POST['reset_missing_stock']);
 
         $assignments = is_array($_POST['group_assignments'] ?? null)
             ? wp_unslash($_POST['group_assignments'])
@@ -279,7 +281,7 @@ final class FRN_Frontend_App
         $parsed['preview_type'] = 'prices';
         $parsed['price_list_name'] = $name;
 
-        $token = wp_generate_password(20, false, false);
+        $token = sanitize_key(wp_generate_password(20, false, false));
         set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
 
         $this->redirect(['tab' => 'importar', 'preview' => $token]);

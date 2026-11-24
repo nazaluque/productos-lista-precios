@@ -42,6 +42,18 @@ foreach ($previewRows as $row) {
         <p><?php echo esc_html(count($previewRows)); ?> referencias · <?php echo esc_html(count($previewIncoming)); ?> próximos ingresos · <?php echo esc_html($invalid); ?> errores · <?php echo esc_html($pendingCategories); ?> categoría(s) por confirmar.</p>
     </div>
 
+    <?php if ($invalid === 0 && $previewRows) : ?>
+        <form id="frn-publish-import" method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-inline-action">
+            <input type="hidden" name="action" value="frn_front_publish_stock">
+            <input type="hidden" name="preview" value="<?php echo esc_attr($previewToken); ?>">
+            <?php wp_nonce_field('frn_front_publish_stock_' . $previewToken); ?>
+            <?php if ($updates['stock']) : ?>
+                <label><input type="checkbox" name="reset_missing_stock" value="1"> Poner a cero las referencias que no aparecen en el Excel</label>
+            <?php endif; ?>
+            <button type="submit">Publicar cambios seleccionados</button>
+        </form>
+    <?php endif; ?>
+
     <div class="frn-import-audit">
         <div><small>Archivo</small><strong><?php echo esc_html((string)($preview['filename'] ?? '')); ?></strong></div>
         <div><small>Hoja(s) de datos</small><strong><?php echo esc_html(implode(', ', (array)($preview['data_sheets'] ?? [])) ?: '—'); ?></strong></div>
@@ -144,12 +156,4 @@ foreach ($previewRows as $row) {
         </table>
     </div>
 
-    <?php if ($invalid === 0 && $previewRows) : ?>
-        <form id="frn-publish-import" method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-inline-action">
-            <input type="hidden" name="action" value="frn_front_publish_stock">
-            <input type="hidden" name="preview" value="<?php echo esc_attr($previewToken); ?>">
-            <?php wp_nonce_field('frn_front_publish_stock_' . $previewToken); ?>
-            <button type="submit">Publicar cambios seleccionados</button>
-        </form>
-    <?php endif; ?>
 </section>

@@ -434,7 +434,7 @@ final class FRN_Catalog_Repository
 
         $updates = array_merge(
             ['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false],
-            array_intersect_key($updates, ['stock'=>1,'price'=>1,'cost'=>1,'groups'=>1])
+            array_intersect_key($updates, ['stock'=>1,'price'=>1,'cost'=>1,'groups'=>1,'reset_missing_stock'=>1])
         );
 
         $wpdb->query('START TRANSACTION');
@@ -442,7 +442,7 @@ final class FRN_Catalog_Repository
         try {
             // Only a stock synchronization is allowed to zero products that
             // disappeared from the current weekly stock source.
-            if (!empty($updates['stock'])) {
+            if (!empty($updates['stock']) && ($updates['reset_missing_stock'] ?? true)) {
                 $wpdb->query(
                     $wpdb->prepare(
                         "UPDATE {$table}
@@ -481,6 +481,10 @@ final class FRN_Catalog_Repository
                     'published_at' => $now,
                     'incoming' => $incoming ? 1 : 0,
                 ];
+
+                if ($existing && !empty($updates['stock']) && empty($updates['price']) && empty($updates['cost']) && empty($updates['groups'])) {
+                    unset($data['brand'], $data['product_name'], $data['model'], $data['unit']);
+                }
 
                 if (!empty($updates['stock']) && !empty($row['stock_present'])) {
                     $stock = max(0, (float) ($row['stock'] ?? 0));
