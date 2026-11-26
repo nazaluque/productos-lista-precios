@@ -27,9 +27,9 @@ jobs:
           tools: composer:v2
       - name: Validate PHP syntax
         run: find frn-stock-prices frn-home -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Validate FRN 1.3.3 contract
+      - name: Validate FRN 1.3.8 contract
         run: |
-          grep -q "Version: 1.3.3" frn-stock-prices/frn-stock-prices.php
+          grep -q "Version: 1.3.8" frn-stock-prices/frn-stock-prices.php
           grep -q "frn_product_history" frn-stock-prices/includes/class-frn-catalog-repository.php
           grep -q "frn_front_preview_stock" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "frn_front_user_save" frn-stock-prices/includes/class-frn-frontend-app.php
@@ -42,7 +42,7 @@ jobs:
           grep -q "header-photo" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "SIN CATEGORÍA" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "Totales detectados por unidad" frn-stock-prices/templates/partials/app-preview.php
-          grep -q "Archivo analizado · todavía NO se ha publicado" frn-stock-prices/templates/partials/app-import.php
+          grep -q "Análisis completado. Listo para revisar y publicar" frn-stock-prices/templates/partials/app-import.php
           grep -q "frn_front_save_translations" frn-stock-prices/includes/class-frn-frontend-app.php
           grep -q "Pronosticado" frn-stock-prices/templates/partials/app-import.php || true
           grep -q "pronosticado" frn-stock-prices/includes/class-frn-excel-importer.php
@@ -71,11 +71,11 @@ jobs:
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
       - name: Stage a single installable plugin folder
         run: |
-          mkdir -p build/FRN-STOCK-PRECIOS-v1.3.3
-          cp -R frn-stock-prices build/FRN-STOCK-PRECIOS-v1.3.3/frn-stock-prices
-          cp release/LEEME-PRIMERO.txt build/FRN-STOCK-PRECIOS-v1.3.3/LEEME-PRIMERO.txt
+          mkdir -p build/FRN-STOCK-PRECIOS-v1.3.8
+          cp -R frn-stock-prices build/FRN-STOCK-PRECIOS-v1.3.8/frn-stock-prices
+
       - uses: actions/upload-artifact@v4
         with:
-          name: FRN-STOCK-PRECIOS-v1.3.3
-          path: build/FRN-STOCK-PRECIOS-v1.3.3
+          name: FRN-STOCK-PRECIOS-v1.3.8
+          path: build/FRN-STOCK-PRECIOS-v1.3.8
           if-no-files-found: error

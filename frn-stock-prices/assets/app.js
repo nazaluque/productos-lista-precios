@@ -5,12 +5,46 @@ document.addEventListener('DOMContentLoaded', () => {
     sentNotice.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  const importSteps = document.querySelector('[data-frn-import-step]');
+  const setImportStep = (active) => {
+    importSteps?.querySelectorAll(':scope > span').forEach((item, index) => {
+      const step = index + 1;
+      const done = step < active;
+      item.classList.toggle('is-done', done);
+      item.classList.toggle('is-active', step === active);
+      if (step === active) item.setAttribute('aria-current', 'step');
+      else item.removeAttribute('aria-current');
+      item.querySelector('b').textContent = done ? '✓' : String(step);
+      item.querySelector('[data-frn-step-status]').textContent = done ? 'Completado' : '';
+    });
+  };
+
+  const importResult = document.querySelector('[data-frn-import-result]');
+  if (importResult) importResult.focus();
+
+  document.querySelectorAll('.frn-import-card button[data-frn-busy]').forEach((button) => {
+    const label = button.textContent;
+    button.form.addEventListener('submit', (event) => {
+      if (button.disabled) {
+        event.preventDefault();
+        return;
+      }
+      button.textContent = button.dataset.frnBusy;
+      button.disabled = true;
+    });
+    window.addEventListener('pageshow', () => {
+      button.textContent = label;
+      button.disabled = false;
+    });
+  });
+
   const fileInput = document.querySelector('#frn-stock-files');
   const fileStatus = document.querySelector('#frn-file-status');
 
   const refreshFileStatus = () => {
     if (!fileInput || !fileStatus) return;
     const files = Array.from(fileInput.files || []);
+    setImportStep(files.length ? 2 : Number(importSteps.dataset.frnImportStep));
     const strong = fileStatus.querySelector('strong');
     const span = fileStatus.querySelector('span');
 
@@ -29,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (fileInput) {
     fileInput.addEventListener('change', refreshFileStatus);
     refreshFileStatus();
+    window.addEventListener('pageshow', refreshFileStatus);
   }
 
   const setChecked = (selector, checked) => {
@@ -303,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (quantityLabel) quantityLabel.textContent = selectedUnit === 'cajas' ? 'Cantidad (cajas)' : selectedUnit === 'pallets' ? 'Pallets completos' : selectedUnit === 'unidades' ? 'Cantidad (unidades)' : 'Cantidad (kg)';
           if (quantity) quantity.step = selectedUnit === 'pallets' ? '1' : '0.001';
           if (halfWrap) halfWrap.hidden = selectedUnit !== 'pallets';
+          if (pallets && selectedUnit !== 'pallets') pallets.value = '0';
+          if (halfToggle) halfToggle.checked = false;
           if (quantityWrap) quantityWrap.hidden = false;
           const weightLabel = line.querySelector('[data-frn-weight-label]');
           const weightInput = line.querySelector('[data-line-field="total_kg"]');
@@ -312,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (weightInput) weightInput.value = selectedUnit === 'kg' ? (quantity?.value || '0') : '0';
           if (selectedUnit === 'cajas' && boxes && quantity) boxes.value = quantity.value;
           if (selectedUnit === 'pallets' && quantity && pallets) {
-            if (halfToggle) halfToggle.checked = false;
             const whole = Math.max(0, Math.floor(Number(quantity.value || 0)));
             quantity.value = String(whole);
             pallets.value = String(whole);
@@ -374,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const halfWrap = inserted.querySelector('[data-frn-half-pallet-wrap]');
       if (quantity) quantity.step = selectedUnit === 'pallets' ? '1' : '0.001';
       if (halfWrap) halfWrap.hidden = selectedUnit !== 'pallets';
+      if (pallets && selectedUnit !== 'pallets') pallets.value = '0';
       if (selectedUnit === 'pallets' && quantity && pallets) {
         const savedPallets = Number(pallets.value || 0);
         const palletValue = savedPallets > 0 ? savedPallets : Number(quantity.value || 0);

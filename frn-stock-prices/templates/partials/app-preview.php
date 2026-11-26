@@ -1,15 +1,6 @@
 <?php
 if (!defined('ABSPATH')) { exit; }
 
-$previewRows = array_merge(
-    $preview['catalogs']['carne'] ?? [],
-    $preview['catalogs']['pescado-marisco'] ?? []
-);
-$previewIncoming = array_values(array_filter($previewRows, static fn(array $row): bool => !empty($row['incoming'])));
-$previewRegular = array_values(array_filter($previewRows, static fn(array $row): bool => empty($row['incoming'])));
-$invalid = count(array_filter($previewRows, static fn(array $row): bool => empty($row['valid'])));
-$updates = array_merge(['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false], $preview['updates'] ?? []);
-$detected = array_merge(['stock'=>false,'price'=>false,'cost'=>false,'groups'=>false], $preview['detected'] ?? []);
 $ungrouped = $preview['ungrouped'] ?? ['carne'=>[],'pescado-marisco'=>[]];
 
 $stockTotals = [
@@ -37,7 +28,7 @@ foreach ($previewRows as $row) {
 ?>
 <section class="frn-app-card frn-preview-card">
     <div class="frn-card-heading">
-        <div><small>Previsualización semanal</small><h2>Antes de guardar</h2></div>
+        <div><small>Previsualización semanal</small><h2>Revisa los datos del Excel</h2></div>
         <?php $pendingCategories = count(array_filter($previewRows, static fn(array $row): bool => !empty($row['needs_group_assignment']))); ?>
         <p><?php echo esc_html(count($previewRows)); ?> referencias · <?php echo esc_html(count($previewIncoming)); ?> próximos ingresos · <?php echo esc_html($invalid); ?> errores · <?php echo esc_html($pendingCategories); ?> categoría(s) por confirmar.</p>
     </div>
@@ -52,6 +43,9 @@ foreach ($previewRows as $row) {
                 <strong class="<?php echo !empty($updates[$key]) ? 'is-update' : ''; ?>">
                     <?php echo !empty($updates[$key]) ? 'SE ACTUALIZARÁ' : 'NO SE TOCA'; ?>
                     · <?php echo !empty($detected[$key]) ? 'detectado' : 'no detectado'; ?>
+                    <?php if (isset($preview['field_counts'][$key])) : ?>
+                        · <?php echo (int)$preview['field_counts'][$key]; ?>/<?php echo count($previewRows); ?> con valor
+                    <?php endif; ?>
                 </strong>
             </div>
         <?php endforeach; ?>
@@ -144,12 +138,4 @@ foreach ($previewRows as $row) {
         </table>
     </div>
 
-    <?php if ($invalid === 0 && $previewRows) : ?>
-        <form id="frn-publish-import" method="post" action="<?php echo esc_url($postUrl); ?>" class="frn-inline-action">
-            <input type="hidden" name="action" value="frn_front_publish_stock">
-            <input type="hidden" name="preview" value="<?php echo esc_attr($previewToken); ?>">
-            <?php wp_nonce_field('frn_front_publish_stock_' . $previewToken); ?>
-            <button type="submit">Publicar cambios seleccionados</button>
-        </form>
-    <?php endif; ?>
 </section>

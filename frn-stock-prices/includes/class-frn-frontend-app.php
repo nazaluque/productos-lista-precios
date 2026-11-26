@@ -59,6 +59,16 @@ final class FRN_Frontend_App
         $orderId = $tab === 'pedido' ? absint($_GET['id'] ?? 0) : 0;
         $customerId = $tab === 'clientes' ? absint($_GET['customer_id'] ?? 0) : 0;
 
+        $importStage = $tab === 'importar' ? sanitize_key($_GET['import_stage'] ?? '') : '';
+        $publishFailed = $importStage === 'publicar';
+        $importError = in_array($importStage, ['analizar','publicar'], true)
+            ? sanitize_text_field(wp_unslash($_GET['import_error'] ?? ''))
+            : '';
+        $publishedImport = $tab === 'importar' && isset($_GET['stock_published']) ? [
+            'count' => absint($_GET['stock_published']),
+            'fields' => sanitize_text_field(wp_unslash($_GET['updated_fields'] ?? 'según selección')),
+        ] : null;
+
         $data = [
             'tab' => $tab,
             'previewToken' => $previewToken,
@@ -71,7 +81,10 @@ final class FRN_Frontend_App
             'tariffs' => $this->tariffs->all_tariffs(),
             'tariff' => $tariffId ? $this->tariffs->get_tariff($tariffId) : null,
             'tariffLines' => $tariffId ? $this->tariffs->get_lines($tariffId) : [],
-            'messages' => $this->messages(),
+            'messages' => $this->messages($tab, $importError),
+            'importError' => $importError,
+            'publishFailed' => $publishFailed,
+            'publishedImport' => $publishedImport,
             'canEditStock' => current_user_can('frn_edit_stock'),
             'canEditPrices' => current_user_can('frn_edit_prices'),
             'canViewCost' => current_user_can('frn_view_cost'),
@@ -114,14 +127,30 @@ final class FRN_Frontend_App
         ];
 
         if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','import_error'=>rawurlencode('Tu perfil no puede actualizar stock ni categorías.')]);
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'analizar','import_error'=>rawurlencode('Tu perfil no puede actualizar precios ni costes.')]);
         }
 
         try {
-            $parsed = $this->excel->parse_files($_FILES['stock_files'] ?? [], $updates);
+            $files = $_FILES['stock_files'] ?? [];
+            foreach ((array)($files['error'] ?? []) as $index => $uploadError) {
+                if ((int)$uploadError !== UPLOAD_ERR_OK) {
+                    $filename = sanitize_file_name((string)($files['name'][$index] ?? ''));
+                    throw new RuntimeException('No se pudo cargar ' . ($filename ?: 'el Excel') . '. Vuelve a seleccionarlo y comprueba el tamaño del archivo.');
+                }
+            }
+            $parsed = $this->excel->parse_files($files, $updates);
+            $rows = array_merge($parsed['catalogs']['carne'], $parsed['catalogs']['pescado-marisco']);
+            foreach (['stock'=>'Stock','price'=>'Precio','cost'=>'Coste promedio'] as $field => $label) {
+                if (!$updates[$field]) { continue; }
+                $withValues = count(array_filter($rows, static fn(array $row): bool => !empty($row[$field . '_present'])));
+                if (!$withValues) {
+                    throw new RuntimeException('La columna de ' . $label . ' está vacía en todas las referencias. Completa esa columna o desmarca el campo y vuelve a analizarlo.');
+                }
+                $parsed['field_counts'][$field] = $withValues;
+            }
 
             foreach (['carne','pescado-marisco'] as $category) {
                 foreach (($parsed['catalogs'][$category] ?? []) as $i => $row) {
@@ -153,11 +182,11 @@ final class FRN_Frontend_App
             }
             $parsed['commercial_groups'] = $this->catalog->all_groups();
         } catch (Throwable $e) {
-            $this->redirect(['tab' => 'importar', 'error' => rawurlencode($e->getMessage())]);
+            $this->redirect(['tab' => 'importar', 'import_stage' => 'analizar', 'import_error' => rawurlencode($e->getMessage())]);
         }
 
         $parsed['preview_type'] = 'selective';
-        $token = wp_generate_password(20, false, false);
+        $token = sanitize_key(wp_generate_password(20, false, false));
         set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
 
         $this->redirect(['tab' => 'importar', 'preview' => $token]);
@@ -170,7 +199,7 @@ final class FRN_Frontend_App
 
         $preview = get_transient(self::PREVIEW_PREFIX . $token);
         if (!$preview || !is_array($preview) || !in_array(($preview['preview_type'] ?? ''), ['stock','selective'], true)) {
-            $this->redirect(['tab' => 'importar', 'error' => rawurlencode('La previsualización ha caducado.')]);
+            $this->redirect(['tab' => 'importar', 'import_stage' => 'publicar', 'import_error' => rawurlencode('La previsualización ha caducado. Vuelve a seleccionar y analizar el Excel.')]);
         }
 
         $updates = array_merge(
@@ -179,11 +208,13 @@ final class FRN_Frontend_App
         );
 
         if (($updates['stock'] || $updates['groups']) && !current_user_can('frn_edit_stock')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','import_error'=>rawurlencode('Tu perfil no puede publicar stock ni categorías.')]);
         }
         if (($updates['price'] || $updates['cost']) && !current_user_can('frn_edit_prices')) {
-            $this->redirect(['tab'=>'importar','error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
+            $this->redirect(['tab'=>'importar','import_stage'=>'publicar','import_error'=>rawurlencode('Tu perfil no puede publicar precios ni costes.')]);
         }
+
+        $updates['reset_missing_stock'] = $updates['stock'] && !empty($_POST['reset_missing_stock']);
 
         $assignments = is_array($_POST['group_assignments'] ?? null)
             ? wp_unslash($_POST['group_assignments'])
@@ -200,8 +231,9 @@ final class FRN_Frontend_App
                 if (!$group) {
                     $this->redirect([
                         'tab'=>'importar',
+                        'import_stage'=>'publicar',
                         'preview'=>$token,
-                        'error'=>rawurlencode('Asigna una categoría comercial válida a ' . ($code ?: (string)($row['name'] ?? 'producto nuevo')) . ' antes de publicar.'),
+                        'import_error'=>rawurlencode('Asigna una categoría comercial válida a ' . ($code ?: (string)($row['name'] ?? 'producto nuevo')) . ' antes de publicar.'),
                     ]);
                 }
 
@@ -220,8 +252,8 @@ final class FRN_Frontend_App
         $invalid = array_filter($all, static fn(array $row): bool => empty($row['valid']));
         if ($invalid) {
             $this->redirect([
-                'tab'=>'importar','preview'=>$token,
-                'error'=>rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
+                'tab'=>'importar','import_stage'=>'publicar','preview'=>$token,
+                'import_error'=>rawurlencode('Hay filas con errores. Corrige el Excel antes de publicar.'),
             ]);
         }
 
@@ -239,8 +271,8 @@ final class FRN_Frontend_App
             }
         } catch (Throwable $e) {
             $this->redirect([
-                'tab'=>'importar','preview'=>$token,
-                'error'=>rawurlencode($e->getMessage()),
+                'tab'=>'importar','import_stage'=>'publicar','preview'=>$token,
+                'import_error'=>rawurlencode($e->getMessage()),
             ]);
         }
 
@@ -279,7 +311,7 @@ final class FRN_Frontend_App
         $parsed['preview_type'] = 'prices';
         $parsed['price_list_name'] = $name;
 
-        $token = wp_generate_password(20, false, false);
+        $token = sanitize_key(wp_generate_password(20, false, false));
         set_transient(self::PREVIEW_PREFIX . $token, $parsed, HOUR_IN_SECONDS);
 
         $this->redirect(['tab' => 'importar', 'preview' => $token]);
@@ -686,8 +718,22 @@ final class FRN_Frontend_App
 
         $scope = ($tariff['catalog_scope'] ?? '') === 'carne' ? 'Carne' : 'Pescado-Marisco';
 
+        $languageNames = [
+            'es_ar' => 'Espanol-AR',
+            'es_es' => 'Espanol-ES',
+            'pt_pt' => 'Portugues',
+            'en' => 'Ingles',
+        ];
+        $defaultLanguage = $scopeKey === 'carne' ? 'es_ar' : 'es_es';
+        $primaryLanguage = (string) ($tariff['primary_lang'] ?? $defaultLanguage);
+        $secondaryLanguage = (string) ($tariff['secondary_lang'] ?? '');
+        $languageSuffix = $languageNames[$primaryLanguage] ?? $languageNames[$defaultLanguage];
+        if (isset($languageNames[$secondaryLanguage]) && $languageNames[$secondaryLanguage] !== $languageSuffix) {
+            $languageSuffix .= '-' . $languageNames[$secondaryLanguage];
+        }
+
         $dompdf->stream(
-            sanitize_file_name('FRN-Tarifa-' . $scope . '-' . $tariff['tariff_date'] . '.pdf'),
+            sanitize_file_name('FRN-Tarifa-' . $scope . '-' . $languageSuffix . '-' . $tariff['tariff_date'] . '.pdf'),
             ['Attachment' => true]
         );
         exit;
@@ -1300,12 +1346,19 @@ final class FRN_Frontend_App
         foreach ($items as $item) {
             $qty = (float)$item['quantity'];
             $kg = (float)$item['total_kg'];
+            $saleUnit = (string)$item['sale_unit'];
             $presentation = [];
-            if ((float)$item['pallets'] > 0) { $presentation[] = number_format((float)$item['pallets'], 2, ',', '.') . ' pallets'; }
-            if ((float)$item['boxes'] > 0) { $presentation[] = number_format((float)$item['boxes'], 2, ',', '.') . ' cajas'; }
-            if (!$presentation) { $presentation[] = number_format($qty, 3, ',', '.') . ' ' . esc_html((string)$item['sale_unit']); }
+            if ($saleUnit === 'pallets') {
+                $pallets = (float)$item['pallets'];
+                $presentation[] = self::format_order_quantity($pallets > 0 ? $pallets : $qty) . ' pallets';
+            }
+            $boxes = (float)$item['boxes'];
+            if ($saleUnit === 'cajas' || $boxes > 0) {
+                $presentation[] = self::format_order_quantity($boxes > 0 ? $boxes : $qty) . ' cajas';
+            }
+            if (!$presentation) { $presentation[] = self::format_order_quantity($qty) . ' ' . $saleUnit; }
 
-            $needsWeight = (string)$item['sale_unit'] !== 'kg' && $kg <= 0;
+            $needsWeight = $saleUnit !== 'kg' && $kg <= 0;
             if ($needsWeight) { $pendingWeightCount++; }
             $rows .= '<tr>'
                 . '<td>' . esc_html((string)$item['product_code']) . '</td>'
@@ -1455,7 +1508,7 @@ final class FRN_Frontend_App
 
             $quantity = max(0, $this->number($raw['quantity'] ?? 0));
             $boxes = max(0, $this->number($raw['boxes'] ?? 0));
-            $pallets = max(0, $this->number($raw['pallets'] ?? 0));
+            $pallets = $saleUnit === 'pallets' ? max(0, $this->number($raw['pallets'] ?? 0)) : 0.0;
             $totalKg = max(0, $this->number($raw['total_kg'] ?? 0));
             if ($saleUnit === 'kg') { $totalKg = $quantity; }
 
@@ -1496,17 +1549,10 @@ final class FRN_Frontend_App
         $this->redirect(['tab'=>'pedido','id'=>$savedId,'order_saved'=>1]);
     }
 
-    private function messages(): array
+    private function messages(string $tab, string $importError): array
     {
         $messages = [];
 
-        if (isset($_GET['stock_published'])) {
-            $messages[] = [
-                'success',
-                'Importación publicada: ' . (int) $_GET['stock_published'] . ' referencias. Campos actualizados: ' .
-                (!empty($_GET['updated_fields']) ? sanitize_text_field(wp_unslash($_GET['updated_fields'])) : 'según selección') . '.',
-            ];
-        }
         if (isset($_GET['prices_published'])) {
             $messages[] = [
                 'success',
@@ -1514,7 +1560,7 @@ final class FRN_Frontend_App
             ];
         }
         if (isset($_GET['saved'])) {
-            $messages[] = ['success', 'Cambios guardados.'];
+            $messages[] = ['success', $tab === 'importar' ? 'Ediciones de la tabla guardadas.' : 'Cambios guardados.'];
         }
         if (isset($_GET['created'])) {
             $messages[] = ['success', 'Tarifa creada. Ya puedes revisarla y descargar el PDF.'];
@@ -1546,7 +1592,7 @@ final class FRN_Frontend_App
         if (isset($_GET['order_email_settings_saved'])) {
             $messages[] = ['success', 'Configuración de correo de pedidos guardada.'];
         }
-        if (!empty($_GET['error'])) {
+        if ($importError === '' && !empty($_GET['error'])) {
             $messages[] = ['error', sanitize_text_field(wp_unslash($_GET['error']))];
         }
 
@@ -1578,6 +1624,11 @@ final class FRN_Frontend_App
     {
         wp_safe_redirect(add_query_arg($args, home_url('/stock/')));
         exit;
+    }
+
+    private static function format_order_quantity(float $quantity): string
+    {
+        return rtrim(rtrim(number_format($quantity, 3, ',', '.'), '0'), ',');
     }
 
     private function number(mixed $value): float
