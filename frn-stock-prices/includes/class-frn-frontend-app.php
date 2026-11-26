@@ -1346,12 +1346,19 @@ final class FRN_Frontend_App
         foreach ($items as $item) {
             $qty = (float)$item['quantity'];
             $kg = (float)$item['total_kg'];
+            $saleUnit = (string)$item['sale_unit'];
             $presentation = [];
-            if ((float)$item['pallets'] > 0) { $presentation[] = number_format((float)$item['pallets'], 2, ',', '.') . ' pallets'; }
-            if ((float)$item['boxes'] > 0) { $presentation[] = number_format((float)$item['boxes'], 2, ',', '.') . ' cajas'; }
-            if (!$presentation) { $presentation[] = number_format($qty, 3, ',', '.') . ' ' . esc_html((string)$item['sale_unit']); }
+            if ($saleUnit === 'pallets') {
+                $pallets = (float)$item['pallets'];
+                $presentation[] = self::format_order_quantity($pallets > 0 ? $pallets : $qty) . ' pallets';
+            }
+            $boxes = (float)$item['boxes'];
+            if ($saleUnit === 'cajas' || $boxes > 0) {
+                $presentation[] = self::format_order_quantity($boxes > 0 ? $boxes : $qty) . ' cajas';
+            }
+            if (!$presentation) { $presentation[] = self::format_order_quantity($qty) . ' ' . $saleUnit; }
 
-            $needsWeight = (string)$item['sale_unit'] !== 'kg' && $kg <= 0;
+            $needsWeight = $saleUnit !== 'kg' && $kg <= 0;
             if ($needsWeight) { $pendingWeightCount++; }
             $rows .= '<tr>'
                 . '<td>' . esc_html((string)$item['product_code']) . '</td>'
@@ -1501,7 +1508,7 @@ final class FRN_Frontend_App
 
             $quantity = max(0, $this->number($raw['quantity'] ?? 0));
             $boxes = max(0, $this->number($raw['boxes'] ?? 0));
-            $pallets = max(0, $this->number($raw['pallets'] ?? 0));
+            $pallets = $saleUnit === 'pallets' ? max(0, $this->number($raw['pallets'] ?? 0)) : 0.0;
             $totalKg = max(0, $this->number($raw['total_kg'] ?? 0));
             if ($saleUnit === 'kg') { $totalKg = $quantity; }
 
@@ -1617,6 +1624,11 @@ final class FRN_Frontend_App
     {
         wp_safe_redirect(add_query_arg($args, home_url('/stock/')));
         exit;
+    }
+
+    private static function format_order_quantity(float $quantity): string
+    {
+        return rtrim(rtrim(number_format($quantity, 3, ',', '.'), '0'), ',');
     }
 
     private function number(mixed $value): float

@@ -338,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (quantityLabel) quantityLabel.textContent = selectedUnit === 'cajas' ? 'Cantidad (cajas)' : selectedUnit === 'pallets' ? 'Pallets completos' : selectedUnit === 'unidades' ? 'Cantidad (unidades)' : 'Cantidad (kg)';
           if (quantity) quantity.step = selectedUnit === 'pallets' ? '1' : '0.001';
           if (halfWrap) halfWrap.hidden = selectedUnit !== 'pallets';
+          if (pallets && selectedUnit !== 'pallets') pallets.value = '0';
+          if (halfToggle) halfToggle.checked = false;
           if (quantityWrap) quantityWrap.hidden = false;
           const weightLabel = line.querySelector('[data-frn-weight-label]');
           const weightInput = line.querySelector('[data-line-field="total_kg"]');
@@ -347,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (weightInput) weightInput.value = selectedUnit === 'kg' ? (quantity?.value || '0') : '0';
           if (selectedUnit === 'cajas' && boxes && quantity) boxes.value = quantity.value;
           if (selectedUnit === 'pallets' && quantity && pallets) {
-            if (halfToggle) halfToggle.checked = false;
             const whole = Math.max(0, Math.floor(Number(quantity.value || 0)));
             quantity.value = String(whole);
             pallets.value = String(whole);
@@ -409,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const halfWrap = inserted.querySelector('[data-frn-half-pallet-wrap]');
       if (quantity) quantity.step = selectedUnit === 'pallets' ? '1' : '0.001';
       if (halfWrap) halfWrap.hidden = selectedUnit !== 'pallets';
+      if (pallets && selectedUnit !== 'pallets') pallets.value = '0';
       if (selectedUnit === 'pallets' && quantity && pallets) {
         const savedPallets = Number(pallets.value || 0);
         const palletValue = savedPallets > 0 ? savedPallets : Number(quantity.value || 0);
